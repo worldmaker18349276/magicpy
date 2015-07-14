@@ -39,21 +39,46 @@ class EngineMeta(type):
 
         return clazz
 
-class Engine(metaclass=EngineMeta):
-    def __getattribute__(self, name):
-        clazz = self.__class__
+    def __getattribute__(clazz, name):
         if name in clazz.__enginemethods__:
-            def enginemthd(self, *args, **kwargs):
+            def enginemthd(*args, **kwargs):
                 classes = (clazz,)
                 while classes:
                     for clz in classes:
                         try:
-                            return getattr(clz,name)(self, *args, **kwargs)
-                        except UnsupportedAlgorithmError or AttributeError:
+                            func = clz.__dict__[name].__get__(None,clz) # not clazz!
+                        except KeyError or AttributeError:
+                            continue
+                        try:
+                            return func(*args, **kwargs)
+                        except UnsupportedAlgorithmError:
                             continue
                     classes = map(lambda l:getattr(l,'__bases__',tuple()), classes)
                     classes = reduce(tuple.__add__, classes, tuple())
                 raise UnsupportedAlgorithmError
             return enginemthd
         else:
-            return object.__getattribute__(self, name)
+            return object.__getattribute__(clazz, name)
+
+class Engine(metaclass=EngineMeta):
+    def __getattribute__(instance, name):
+        clazz = instance.__class__
+        if name in clazz.__enginemethods__:
+            def enginemthd(*args, **kwargs):
+                classes = (clazz,)
+                while classes:
+                    for clz in classes:
+                        try:
+                            func = clz.__dict__[name].__get__(instance,clz) # not clazz!
+                        except KeyError or AttributeError:
+                            continue
+                        try:
+                            return func(*args, **kwargs)
+                        except UnsupportedAlgorithmError:
+                            continue
+                    classes = map(lambda l:getattr(l,'__bases__',tuple()), classes)
+                    classes = reduce(tuple.__add__, classes, tuple())
+                raise UnsupportedAlgorithmError
+            return enginemthd
+        else:
+            return object.__getattribute__(instance, name)
