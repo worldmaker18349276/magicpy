@@ -3,6 +3,9 @@
 class IllegalOperationError(Exception):
     pass
 
+class IllegalStateError(Exception):
+    pass
+
 class PuzzleSystem:
     def __init__(self, st, tr, func):
         if not hasattr(st, '__contains__'):
@@ -14,3 +17,26 @@ class PuzzleSystem:
         self.states = st
         self.transitions = tr
         self.applicationfunction = func
+    def puzzle(pzlsystem):
+        class Puzzle:
+            def __init__(self, st):
+                self.state = st
+            @property
+            def system(self):
+                return pzlsystem
+            @property
+            def state(self):
+                return self.__state
+            @state.setter
+            def setState(self, st):
+                if st not in pzlsystem.states:
+                    raise IllegalStateError
+                self.__state = st
+            def operate(self, trans):
+                if trans not in pzlsystem.transitions:
+                    raise IllegalOperationError
+                self.state = pzlsystem.applicationfunction(self.state, trans)
+            def __mul__(self, trans):
+                self.operate(trans)
+        return Puzzle
+
