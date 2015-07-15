@@ -1,3 +1,4 @@
+import operator
 
 
 class IllegalOperationError(Exception):
@@ -8,16 +9,16 @@ class IllegalStateError(Exception):
 
 
 class PuzzleSystem:
-    def __init__(self, st, tr, func):
-        if not hasattr(st, '__contains__'):
+    def __init__(self, sts, trs, ap):
+        if not hasattr(sts, '__contains__'):
             raise ValueError
-        if not hasattr(tr, '__contains__'):
+        if not hasattr(trs, '__contains__'):
             raise ValueError
-        if not hasattr(func, '__call__'):
+        if not hasattr(ap, '__call__'):
             raise ValueError
-        self.states = st
-        self.transitions = tr
-        self.applicationfunction = func
+        self.states = sts
+        self.transitions = trs
+        self.applicationfunction = ap
         class Puzzle:
             def __init__(pzl, st):
                 pzl.state = st
@@ -29,20 +30,21 @@ class PuzzleSystem:
                 if st not in self.states:
                     raise IllegalStateError
                 pzl.__state = st
-            def __mul__(pzl, trans):
-                if trans not in self.transitions:
+            def __mul__(pzl, tr):
+                if tr not in self.transitions:
                     raise IllegalOperationError
-                pzl.state = self.applicationfunction(pzl.state, trans)
+                pzl.state = self.applicationfunction(pzl.state, tr)
         self.puzzle = Puzzle
+    @staticmethod
     def tensor(pzlsystems):
-        st = AbstractTensorSet(pzlsys.states for pzlsys in pzlsystems)
-        tr = AbstractTensorSet(pzlsys.transitions for pzlsys in pzlsystems)
-        aps = tuple(pzlsys.applicationfunction for pzlsys in pzlsystems)
-        def ap(sts, trs):
-            return tuple(map(lambda ap, st, tr: ap(st, tr), aps, sts, trs))
-        return PuzzleSystem(st, tr, ap)
+        stls = AbstractTensorSet(pzlsys.states for pzlsys in pzlsystems)
+        trls = AbstractTensorSet(pzlsys.transitions for pzlsys in pzlsystems)
+        apl = tuple(pzlsys.applicationfunction for pzlsys in pzlsystems)
+        def lap(stl, trl):
+            return tuple(map(lambda ap, st, tr: ap(st, tr), apl, stl, trl))
+        return PuzzleSystem(stls, trls, lap)
     def __mul__(self, other):
-        return tensor((self, other))
+        return self.tensor((self, other))
 
 
 class AbstractSet:
@@ -61,5 +63,5 @@ class AbstractTensorSet(AbstractSet):
     def __contains__(self, members):
         if len(self.sets) != len(members):
             return False
-        return all(members in aset for aset in self.sets)
+        return all(map(operator.contains, self.sets, members))
 
