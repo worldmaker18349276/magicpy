@@ -26,14 +26,20 @@ class PuzzleSystem:
             def state(pzl):
                 return pzl.__state
             @state.setter
-            def setState(pzl, st):
+            def state(pzl, st):
                 if st not in self.states:
                     raise IllegalStateError
                 pzl.__state = st
-            def __mul__(pzl, tr):
+            def operate(pzl, tr):
                 if tr not in self.transitions:
                     raise IllegalOperationError
                 pzl.state = self.applicationfunction(pzl.state, tr)
+            def __mul__(pzl, tr):
+                if tr not in self.transitions:
+                    raise IllegalOperationError
+                return self.puzzle(self.applicationfunction(pzl.state, tr))
+            def __str__(pzl):
+                return str(pzl.state)
         self.puzzle = Puzzle
     @staticmethod
     def tensor(pzlsystems):
