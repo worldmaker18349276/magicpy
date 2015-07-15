@@ -43,6 +43,8 @@ class PuzzleSystem:
         self.puzzle = Puzzle
     @staticmethod
     def tensor(pzlsystems):
+        if hasattr(pzlsystems, '__next__'):
+            pzlsystems = tuple(pzlsystems)
         stls = AbstractTensorSet(pzlsys.states for pzlsys in pzlsystems)
         trls = AbstractTensorSet(pzlsys.transitions for pzlsys in pzlsystems)
         apl = tuple(pzlsys.applicationfunction for pzlsys in pzlsystems)
@@ -51,6 +53,8 @@ class PuzzleSystem:
         return PuzzleSystem(stls, trls, lap)
     def __mul__(self, other):
         return self.tensor((self, other))
+    def __str__(self):
+        return '('+str(self.states)+', '+str(self.transitions)+', '+str(self.applicationfunction)+')'
 
 
 class AbstractSet:
@@ -60,14 +64,18 @@ class AbstractSet:
         return self.condition(member)
     def __mul__(self, other):
         return AbstractTensorSet((self, other))
+    def __str__(self):
+        return '{x|'+str(self.condition)+'(x)}'
 
 class AbstractTensorSet(AbstractSet):
     def __init__(self, asets):
-        if not all(hasattr(aset, '__contains__') for aset in asets):
+        self.sets = tuple(asets)
+        if not all(hasattr(aset, '__contains__') for aset in self.sets):
             raise ValueError
-        self.sets = asets
     def __contains__(self, members):
         if len(self.sets) != len(members):
             return False
         return all(map(operator.contains, self.sets, members))
+    def __str__(self):
+        return '*'.join(str(aset) for aset in self.sets)
 
