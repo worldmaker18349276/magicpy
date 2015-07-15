@@ -41,31 +41,29 @@ class PuzzleSystem:
             def __str__(pzl):
                 return str(pzl.state)
         self.puzzle = Puzzle
-    @staticmethod
-    def tensor(pzlsystems):
-        if hasattr(pzlsystems, '__next__'):
-            pzlsystems = tuple(pzlsystems)
-        stls = AbstractTensorSet(pzlsys.states for pzlsys in pzlsystems)
-        trls = AbstractTensorSet(pzlsys.transitions for pzlsys in pzlsystems)
-        apl = tuple(pzlsys.applicationfunction for pzlsys in pzlsystems)
-        def lap(stl, trl):
-            return tuple(map(lambda ap, st, tr: ap(st, tr), apl, stl, trl))
-        return PuzzleSystem(stls, trls, lap)
-    def __mul__(self, other):
-        return self.tensor((self, other))
     def __str__(self):
         return '('+str(self.states)+', '+str(self.transitions)+', '+str(self.applicationfunction)+')'
-
 
 class AbstractSet:
     def __init__(self, cond):
         self.condition = cond
     def __contains__(self, member):
         return self.condition(member)
-    def __mul__(self, other):
-        return AbstractTensorSet((self, other))
     def __str__(self):
         return '{x|'+str(self.condition)+'(x)}'
+
+
+def tensor(pzlsystems):
+    if hasattr(pzlsystems, '__next__'):
+        pzlsystems = tuple(pzlsystems)
+    stls = AbstractTensorSet(pzlsys.states for pzlsys in pzlsystems)
+    trls = AbstractTensorSet(pzlsys.transitions for pzlsys in pzlsystems)
+    apl = tuple(pzlsys.applicationfunction for pzlsys in pzlsystems)
+    def lap(stl, trl):
+        return tuple(map(lambda ap, st, tr: ap(st, tr), apl, stl, trl))
+    return PuzzleSystem(stls, trls, lap)
+
+PuzzleSystem.__mul__ = lambda self, other: tensor((self, other))
 
 class AbstractTensorSet(AbstractSet):
     def __init__(self, asets):
@@ -76,6 +74,11 @@ class AbstractTensorSet(AbstractSet):
         if len(self.sets) != len(members):
             return False
         return all(map(operator.contains, self.sets, members))
+    @property
+    def condition(self):
+        return self.__contains__
     def __str__(self):
-        return '*'.join(str(aset) for aset in self.sets)
+        return '('+'*'.join(str(aset) for aset in self.sets)+')'
+
+AbstractSet.__mul__ = lambda self, other: AbstractTensorSet((self, other))
 
