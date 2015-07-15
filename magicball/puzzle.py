@@ -18,44 +18,31 @@ class PuzzleSystem:
         self.states = st
         self.transitions = tr
         self.applicationfunction = func
-    def __mul__(self, other): # tensor product
-        return TensorPuzzleSystem(self, other)
-    def puzzle(pzlsystem):
         class Puzzle:
-            def __init__(self, st):
-                self.state = st
+            def __init__(pzl, st):
+                pzl.state = st
             @property
-            def system(self):
-                return pzlsystem
-            @property
-            def state(self):
-                return self.__state
+            def state(pzl):
+                return pzl.__state
             @state.setter
-            def setState(self, st):
-                if st not in pzlsystem.states:
+            def setState(pzl, st):
+                if st not in self.states:
                     raise IllegalStateError
-                self.__state = st
-            def __mul__(self, trans):
-                if trans not in pzlsystem.transitions:
+                pzl.__state = st
+            def __mul__(pzl, trans):
+                if trans not in self.transitions:
                     raise IllegalOperationError
-                self.state = pzlsystem.applicationfunction(self.state, trans)
-        return Puzzle
-
-class TensorPuzzleSystem(PuzzleSystem):
-    def __init__(self, *pzlsystems):
-        self.systems = pzlsystems
-    @property
-    def states(self):
-        AbstractTensorSet(*(pzlsys.states for pzlsys in self.systems))
-    @property
-    def transitions(self):
-        AbstractTensorSet(*(pzlsys.transitions for pzlsys in self.systems))
-    @property
-    def applicationfunction(self):
-        aps = tuple(pzlsys.applicationfunction for pzlsys in self.systems)
-        def tensorapplicationfunction(sts, trs):
+                pzl.state = self.applicationfunction(pzl.state, trans)
+        self.puzzle = Puzzle
+    def tensor(pzlsystems):
+        st = AbstractTensorSet(pzlsys.states for pzlsys in pzlsystems)
+        tr = AbstractTensorSet(pzlsys.transitions for pzlsys in pzlsystems)
+        aps = tuple(pzlsys.applicationfunction for pzlsys in pzlsystems)
+        def ap(sts, trs):
             return tuple(map(lambda ap, st, tr: ap(st, tr), aps, sts, trs))
-        return tensorapplicationfunction
+        return PuzzleSystem(st, tr, ap)
+    def __mul__(self, other):
+        return tensor((self, other))
 
 
 class AbstractSet:
@@ -63,14 +50,11 @@ class AbstractSet:
         self.condition = cond
     def __contains__(self, member):
         return self.condition(member)
-    def __mul__(self, other): # tensor product
-        if hasattr(other, '__contains__'):
-            return AbstractTensorSet(self, other)
-        else:
-            raise ValueError
+    def __mul__(self, other):
+        return AbstractTensorSet((self, other))
 
 class AbstractTensorSet(AbstractSet):
-    def __init__(self, *asets):
+    def __init__(self, asets):
         if not all(hasattr(aset, '__contains__') for aset in asets):
             raise ValueError
         self.sets = asets
@@ -78,9 +62,4 @@ class AbstractTensorSet(AbstractSet):
         if len(self.sets) != len(members):
             return False
         return all(members in aset for aset in self.sets)
-    def __mul__(self, other): # tensor product
-        if hasattr(other, '__contains__'):
-            return AbstractTensorSet(*self.sets, other)
-        else:
-            raise ValueError
 
