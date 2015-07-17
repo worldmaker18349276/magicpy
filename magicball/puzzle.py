@@ -1,3 +1,4 @@
+from functools import reduce
 import operator
 
 
@@ -21,6 +22,29 @@ class PuzzleSystem:
         self.application = ap
     def __str__(self):
         return '('+str(self.stateset)+', '+str(self.operationset)+', '+str(self.application)+')'
+    def operation(self, *args, **kwargs):
+        return Operation(self, *args, **kwargs)
+    def puzzle(self, *args, **kwargs):
+        return Puzzle(self, *args, **kwargs)
+
+class ContinuousPuzzleSystem(PuzzleSystem):
+    def __init__(self, sts, eops, eap):
+        if not hasattr(sts, '__contains__'):
+            raise ValueError
+        if not hasattr(eops, '__contains__'):
+            raise ValueError
+        if not hasattr(eap, '__call__'):
+            raise ValueError
+        self.stateset = sts
+        self.extendedoperationset = eops
+        self.extendedapplication = eap
+    @property
+    def operationset(self):
+        return self.extendedoperationset
+    def application(self, st, eop):
+        return self.extendedapplication(st, eop)
+    def __str__(self):
+        return '('+str(self.stateset)+', '+str(self.extendedoperationset)+', '+str(self.extendedapplication)+')'
     def operation(self, *args, **kwargs):
         return Operation(self, *args, **kwargs)
     def puzzle(self, *args, **kwargs):
