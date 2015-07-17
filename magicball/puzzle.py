@@ -9,85 +9,85 @@ class IllegalStateError(Exception):
 
 
 class PuzzleSystem:
-    def __init__(self, sts, trs, ap):
+    def __init__(self, sts, ops, ap):
         if not hasattr(sts, '__contains__'):
             raise ValueError
-        if not hasattr(trs, '__contains__'):
+        if not hasattr(ops, '__contains__'):
             raise ValueError
         if not hasattr(ap, '__call__'):
             raise ValueError
-        self.states = sts
-        self.transitions = trs
-        self.applicationfunction = ap
+        self.stateset = sts
+        self.operationset = ops
+        self.application = ap
     def __str__(self):
-        return '('+str(self.states)+', '+str(self.transitions)+', '+str(self.applicationfunction)+')'
+        return '('+str(self.stateset)+', '+str(self.operationset)+', '+str(self.application)+')'
     def operation(self, *args, **kwargs):
         return Operation(self, *args, **kwargs)
     def puzzle(self, *args, **kwargs):
         return Puzzle(self, *args, **kwargs)
 
 class Operation:
-    def __init__(op, pzlsys, trs):
-        op.system = pzlsys
-        op.transitions = tuple(trs)
+    def __init__(self, pzlsys, ops):
+        self.system = pzlsys
+        self.operations = tuple(ops)
     @property
-    def transitions(op):
-        return op.__transitions
-    @transitions.setter
-    def transitions(op, trs):
-        if all(tr not in op.system.transitions for tr in trs):
+    def operations(self):
+        return self.__operations
+    @operations.setter
+    def operations(self, ops):
+        if all(op not in self.system.operationset for op in ops):
             raise IllegalOperationError
-        op.__transitions = trs
-    def append(op, tr):
-        if tr in op.system.transitions:
-            op.__transitions = op.__transitions + (tr)
-        elif isinstance(tr, Operation) and tr.system == op.system:
-            op.__transitions = op.__transitions + tr.__transitions
+        self.__operations = ops
+    def append(self, op):
+        if op in self.system.operationset:
+            self.__operations = self.__operations + (op)
+        elif isinstance(op, Operation) and op.system == self.system:
+            self.__operations = self.__operations + op.__operations
         else:
             raise IllegalOperationError
-    def __mul__(op, tr):
-        if tr in op.system.transitions:
-            return op.system.operation(op.__transitions + (tr))
-        elif isinstance(tr, Operation) and tr.system == op.system:
-            return op.system.operation(op.__transitions + tr.__transitions)
+    def __mul__(self, op):
+        if op in self.system.operationset:
+            return self.system.operation(self.__operations + (op))
+        elif isinstance(op, Operation) and op.system == self.system:
+            return self.system.operation(self.__operations + op.__operations)
         else:
             raise IllegalOperationError
-    def __iter__(op):
-        return iter(op.transitions)
-    def __str__(op):
-        return '*'.join(str(tr) for tr in op.transitions)
+    def __iter__(self):
+        return iter(self.operations)
+    def __str__(self):
+        return '*'.join(str(op) for op in self.operations)
 
 class Puzzle:
-    def __init__(pzl, pzlsys, st):
-        pzl.system = pzlsys
-        pzl.state = st
+    def __init__(self, pzlsys, st):
+        self.system = pzlsys
+        self.state = st
     @property
-    def state(pzl):
-        return pzl.__state
+    def state(self):
+        return self.__state
     @state.setter
-    def state(pzl, st):
-        if st not in pzl.system.states:
+    def state(self, st):
+        if st not in self.system.stateset:
             raise IllegalStateError
-        pzl.__state = st
-    def operate(pzl, tr):
-        if tr in pzl.system.transitions:
-            pzl.state = pzl.system.applicationfunction(pzl.state, tr)
-        elif isinstance(tr, Operation) and tr.system == pzl.system:
-            for _ in map(pzl.operate, tr):
+        self.__state = st
+    def operate(self, op):
+        if op in self.system.operationset:
+            self.state = self.system.application(self.state, op)
+        elif isinstance(op, Operation) and op.system == self.system:
+            for _ in map(self.operate, op):
                 pass
         else:
             raise IllegalOperationError
-    def __mul__(pzl, tr):
-        if tr in pzl.system.transitions:
-            return pzl.system.puzzle(pzl.system.applicationfunction(pzl.state, tr))
-        elif isinstance(tr, Operation) and tr.system == pzl.system:
-            pzl2 = pzl.system.puzzle(pzl.state)
-            pzl2.operate(tr)
+    def __mul__(self, op):
+        if op in self.system.operationset:
+            return self.system.puzzle(self.system.application(self.state, op))
+        elif isinstance(op, Operation) and op.system == self.system:
+            pzl2 = self.system.puzzle(self.state)
+            pzl2.operate(op)
             return pzl2
         else:
             raise IllegalOperationError
-    def __str__(pzl):
-        return str(pzl.state)
+    def __str__(self):
+        return str(self.state)
 
 class AbstractSet:
     def __init__(self, cond):
@@ -101,12 +101,12 @@ class AbstractSet:
 def tensor(pzlsystems):
     if hasattr(pzlsystems, '__next__'):
         pzlsystems = tuple(pzlsystems)
-    stls = AbstractTensorSet(pzlsys.states for pzlsys in pzlsystems)
-    trls = AbstractTensorSet(pzlsys.transitions for pzlsys in pzlsystems)
-    apl = tuple(pzlsys.applicationfunction for pzlsys in pzlsystems)
-    def lap(stl, trl):
-        return tuple(map(lambda ap, st, tr: ap(st, tr), apl, stl, trl))
-    return PuzzleSystem(stls, trls, lap)
+    stls = AbstractTensorSet(pzlsys.stateset for pzlsys in pzlsystems)
+    opls = AbstractTensorSet(pzlsys.operationset for pzlsys in pzlsystems)
+    apl = tuple(pzlsys.application for pzlsys in pzlsystems)
+    def lap(stl, opl):
+        return tuple(map(lambda ap, st, op: ap(st, op), apl, stl, opl))
+    return PuzzleSystem(stls, opls, lap)
 
 PuzzleSystem.__mul__ = lambda self, other: tensor((self, other))
 
