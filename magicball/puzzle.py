@@ -141,6 +141,8 @@ def restrict(pzlsys, cond):
             else:
                 return None
         return PuzzleSystem(restrictedstateset, pzlsys.operationset, restrictedapplication)
+    else:
+        raise ValueError
 
 
 def tensor(pzlsystems):
@@ -157,7 +159,7 @@ def tensor(pzlsystems):
             else:
                 return stl2
         return PuzzleSystem(stls, opls, lap)
-    if all(isinstance(pzlsys, PuzzleSystem) for pzlsys in pzlsystems):
+    elif all(isinstance(pzlsys, PuzzleSystem) and not isinstance(pzlsys, ContinuousPuzzleSystem) for pzlsys in pzlsystems):
         pzlsystems = tuple(pzlsystems)
         stls = AbstractTensorSet(pzlsys.stateset for pzlsys in pzlsystems)
         opls = AbstractTensorSet(pzlsys.operationset for pzlsys in pzlsystems)
@@ -169,6 +171,6 @@ def tensor(pzlsystems):
             else:
                 return stl2
         return PuzzleSystem(stls, opls, lap)
-
-PuzzleSystem.__mul__ = lambda self, other: tensor((self, other))
+    else:
+        raise ValueError
 
