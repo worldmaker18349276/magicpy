@@ -13,7 +13,7 @@ class EngineFunction():
                 return func(*args, **kwargs)
             except UnsupportedAlgorithmError:
                 continue
-            raise UnsupportedAlgorithmError
+        raise UnsupportedAlgorithmError
     def __or__(self, other):
         if isinstance(other, EngineFunction):
             return EngineFunction(self.functions + other.functions)
@@ -53,8 +53,7 @@ class EngineMeta(type):
                             return func(*args, **kwargs)
                         except UnsupportedAlgorithmError:
                             continue
-                    classes = map(lambda l:getattr(l,'__bases__',tuple()), classes)
-                    classes = reduce(tuple.__add__, classes, tuple())
+                    classes = [blz for blz in getattr(clz,'__bases__',[]) for clz in classes]
                 raise UnsupportedAlgorithmError
             return enginemthd
         else:
@@ -76,8 +75,7 @@ class Engine(metaclass=EngineMeta):
                             return func(*args, **kwargs)
                         except UnsupportedAlgorithmError:
                             continue
-                    classes = map(lambda l:getattr(l,'__bases__',tuple()), classes)
-                    classes = reduce(tuple.__add__, classes, tuple())
+                    classes = [blz for blz in getattr(clz,'__bases__',[]) for clz in classes]
                 raise UnsupportedAlgorithmError
             return enginemthd
         else:
