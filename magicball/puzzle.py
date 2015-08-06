@@ -12,11 +12,11 @@ class IllegalStateError(Exception):
 class PuzzleSystem:
     def __init__(self, sts, ops, ap):
         if not hasattr(sts, '__contains__'):
-            raise ValueError
+            raise TypeError
         if not hasattr(ops, '__contains__'):
-            raise ValueError
+            raise TypeError
         if not hasattr(ap, '__call__'):
-            raise ValueError
+            raise TypeError
         self.states = sts
         self.operations = ops
         self.application = ap
@@ -32,11 +32,11 @@ class PuzzleSystem:
 class DiscretePuzzleSystem(PuzzleSystem):
     def __init__(self, sts, pops, pap):
         if not hasattr(sts, '__contains__'):
-            raise ValueError
+            raise TypeError
         if not hasattr(pops, '__contains__'):
-            raise ValueError
+            raise TypeError
         if not hasattr(pap, '__call__'):
-            raise ValueError
+            raise TypeError
         self.states = sts
         self.primaryoperations = pops
         self.primaryapplication = pap
@@ -55,11 +55,11 @@ class DiscretePuzzleSystem(PuzzleSystem):
 class ContinuousPuzzleSystem(PuzzleSystem):
     def __init__(self, sts, bops, bap):
         if not hasattr(sts, '__contains__'):
-            raise ValueError
+            raise TypeError
         if not hasattr(bops, '__contains__'):
-            raise ValueError
+            raise TypeError
         if not hasattr(bap, '__call__'):
-            raise ValueError
+            raise TypeError
         self.states = sts
         self.basedoperations = bops
         self.basedapplication = bap

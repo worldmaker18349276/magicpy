@@ -3,34 +3,32 @@ import operator
 
 class AbstractSet:
     def __init__(self, cond):
+        if not hasattr(cond, '__call__'):
+            raise TypeError
         self.condition = cond
-    def __contains__(self, member):
-        return self.condition(member)
+    def __contains__(self, mem):
+        return self.condition(mem)
     def __and__(self, other):
         if not hasattr(other, '__contains__'):
-            raise ValueError
-        cond1 = self.condition
-        cond2 = other.condition
-        return AbstractSet(lambda mem: cond1(mem) and cond2(mem))
+            raise TypeError
+        return AbstractSet(lambda mem: mem in cond1 and mem in cond2)
     def __or__(self, other):
         if not hasattr(other, '__contains__'):
-            raise ValueError
-        cond1 = self.condition
-        cond2 = other.condition
-        return AbstractSet(lambda mem: cond1(mem) or cond2(mem))
+            raise TypeError
+        return AbstractSet(lambda mem: mem in cond1 or mem in cond2)
     def __invert__(self):
-        cond = self.condition
-        return AbstractSet(lambda mem: not cond(mem))
+        return AbstractSet(lambda mem: not mem in cond)
     def __mul__(self, other):
         return AbstractSet.tensor((self, other))
     def __pow__(self, n):
         return AbstractSet.tensor((self,)*n)
+    @classmethod
     def tensor(asets):
         asets = tuple(asets)
-        if not all(hasattr(aset, '__contains__') for aset in self.sets):
-            raise ValueError
+        if any(not hasattr(aset, '__contains__') for aset in asets):
+            raise TypeError
         def tensor_contains(mem):
-            if not hasattr(mem, '__len__'):
+            if not isinstance(mem, tuple):
                 return False
             if len(asets) != len(mem):
                 return False
@@ -47,7 +45,14 @@ class FreeMonoid(AbstractSet):
         if not isinstance(mem, list):
             return False
         return all(mem[t] in self.alphabet for t in range(len(mem)))
+    def __mul__(self, other):
+        return FreeMonoid.tensor((self, other))
+    def __pow__(self, n):
+        return FreeMonoid.tensor((self,)*n)
+    @classmethod
     def tensor(pmnds):
+        if any(not isinstance(pmnd, FreeMonoid) for pmnd in pmnds):
+            raise TypeError
         return FreeMonoid(AbstractSet.tensor(pmnd.alphabet for pmnd in pmnds))
 
 class PathMonoid(AbstractSet):
@@ -59,7 +64,14 @@ class PathMonoid(AbstractSet):
         if not isinstance(mem, Path):
             return False
         return all(mem(t) in self.base for t in range(len(mem)))
+    def __mul__(self, other):
+        return PathMonoid.tensor((self, other))
+    def __pow__(self, n):
+        return PathMonoid.tensor((self,)*n)
+    @classmethod
     def tensor(pmnds):
+        if any(not isinstance(pmnd, PathMonoid) for pmnd in pmnds):
+            raise TypeError
         return PathMonoid(AbstractSet.tensor(pmnd.base for pmnd in pmnds))
 
 class Path:
@@ -78,21 +90,22 @@ class Path:
         return Path(lambda t: func1(flen1)*func2(t-flen1) if t>flen1 else func1(t), flen1+flen2)
     def __getitem__(self, key):
         if not isinstance(key, slice):
-            raise ValueError
+            raise TypeError
+        func = self.function
         stp = key.stop if key.stop is not None else self.length
         strt = key.start if key.start is not None else 0
         if stp not in range(self.length+1) or strt not in range(self.length) or stp < strt:
-            raise ValueError
-        func = self.function
+            raise IndexError
         return Path(lambda t: func(strt+t), stp-strt)
     def __call__(self, t):
         if t not in range(self.length):
-            raise ValueError
+            raise IndexError
         return self.function(t)
     def __mul__(self, other):
         return Path.tensor((self, other))
     def __pow__(self, n):
         return Path.tensor((self,)*n)
+    @classmethod
     def tensor(pths):
         pths = tuple(pths)
         if any(not isinstance(pth, Path) for pth in pths):
