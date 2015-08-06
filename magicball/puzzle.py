@@ -28,14 +28,6 @@ class PuzzleSystem:
         if any(eap(st, eop[:t+1]) not in rsts for t in range(len(eop))):
             return None
         return eap(st, eop)
-    def tensor(pzlsystems):
-        pzlsystems = tuple(pzlsystems)
-        stls = AbstractSet.tensor(pzlsys.stateset for pzlsys in pzlsystems)
-        samelen = lambda eopl: max(len(eop) for eop in eopl) == min(len(eop) for eop in eopl)
-        eopls = AbstractSet.tensor(pzlsys.extendedoperationset for pzlsys in pzlsystems) & AbstractSet(samelen)
-        eapl = tuple(pzlsys.extendedapplication for pzlsys in pzlsystems)
-        leap = lambda stl, eopl: tuple(map(lambda eap, st, eop: eap(st, eop), eapl, stl, eopl))
-        return PuzzleSystem(stls, eopls, leap)
 
 class DiscretePuzzleSystem(PuzzleSystem):
     def __init__(self, sts, ops, ap):
@@ -48,9 +40,17 @@ class DiscretePuzzleSystem(PuzzleSystem):
         self.stateset = sts
         self.operationset = ops
         self.application = ap
-        self.extendedoperationset = AbstractSet(lambda eop: all(op in ops for op in eop)
-                                                if hasattr(eop, '__len__') else False)
+        self.extendedoperationset = FreeMonoid(ops)
         self.extendedapplication = lambda st, eop: reduce(ap, eop, st)
+    def tensor(pzlsystems):
+        pzlsystems = tuple(pzlsystems)
+        if any(not isinstance(pzlsys, DiscretePuzzleSystem) for pzlsys in pzlsystems):
+            raise TypeError
+        stls = AbstractSet.tensor(pzlsys.stateset for pzlsys in pzlsystems)
+        opls = AbstractSet.tensor(pzlsys.operationset for pzlsys in pzlsystems)
+        apl = tuple(pzlsys.application for pzlsys in pzlsystems)
+        lap = lambda stl, opl: tuple(map(lambda ap, st, op: ap(st, op), apl, stl, opl))
+        return DiscretePuzzleSystem(stls, opls, lap)
 
 class ContinuousPuzzleSystem(PuzzleSystem):
     def __init__(self, sts, bops, bap):
@@ -63,7 +63,15 @@ class ContinuousPuzzleSystem(PuzzleSystem):
         self.stateset = sts
         self.basedoperationset = bops
         self.basedapplication = bap
-        self.extendedoperationset = AbstractSet(lambda eop: all(eop(t) in bops for t in range(len(eop)))
-                                                if isinstance(eop, Path) else False)
+        self.extendedoperationset = PathMonoid(bops)
         self.extendedapplication = lambda st, eop: bap(st, eop(len(eop)))
+    def tensor(pzlsystems):
+        pzlsystems = tuple(pzlsystems)
+        if any(not isinstance(pzlsys, ContinuousPuzzleSystem) for pzlsys in pzlsystems):
+            raise TypeError
+        stls = AbstractSet.tensor(pzlsys.stateset for pzlsys in pzlsystems)
+        bopls = ContinuousPuzzleSystem.tensor(pzlsys.basedoperationset for pzlsys in pzlsystems)
+        bapl = tuple(pzlsys.basedapplication for pzlsys in pzlsystems)
+        lbap = lambda stl, bopl: tuple(map(lambda bap, st, bop: bap(st, bop), bapl, stl, bopl))
+        return ContinuousPuzzleSystem(stls, bopls, lbap)
 

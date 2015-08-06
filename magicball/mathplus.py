@@ -38,6 +38,30 @@ class AbstractSet:
         return AbstractSet(tensor_contains)
 
 
+class FreeMonoid(AbstractSet):
+    def __init__(self, ab):
+        if not hasattr(ab, '__contains__'):
+            raise TypeError
+        self.alphabet = ab
+    def __contains__(self, mem):
+        if not isinstance(mem, list):
+            return False
+        return all(mem[t] in self.alphabet for t in range(len(mem)))
+    def tensor(pmnds):
+        return FreeMonoid(AbstractSet.tensor(pmnd.alphabet for pmnd in pmnds))
+
+class PathMonoid(AbstractSet):
+    def __init__(self, bs):
+        if not hasattr(bs, '__contains__'):
+            raise TypeError
+        self.base = bs
+    def __contains__(self, mem):
+        if not isinstance(mem, Path):
+            return False
+        return all(mem(t) in self.base for t in range(len(mem)))
+    def tensor(pmnds):
+        return PathMonoid(AbstractSet.tensor(pmnd.base for pmnd in pmnds))
+
 class Path:
     def __init__(self, func, flen):
         self.function = func
@@ -76,3 +100,4 @@ class Path:
         if max(len(pth) for pth in pths) != min(len(pth) for pth in pths):
             raise ValueError
         return Path(lambda t: tuple(map(pth.function(t) for pth in pths)), len(pths[0]))
+
