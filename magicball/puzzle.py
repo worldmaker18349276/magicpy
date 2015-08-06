@@ -28,6 +28,14 @@ class PuzzleSystem:
         if any(eap(st, eop[:t+1]) not in rsts for t in range(len(eop))):
             return None
         return eap(st, eop)
+    def tensor(pzlsystems):
+        pzlsystems = tuple(pzlsystems)
+        stls = AbstractSet.tensor(pzlsys.stateset for pzlsys in pzlsystems)
+        samelen = lambda eopl: max(len(eop) for eop in eopl) == min(len(eop) for eop in eopl)
+        eopls = AbstractSet.tensor(pzlsys.extendedoperationset for pzlsys in pzlsystems) & AbstractSet(samelen)
+        eapl = tuple(pzlsys.extendedapplication for pzlsys in pzlsystems)
+        leap = lambda stl, eopl: tuple(map(lambda eap, st, eop: eap(st, eop), eapl, stl, eopl))
+        return PuzzleSystem(stls, eopls, leap)
 
 class DiscretePuzzleSystem(PuzzleSystem):
     def __init__(self, sts, ops, ap):
@@ -58,34 +66,4 @@ class ContinuousPuzzleSystem(PuzzleSystem):
         self.extendedoperationset = AbstractSet(lambda eop: all(eop(t) in bops for t in range(len(eop)))
                                                 if isinstance(eop, Path) else False)
         self.extendedapplication = lambda st, eop: bap(st, eop(len(eop)))
-
-
-def tensor(pzlsystems):
-    if all(isinstance(pzlsys, ContinuousPuzzleSystem) for pzlsys in pzlsystems):
-        pzlsystems = tuple(pzlsystems)
-        stls = AbstractTensorSet(pzlsys.stateset for pzlsys in pzlsystems)
-        samelen = lambda opl: max(len(op) for op in opl) == min(len(op) for op in opl)
-        opls = AbstractTensorSet(pzlsys.extendedoperationset for pzlsys in pzlsystems) & AbstractSet(samelen)
-        apl = tuple(pzlsys.extendedapplication for pzlsys in pzlsystems)
-        def lap(stl, opl):
-            stl2 = tuple(map(lambda ap, st, op: ap(st, op), apl, stl, opl))
-            if any(st2 is None for st2 in stl2):
-                return None
-            else:
-                return stl2
-        return PuzzleSystem(stls, opls, lap)
-    elif all(isinstance(pzlsys, PuzzleSystem) and not isinstance(pzlsys, ContinuousPuzzleSystem) for pzlsys in pzlsystems):
-        pzlsystems = tuple(pzlsystems)
-        stls = AbstractTensorSet(pzlsys.stateset for pzlsys in pzlsystems)
-        opls = AbstractTensorSet(pzlsys.operationset for pzlsys in pzlsystems)
-        apl = tuple(pzlsys.application for pzlsys in pzlsystems)
-        def lap(stl, opl):
-            stl2 = tuple(map(lambda ap, st, op: ap(st, op), apl, stl, opl))
-            if any(st2 is None for st2 in stl2):
-                return None
-            else:
-                return stl2
-        return PuzzleSystem(stls, opls, lap)
-    else:
-        raise ValueError
 
