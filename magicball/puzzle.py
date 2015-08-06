@@ -22,39 +22,12 @@ class PuzzleSystem:
         self.extendedapplication = eap
     def __str__(self):
         return '('+str(self.stateset)+', '+str(self.extendedoperationset)+', '+str(self.extendedapplication)+')'
-    def puzzle(self, *args, **kwargs):
-        return Puzzle(self, *args, **kwargs)
-    def restrict(self, cond):
-        rsts = AbstractSet(cond) & self.stateset
-        eap = self.extendedapplication
-        erap = lambda rst, eop: eap(rst, eop[:len(eop)])
-               if all(eap(rst, eop[:t]) in rsts for t in range(len(eop)))
-               else None
-        return PuzzleSystem(rsts, self.extendedoperationset, erap)
-
-class Puzzle:
-    def __init__(self, pzlsys, st):
-        self.system = pzlsys
-        self.state = st
-    @property
-    def state(self):
-        return self.__state
-    @state.setter
-    def state(self, st):
-        if st not in self.system.stateset:
-            raise IllegalStateError
-        self.__state = st
-    def __imul__(self, op):
-        if op not in self.system.extendedoperationset:
-            raise IllegalOperationError
-        self.state = self.system.extendedapplication(self.state, op)
-    def __mul__(self, op):
-        if op not in self.system.extendedoperationset:
-            raise IllegalOperationError
-        return self.system.puzzle(self.system.extendedapplication(self.state, op))
-    def __str__(self):
-        return str(self.state)
-
+    def apply(self, st, eop):
+        if st not in self.stateset or eop not in self.extendedoperationset:
+            return None
+        if any(eap(st, eop[:t+1]) not in rsts for t in range(len(eop))):
+            return None
+        return eap(st, eop)
 
 class DiscretePuzzleSystem(PuzzleSystem):
     def __init__(self, sts, ops, ap):
@@ -83,11 +56,8 @@ class ContinuousPuzzleSystem(PuzzleSystem):
         self.basedoperationset = bops
         self.basedapplication = bap
         self.extendedoperationset = AbstractSet(lambda eop: all(eop(t) in bops for t in range(len(eop)))
-                                                if hasattr(eop, '__len__') and hasattr(eop, '__call__')
-                                                else False)
+                                                if isinstance(eop, Path) else False)
         self.extendedapplication = lambda st, eop: bap(st, eop(len(eop)))
-                                   if all(bap(st, eop(t)) is not None for t in range(len(eop)))
-                                   else None
 
 
 def tensor(pzlsystems):
