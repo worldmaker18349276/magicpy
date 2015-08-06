@@ -24,6 +24,13 @@ class PuzzleSystem:
         return '('+str(self.stateset)+', '+str(self.extendedoperationset)+', '+str(self.extendedapplication)+')'
     def puzzle(self, *args, **kwargs):
         return Puzzle(self, *args, **kwargs)
+    def restrict(self, cond):
+        rsts = AbstractSet(cond) & self.stateset
+        eap = self.extendedapplication
+        erap = lambda rst, eop: eap(rst, eop[:len(eop)])
+               if all(eap(rst, eop[:t]) in rsts for t in range(len(eop)))
+               else None
+        return PuzzleSystem(rsts, self.extendedoperationset, erap)
 
 class Puzzle:
     def __init__(self, pzlsys, st):
@@ -81,36 +88,6 @@ class ContinuousPuzzleSystem(PuzzleSystem):
         self.extendedapplication = lambda st, eop: bap(st, eop(len(eop)))
                                    if all(bap(st, eop(t)) is not None for t in range(len(eop)))
                                    else None
-
-
-def restrict(pzlsys, cond):
-    if isinstance(pzlsys, ContinuousPuzzleSystem):
-        restrictedstateset = pzlsys.stateset & AbstractSet(cond)
-        def extendedrestrictedapplication(st, eop):
-            def rap(st, eop):
-                if st is None:
-                    return None
-                st2 = pzlsys.extendedapplication(st, eop)
-                if st2 in restrictedstateset:
-                    return st2
-                else:
-                    return None
-            n = 1000
-            return reduce(rap, eop[::1/n], st)
-        return ContinuousPuzzleSystem(restrictedstateset, pzlsys.extendedoperationset, extendedrestrictedapplication)
-    elif isinstance(pzlsys, PuzzleSystem):
-        restrictedstateset = pzlsys.stateset & AbstractSet(cond)
-        def restrictedapplication(st, op):
-            if st is None:
-                return None
-            st2 = pzlsys.application(st, op)
-            if st2 in restrictedstateset:
-                return st2
-            else:
-                return None
-        return PuzzleSystem(restrictedstateset, pzlsys.operationset, restrictedapplication)
-    else:
-        raise ValueError
 
 
 def tensor(pzlsystems):
