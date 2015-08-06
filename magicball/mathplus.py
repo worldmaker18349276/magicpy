@@ -7,43 +7,17 @@ class AbstractSet:
     def __contains__(self, member):
         return self.condition(member)
     def __and__(self, other):
-        if isinstance(other, AbstractAndSet):
-            return AbstractAndSet((self) + other.sets)
-        else:
-            return AbstractAndSet((self, other))
+        if not hasattr(other, '__contains__'):
+            raise ValueError
+        cond1 = self.condition
+        cond2 = other.condition
+        return AbstractSet(lambda mem: cond1(mem) and cond2(mem))
     def __or__(self, other):
-        if isinstance(other, AbstractOrSet):
-            return AbstractOrSet((self) + other.sets)
-        else:
-            return AbstractOrSet((self, other))
-    def __str__(self):
-        return '{x|'+str(self.condition)+'(x)}'
-
-class AbstractAndSet(AbstractSet):
-    def __init__(self, asets):
-        self.sets = tuple(asets)
-    def __contains__(self, member):
-        return all(member in aset for aset in self.sets)
-    def __and__(self, other):
-        if isinstance(other, AbstractAndSet):
-            return AbstractAndSet(self.sets + other.sets)
-        else:
-            return AbstractAndSet(self.sets + (other))
-    def __str__(self):
-        return '('+'&'.join(str(aset) for aset in self.sets)+')'
-
-class AbstractOrSet(AbstractSet):
-    def __init__(self, asets):
-        self.sets = tuple(asets)
-    def __contains__(self, member):
-        return all(member in aset for aset in self.sets)
-    def __or__(self, other):
-        if isinstance(other, AbstractOrSet):
-            return AbstractOrSet(self.sets + other.sets)
-        else:
-            return AbstractOrSet(self.sets + (other))
-    def __str__(self):
-        return '('+'|'.join(str(aset) for aset in self.sets)+')'
+        if not hasattr(other, '__contains__'):
+            raise ValueError
+        cond1 = self.condition
+        cond2 = other.condition
+        return AbstractSet(lambda mem: cond1(mem) or cond2(mem))
 
 
 class AbstractTensorSet(AbstractSet):
@@ -60,8 +34,6 @@ class AbstractTensorSet(AbstractSet):
     @property
     def condition(self):
         return self.__contains__
-    def __str__(self):
-        return '('+'*'.join(str(aset) for aset in self.sets)+')'
 
 
 class Path:
@@ -71,26 +43,24 @@ class Path:
     def __len__( self ):
         return self.length
     def __add__( self, other ):
-        if isinstance(other, Path):
-            func1 = self.function
-            func2 = other.function
-            flen1 = self.length
-            flen2 = other.length
-            return Path(lambda t: func1(flen1)*func2(t-flen1) if t>flen1 else func1(t), flen1+flen2)
-        else:
+        if not isinstance(other, Path):
             raise ValueError
+        func1 = self.function
+        func2 = other.function
+        flen1 = self.length
+        flen2 = other.length
+        return Path(lambda t: func1(flen1)*func2(t-flen1) if t>flen1 else func1(t), flen1+flen2)
     def __getitem__( self, key ):
         if not isinstance(key, slice):
             raise ValueError
-        stp = key.stop or self.length
-        strt = key.start or 0
-        if stp not in range(self.length) or strt not in range(self.length) or stp < strt:
+        stp = key.stop if key.stop is not None else self.length
+        strt = key.start if key.start is not None else 0
+        if stp not in range(self.length+1) or strt not in range(self.length) or stp < strt:
             raise ValueError
         func = self.function
         return Path(lambda t: func(strt+t), stp-strt)
     def __call__( self, t ):
-        if t in range(self.length):
-            return self.function(t)
-        else:
+        if t not in range(self.length):
             raise ValueError
+        return self.function(t)
 
