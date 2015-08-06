@@ -18,22 +18,24 @@ class AbstractSet:
         cond1 = self.condition
         cond2 = other.condition
         return AbstractSet(lambda mem: cond1(mem) or cond2(mem))
-
-
-class AbstractTensorSet(AbstractSet):
-    def __init__(self, asets):
-        self.sets = tuple(asets)
+    def __invert__(self):
+        cond = self.condition
+        return AbstractSet(lambda mem: not cond(mem))
+    def __mul__(self, other):
+        return tensor((self, other))
+    def __pow__(self, n):
+        return tensor((self,)*n)
+    def tensor(asets):
+        asets = tuple(asets)
         if not all(hasattr(aset, '__contains__') for aset in self.sets):
             raise ValueError
-    def __contains__(self, members):
-        if not hasattr(members, '__len__'):
-            return False
-        if len(self.sets) != len(members):
-            return False
-        return all(map(operator.contains, self.sets, members))
-    @property
-    def condition(self):
-        return self.__contains__
+        def tensor_contains(mem):
+            if not hasattr(mem, '__len__'):
+                return False
+            if len(asets) != len(mem):
+                return False
+            return all(map(operator.contains, asets, mem))
+        return AbstractSet(tensor_contains)
 
 
 class Path:
