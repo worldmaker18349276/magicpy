@@ -22,9 +22,9 @@ class AbstractSet:
         cond = self.condition
         return AbstractSet(lambda mem: not cond(mem))
     def __mul__(self, other):
-        return tensor((self, other))
+        return AbstractSet.tensor((self, other))
     def __pow__(self, n):
-        return tensor((self,)*n)
+        return AbstractSet.tensor((self,)*n)
     def tensor(asets):
         asets = tuple(asets)
         if not all(hasattr(aset, '__contains__') for aset in self.sets):
@@ -39,12 +39,12 @@ class AbstractSet:
 
 
 class Path:
-    def __init__( self, func, flen ):
+    def __init__(self, func, flen):
         self.function = func
         self.length = flen
-    def __len__( self ):
+    def __len__(self):
         return self.length
-    def __add__( self, other ):
+    def __add__(self, other):
         if not isinstance(other, Path):
             raise ValueError
         func1 = self.function
@@ -52,7 +52,7 @@ class Path:
         flen1 = self.length
         flen2 = other.length
         return Path(lambda t: func1(flen1)*func2(t-flen1) if t>flen1 else func1(t), flen1+flen2)
-    def __getitem__( self, key ):
+    def __getitem__(self, key):
         if not isinstance(key, slice):
             raise ValueError
         stp = key.stop if key.stop is not None else self.length
@@ -61,8 +61,18 @@ class Path:
             raise ValueError
         func = self.function
         return Path(lambda t: func(strt+t), stp-strt)
-    def __call__( self, t ):
+    def __call__(self, t):
         if t not in range(self.length):
             raise ValueError
         return self.function(t)
-
+    def __mul__(self, other):
+        return Path.tensor((self, other))
+    def __pow__(self, n):
+        return Path.tensor((self,)*n)
+    def tensor(pths):
+        pths = tuple(pths)
+        if any(not isinstance(pth, Path) for pth in pths):
+            raise TypeError
+        if max(len(pth) for pth in pths) != min(len(pth) for pth in pths):
+            raise ValueError
+        return Path(lambda t: tuple(map(pth.function(t) for pth in pths)), len(pths[0]))
