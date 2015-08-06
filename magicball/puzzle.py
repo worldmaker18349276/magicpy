@@ -49,6 +49,40 @@ class Puzzle:
         return str(self.state)
 
 
+class DiscretePuzzleSystem(PuzzleSystem):
+    def __init__(self, sts, ops, ap):
+        if not hasattr(sts, '__contains__'):
+            raise ValueError
+        if not hasattr(ops, '__contains__'):
+            raise ValueError
+        if not hasattr(ap, '__call__'):
+            raise ValueError
+        self.stateset = sts
+        self.operationset = ops
+        self.application = ap
+        self.extendedoperationset = AbstractSet(lambda eop: all(op in ops for op in eop)
+                                                if hasattr(eop, '__len__') else False)
+        self.extendedapplication = lambda st, eop: reduce(ap, eop, st)
+
+class ContinuousPuzzleSystem(PuzzleSystem):
+    def __init__(self, sts, bops, bap):
+        if not hasattr(sts, '__contains__'):
+            raise ValueError
+        if not hasattr(bops, '__contains__'):
+            raise ValueError
+        if not hasattr(bap, '__call__'):
+            raise ValueError
+        self.stateset = sts
+        self.basedoperationset = bops
+        self.basedapplication = bap
+        self.extendedoperationset = AbstractSet(lambda eop: all(eop(t) in bops for t in range(len(eop)))
+                                                if hasattr(eop, '__len__') and hasattr(eop, '__call__')
+                                                else False)
+        self.extendedapplication = lambda st, eop: bap(st, eop(len(eop)))
+                                   if all(bap(st, eop(t)) is not None for t in range(len(eop)))
+                                   else None
+
+
 def restrict(pzlsys, cond):
     if isinstance(pzlsys, ContinuousPuzzleSystem):
         restrictedstateset = pzlsys.stateset & AbstractSet(cond)
