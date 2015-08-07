@@ -42,6 +42,7 @@ class DiscretePuzzleSystem(PuzzleSystem):
         self.primaryapplication = pap
         self.operations = FreeMonoid(pops)
         self.application = lambda st, op: reduce(pap, op, st)
+    @staticmethod
     def tensor(pzlsystems):
         pzlsystems = tuple(pzlsystems)
         if any(not isinstance(pzlsys, DiscretePuzzleSystem) for pzlsys in pzlsystems):
@@ -65,6 +66,7 @@ class ContinuousPuzzleSystem(PuzzleSystem):
         self.basedapplication = bap
         self.operations = PathMonoid(bops)
         self.application = lambda st, op: bap(st, op(len(op)))
+    @staticmethod
     def tensor(pzlsystems):
         pzlsystems = tuple(pzlsystems)
         if any(not isinstance(pzlsys, ContinuousPuzzleSystem) for pzlsys in pzlsystems):
