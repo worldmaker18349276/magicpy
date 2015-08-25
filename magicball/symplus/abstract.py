@@ -1,11 +1,30 @@
 from sympy.sets.sets import Set, EmptySet
-from sympy.core.compatibility import iterable
 from sympy.core.containers import Tuple
-from sympy.core.symbol import Dummy
-from sympy.core.basic import Basic
-from sympy.simplify import simplify
+from sympy.core.symbol import Symbol, Dummy
 from sympy.logic.inference import satisfiable, valid
 from sympy.logic.boolalg import true, false
+from sympy.matrices.expressions.matexpr import MatrixSymbol
+
+
+class DummyMatrixSymbol(MatrixSymbol):
+    _count = 0
+    __slots__ = ['dummy_index']
+    is_Dummy = True
+    def __new__(cls, name, n, m):
+        obj = MatrixSymbol.__new__(cls, name, n, m)
+        cls._count += 1
+        obj.dummy_index = cls._count
+        return obj
+    def _hashable_content(self):
+        return self.name, self.shape, self.dummy_index
+
+def as_dummy(var):
+    if isinstance(var, Symbol):
+        return var.as_dummy()
+    elif isinstance(var, MatrixSymbol):
+        return DummyMatrixSymbol('_'+var.name, var.shape[0], var.shape[1])
+    else:
+        raise TypeError('variable is not a symbol or matrix symbol: %s' % var)
 
 
 class AbstractSet(Set):
@@ -24,6 +43,11 @@ class AbstractSet(Set):
         AbstractSet((x, y), Abs(x - y) > 1)
         >>> AbstractSet([x, y], abs(x-y)>1)
         AbstractSet((x, y), Abs(x - y) > 1)
+        >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
+        >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))
+        AbstractSet(m, m[0, 0] + m[1, 1] == 0)
+        >>> AbstractSet((m, x), Eq(det(m),x))
+        AbstractSet((m, x), Determinant(m) == x)
         >>> AbstractSet(x, x>1)
         (1, oo)
         >>> AbstractSet(x, (x>1) & (x**2<2))
@@ -33,19 +57,19 @@ class AbstractSet(Set):
         >>> AbstractSet(1, x>y)
         Traceback (most recent call last):
             ...
-        TypeError: variable is not a symbol: 1
+        TypeError: variable is not a symbol or matrix symbol: 1
         >>> AbstractSet(x, x+y)
         Traceback (most recent call last):
             ...
         TypeError: expression is not boolean or relational: x + y
         """
-        for v in variable if iterable(variable) else [variable]:
-            if not getattr(v, 'is_Symbol', False):
-                raise TypeError('variable is not a symbol: %s' % v)
+        for v in variable if is_Tuple(variable) else (variable,):
+            if not is_Symbol(v):
+                raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
         if not is_Boolean(expr):
             raise TypeError('expression is not boolean or relational: %r' % expr)
 
-        if iterable(variable):
+        if is_Tuple(variable):
             if len(variable) > 1:
                 variable = Tuple(*variable)
             else:
@@ -91,7 +115,7 @@ class AbstractSet(Set):
         >>> AbstractSet(x, x>y).variables
         (x,)
         """
-        return self._args[0] if iterable(self._args[0]) else Tuple(self._args[0])
+        return self._args[0] if is_Tuple(self._args[0]) else Tuple(self._args[0])
 
     @property
     def expr(self):
@@ -141,14 +165,21 @@ class AbstractSet(Set):
         >>> x2 = Symbol('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet(x2, x2<y))
         AbstractSet(_x, And(Abs(_x) > 1, _x < y))
+        >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
+        >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._intersect(AbstractSet(n, Eq(det(n),0)))
+        AbstractSet(_m, And(Determinant(_m) == 0, _m[0, 0] + _m[1, 1] == 0))
+        >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._intersect(AbstractSet(x, abs(x)>1))
+        EmptySet()
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
             vars2 = other.variables
             if len(vars1) != len(vars2):
                 return EmptySet()
+            if any(not var_type_match(v1, v2) for v1, v2 in zip(vars1, vars2)):
+                return EmptySet()
 
-            vars12 = tuple(var1.as_dummy() for var1 in vars1)
+            vars12 = tuple(as_dummy(var1) for var1 in vars1)
             expr12 = (self.expr.xreplace(dict(zip(vars1, vars12))) &
                       other.expr.xreplace(dict(zip(vars2, vars12))))
             if not satisfiable(expr12):
@@ -171,14 +202,20 @@ class AbstractSet(Set):
         >>> x2 = Symbol('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet(x2, x2<y))
         AbstractSet(_x, Or(Abs(_x) > 1, _x < y))
+        >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
+        >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._union(AbstractSet(n, Eq(det(n),0)))
+        AbstractSet(_m, Or(Determinant(_m) == 0, _m[0, 0] + _m[1, 1] == 0))
+        >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._union(AbstractSet(x, abs(x)>1))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
             vars2 = other.variables
             if len(vars1) != len(vars2):
                 return None
+            if any(not var_type_match(v1, v2) for v1, v2 in zip(vars1, vars2)):
+                return None
 
-            vars12 = tuple(var1.as_dummy() for var1 in vars1)
+            vars12 = tuple(as_dummy(var1) for var1 in vars1)
             expr12 = (self.expr.xreplace(dict(zip(vars1, vars12))) |
                       other.expr.xreplace(dict(zip(vars2, vars12))))
             if not satisfiable(expr12):
@@ -196,19 +233,27 @@ class AbstractSet(Set):
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(y, abs(y)<3))
         AbstractSet(_x, And(Abs(_x) > 1, Abs(_x) >= 3))
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet((x,y), abs(x-y)>1))
+        EmptySet()
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(y, y<x))
         AbstractSet(_x, And(Abs(_x) > 1, _x >= x))
         >>> x2 = Symbol('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(x2, x2<y))
         AbstractSet(_x, And(Abs(_x) > 1, _x >= y))
+        >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
+        >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._complement(AbstractSet(n, Eq(det(n),0)))
+        AbstractSet(_m, And(Determinant(_m) != 0, _m[0, 0] + _m[1, 1] == 0))
+        >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._complement(AbstractSet(x, abs(x)>1))
+        EmptySet()
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
             vars2 = other.variables
             if len(vars1) != len(vars2):
-                return None
+                return EmptySet()
+            if any(not var_type_match(v1, v2) for v1, v2 in zip(vars1, vars2)):
+                return EmptySet()
 
-            vars12 = tuple(var1.as_dummy() for var1 in vars1)
+            vars12 = tuple(as_dummy(var1) for var1 in vars1)
             expr12 = (self.expr.xreplace(dict(zip(vars1, vars12))) &~
                       other.expr.xreplace(dict(zip(vars2, vars12))))
             if not satisfiable(expr12):
@@ -230,55 +275,87 @@ class AbstractSet(Set):
         True
         >>> AbstractSet(x, x>y)._contains(z)
         z > y
+        >>> AbstractSet(x, x>y)._contains(Matrix(2,2,[1,2,3,4]))
+        False
         """
-        if len(self.variables) == 1:
-            return self.expr.xreplace({self.variable: other})
-        else:
-            if (not isinstance(other, (tuple, Tuple)) or
-                len(self.variable) != len(other)):
-               return false
-            return self.expr.xreplace(dict(zip(self.variable, other)))
+        other = other if is_Tuple(other) else Tuple(other)
+
+        var = self.variables
+        if not isinstance(other, (tuple, Tuple)):
+           return false
+        if len(var) != len(other):
+           return false
+        if any(not var_type_match(v1, v2) for v1, v2 in zip(var, other)):
+            return false
+        return self.expr.xreplace(dict(zip(var, other)))
     
     def is_subset(self, other):
         if isinstance(other, AbstractSet):
-            if len(self.variables) != len(other.variables):
+            vars1 = self.variables
+            vars2 = other.variables
+            if len(vars1) != len(vars2):
                 return false
-            if len(self.variables) == 1:
+            if any(not var_type_match(v1, v2) for v1, v2 in zip(vars1, vars2)):
+                return false
+            if len(vars1) == 1:
                 x = Dummy('x')
                 return forall(x, self._contains(x) >> other._contains(x))
             else:
-                x = tuple(Dummy('x'+str(n)) for n in range(len(self.variables)))
+                x = tuple(Dummy('x'+str(n)) for n in range(len(vars1)))
                 return forall(x, self._contains(x) >> other._contains(x))
         else:
             raise ValueError("Unknown argument '%s'" % other)
 
     def is_disjoint(self, other):
         if isinstance(other, AbstractSet):
-            if len(self.variables) != len(other.variables):
+            vars1 = self.variables
+            vars2 = other.variables
+            if len(vars1) != len(vars2):
                 return true
-            if len(self.variables) == 1:
+            if any(not var_type_match(v1, v2) for v1, v2 in zip(vars1, vars2)):
+                return true
+            if len(vars1) == 1:
                 x = Dummy('x')
                 return forall(x, self._contains(x) >> ~other._contains(x))
             else:
-                x = tuple(Dummy('x'+str(n)) for n in range(len(self.variables)))
+                x = tuple(Dummy('x'+str(n)) for n in range(len(vars1)))
                 return forall(x, self._contains(x) >> ~other._contains(x))
         else:
             raise ValueError("Unknown argument '%s'" % other)
 
 
+def is_Tuple(t):
+    return isinstance(t, (list, tuple, Tuple))
+
+def is_Matrix(m):
+    return getattr(m, 'is_Matrix', False)
+
+def is_Symbol(s):
+    return isinstance(s, (Symbol, MatrixSymbol))
+
 def is_Boolean(b):
     return getattr(b, 'is_Boolean', False) or getattr(b, 'is_Relational', False) or b in (true, false)
 
+def var_type_match(var1, var2):
+    if isinstance(var1, Symbol):
+        return not is_Matrix(var2) # TODO: real/complex test
+    elif isinstance(var1, MatrixSymbol):
+        return is_Matrix(var2) and var1.shape == var2.shape
+    else:
+        raise TypeError('variable is not a symbol or matrix symbol: %s' % var1)
+
+
+# TODO: improve algorithm
 def forall(variables, expr):
-    variables = Tuple(*variables) if iterable(variables) else Tuple(variables)
+    variables = Tuple(*variables) if is_Tuple(variables) else Tuple(variables)
     for v in variables:
-        if not getattr(v, 'is_Symbol', False):
-            raise TypeError('variable is not a symbol: %s' % v)
+        if not is_Symbol(v):
+            raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
     if not is_Boolean(expr):
         raise TypeError('expression is not boolean or relational: %r' % expr)
 
     if expr.free_symbols - set(variables) == set():
-        return simplify(expr)
+        return valid(expr)
     else:
         raise TypeError('unable to evaluate forall: Forall(%s, %r)' % (variables, expr))
 
