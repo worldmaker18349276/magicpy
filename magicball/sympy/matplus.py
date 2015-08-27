@@ -1,4 +1,5 @@
-from sympy.matrices.expressions.matexpr import MatrixElement, MatrixSymbol
+from util import *
+from sympy.matrices.expressions.matexpr import MatrixElement, MatrixSymbol, MatrixExpr
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from sympy.core.relational import Ne, Eq
 from sympy.simplify.simplify import bottom_up
@@ -27,7 +28,7 @@ def matsimp(expr):
     """
     # expand MatrixSymbol as Matrix: A -> [ A[0,0] ,..]
     matsym = filter(lambda s: s.is_Matrix, expr.free_symbols)
-    expr = expr.xreplace(dict((mat, Mat(mat)) for mat in matsym))
+    expr = expr.xreplace(dict((mat, mat.as_explicit()) for mat in matsym))
 
     # do indexing: [.., aij ,..][i,j] -> aij
     expr = do_indexing(expr)
@@ -35,18 +36,18 @@ def matsimp(expr):
     expr = bottom_up(expr, lambda e: e.doit())
 
     def mateq_expand(m1, m2):
-        if not getattr(m1, 'is_Matrix', False) and not getattr(m2, 'is_Matrix', False):
+        if not is_Matrix(m1) and not is_Matrix(m2):
             return Eq(m1, m2)
-        if not getattr(m1, 'is_Matrix', False) or not getattr(m2, 'is_Matrix', False):
+        if not is_Matrix(m1) or not is_Matrix(m2):
             return false
         if m1.shape != m2.shape:
             return false
         return And(*[Eq(e1, e2) for e1, e2 in zip(m1, m2)])
 
     def matne_expand(m1, m2):
-        if not getattr(m1, 'is_Matrix', False) and not getattr(m2, 'is_Matrix', False):
+        if not is_Matrix(m1) and not is_Matrix(m2):
             return Ne(m1, m2)
-        if not getattr(m1, 'is_Matrix', False) or not getattr(m2, 'is_Matrix', False):
+        if not is_Matrix(m1) or not is_Matrix(m2):
             return true
         if m1.shape != m2.shape:
             return true
@@ -71,6 +72,90 @@ class DummyMatrixSymbol(MatrixSymbol):
         return obj
     def _hashable_content(self):
         return self.name, self.shape, self.dummy_index
+
+
+class MatrixLambda(MatrixExpr):
+    def __new__(cls, variables, expr):
+        variables = Tuple(*variables) if is_Tuple(variables) else Tuple(variables)
+        for v in variables:
+            if not is_Symbol(v):
+                raise TypeError('variable is not a Symbol or MatrixSymbol: %s' % v)
+        if not is_Matrix(expr):
+            raise TypeError('expression is not a Matrix: %s' % expr)
+
+        return MatrixExpr.__new__(cls, variables, expr)
+
+    @property
+    def variables(self):
+        """The variables used in the internal representation of the function"""
+        return self._args[0]
+
+    @property
+    def expr(self):
+        """The return value of the function"""
+        return self._args[1]
+
+    @property
+    def free_symbols(self):
+        return self.expr.free_symbols - set(self.variables)
+
+    def __call__(self, *args):
+        n = len(args)
+        if n != len(self.args):
+            temp = ('%(name)s takes exactly %(args)s '
+                   'argument%(plural)s (%(given)s given)')
+            raise TypeError(temp % {
+                'name': self,
+                'args': len(self.args),
+                'plural': 's'*(len(self.args) != 1),
+                'given': n})
+        return self.expr.xreplace(dict(zip(self.variables, args)))
+
+    def __eq__(self, other):
+        if not isinstance(other, MatrixLambda):
+            return False
+        if len(self.args) != len(other.args):
+            return False
+
+        selfexpr = self.args[1]
+        otherexpr = other.args[1]
+        otherexpr = otherexpr.xreplace(dict(zip(other.args[0], self.args[0])))
+        return selfexpr == otherexpr
+
+    def __ne__(self, other):
+        return not(self == other)
+
+    def _hashable_content(self):
+        return (self.expr.xreplace(self.canonical_variables),)
+
+    @property
+    def shape(self):
+        return self.expr.shape
+
+    def _eval_conjugate(self):
+        from sympy.matrices.expressions.adjoint import Adjoint
+        from sympy.matrices.expressions.transpose import Transpose
+        return self.func(self.variables, Adjoint(Transpose(self.expr)))
+
+    def _eval_inverse(self):
+        from sympy.matrices.expressions.inverse import Inverse
+        return self.func(self.variables, Inverse(self.expr))
+
+    def _eval_transpose(self):
+        return self.func(self.variables, Transpose(self.expr))
+
+    def _eval_power(self, exp):
+        return self.func(self.variables, MatPow(self.expr, exp))
+
+    def _eval_simplify(self, **kwargs):
+        return self.func(self.variables, simplify(self.expr))
+
+    def _eval_adjoint(self):
+        from sympy.matrices.expressions.adjoint import Adjoint
+        return self.func(self.variables, Adjoint(self.expr))
+
+    def _entry(self, i, j):
+        return Lambda(self.variables, self.expr[i,j])
 
 
 if __name__ == '__main__':
