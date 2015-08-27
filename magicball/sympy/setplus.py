@@ -15,6 +15,16 @@ def as_dummy(var):
     else:
         raise TypeError('variable is not a symbol or matrix symbol: %s' % var)
 
+def rename_variables_in(variables, varspace):
+    names = [v.name for v in variables]
+    namespace = [v.name for v in varspace]
+    for i in range(len(names)):
+        while names[i] in namespace or names[i] in names[:i]:
+            names[i] += '_'
+    return list(Symbol(n, **v.assumptions0)
+                if isinstance(v, Symbol) else MatrixSymbol(n, v.rows, v.cols)
+                for n, v in zip(names, variables))
+
 
 class AbstractSet(Set):
     is_AbstractSet = True
@@ -140,23 +150,26 @@ class AbstractSet(Set):
         """
         return self.expr.free_symbols - set(self.variables)
 
+    def _hashable_content(self):
+        return (self.expr.xreplace(self.canonical_variables),)
+
     def _intersect(self, other):
         """intersect two set builder
 
         >>> from sympy import *
         >>> x, y = Symbol('x'), Symbol('y')
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet(y, abs(y)<3))
-        AbstractSet(_x, And(Abs(_x) < 3, Abs(_x) > 1))
+        AbstractSet(x, And(Abs(x) < 3, Abs(x) > 1))
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet((x,y), abs(x-y)>1))
         EmptySet()
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet(y, y<x))
-        AbstractSet(_x, And(Abs(_x) > 1, _x < x))
+        AbstractSet(x_, And(Abs(x_) > 1, x_ < x))
         >>> x2 = Symbol('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet(x2, x2<y))
-        AbstractSet(_x, And(Abs(_x) > 1, _x < y))
+        AbstractSet(x, And(Abs(x) > 1, x < y))
         >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._intersect(AbstractSet(n, Eq(det(n),0)))
-        AbstractSet(_m, And(Determinant(_m) == 0, _m[0, 0] + _m[1, 1] == 0))
+        AbstractSet(m, And(Determinant(m) == 0, m[0, 0] + m[1, 1] == 0))
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._intersect(AbstractSet(x, abs(x)>1))
         EmptySet()
         """
@@ -168,7 +181,7 @@ class AbstractSet(Set):
             if any(not var_type_match(v1, v2) for v1, v2 in zip(vars1, vars2)):
                 return EmptySet()
 
-            vars12 = tuple(as_dummy(var1) for var1 in vars1)
+            vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
             expr12 = (self.expr.xreplace(dict(zip(vars1, vars12))) &
                       other.expr.xreplace(dict(zip(vars2, vars12))))
             if not satisfiable(expr12):
@@ -184,16 +197,16 @@ class AbstractSet(Set):
         >>> from sympy import *
         >>> x, y = Symbol('x'), Symbol('y')
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet(y, abs(y)<3))
-        AbstractSet(_x, Or(Abs(_x) < 3, Abs(_x) > 1))
+        AbstractSet(x, Or(Abs(x) < 3, Abs(x) > 1))
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet((x,y), abs(x-y)>1))
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet(y, y<x))
-        AbstractSet(_x, Or(Abs(_x) > 1, _x < x))
+        AbstractSet(x_, Or(Abs(x_) > 1, x_ < x))
         >>> x2 = Symbol('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet(x2, x2<y))
-        AbstractSet(_x, Or(Abs(_x) > 1, _x < y))
+        AbstractSet(x, Or(Abs(x) > 1, x < y))
         >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._union(AbstractSet(n, Eq(det(n),0)))
-        AbstractSet(_m, Or(Determinant(_m) == 0, _m[0, 0] + _m[1, 1] == 0))
+        AbstractSet(m, Or(Determinant(m) == 0, m[0, 0] + m[1, 1] == 0))
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._union(AbstractSet(x, abs(x)>1))
         """
         if isinstance(other, AbstractSet):
@@ -204,7 +217,7 @@ class AbstractSet(Set):
             if any(not var_type_match(v1, v2) for v1, v2 in zip(vars1, vars2)):
                 return None
 
-            vars12 = tuple(as_dummy(var1) for var1 in vars1)
+            vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
             expr12 = (self.expr.xreplace(dict(zip(vars1, vars12))) |
                       other.expr.xreplace(dict(zip(vars2, vars12))))
             if not satisfiable(expr12):
@@ -220,17 +233,17 @@ class AbstractSet(Set):
         >>> from sympy import *
         >>> x, y = Symbol('x'), Symbol('y')
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(y, abs(y)<3))
-        AbstractSet(_x, And(Abs(_x) > 1, Abs(_x) >= 3))
+        AbstractSet(x, And(Abs(x) > 1, Abs(x) >= 3))
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet((x,y), abs(x-y)>1))
         EmptySet()
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(y, y<x))
-        AbstractSet(_x, And(Abs(_x) > 1, _x >= x))
+        AbstractSet(x_, And(Abs(x_) > 1, x_ >= x))
         >>> x2 = Symbol('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(x2, x2<y))
-        AbstractSet(_x, And(Abs(_x) > 1, _x >= y))
+        AbstractSet(x, And(Abs(x) > 1, x >= y))
         >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._complement(AbstractSet(n, Eq(det(n),0)))
-        AbstractSet(_m, And(Determinant(_m) != 0, _m[0, 0] + _m[1, 1] == 0))
+        AbstractSet(m, And(Determinant(m) != 0, m[0, 0] + m[1, 1] == 0))
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._complement(AbstractSet(x, abs(x)>1))
         EmptySet()
         """
@@ -242,7 +255,7 @@ class AbstractSet(Set):
             if any(not var_type_match(v1, v2) for v1, v2 in zip(vars1, vars2)):
                 return EmptySet()
 
-            vars12 = tuple(as_dummy(var1) for var1 in vars1)
+            vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
             expr12 = (self.expr.xreplace(dict(zip(vars1, vars12))) &~
                       other.expr.xreplace(dict(zip(vars2, vars12))))
             if not satisfiable(expr12):
