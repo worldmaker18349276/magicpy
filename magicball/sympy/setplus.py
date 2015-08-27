@@ -1,3 +1,4 @@
+from matplus import DummyMatrixSymbol
 from sympy.sets.sets import Set, EmptySet
 from sympy.core.containers import Tuple
 from sympy.core.symbol import Symbol, Dummy
@@ -5,18 +6,6 @@ from sympy.logic.inference import satisfiable, valid
 from sympy.logic.boolalg import true, false
 from sympy.matrices.expressions.matexpr import MatrixSymbol
 
-
-class DummyMatrixSymbol(MatrixSymbol):
-    _count = 0
-    __slots__ = ['dummy_index']
-    is_Dummy = True
-    def __new__(cls, name, n, m):
-        obj = MatrixSymbol.__new__(cls, name, n, m)
-        cls._count += 1
-        obj.dummy_index = cls._count
-        return obj
-    def _hashable_content(self):
-        return self.name, self.shape, self.dummy_index
 
 def as_dummy(var):
     if isinstance(var, Symbol):
