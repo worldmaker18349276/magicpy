@@ -1,29 +1,11 @@
 from matplus import DummyMatrixSymbol
+from util import *
 from sympy.sets.sets import Set, EmptySet
 from sympy.core.containers import Tuple
 from sympy.core.symbol import Symbol, Dummy
 from sympy.logic.inference import satisfiable, valid
 from sympy.logic.boolalg import true, false
 from sympy.matrices.expressions.matexpr import MatrixSymbol
-
-
-def as_dummy(var):
-    if isinstance(var, Symbol):
-        return var.as_dummy()
-    elif isinstance(var, MatrixSymbol):
-        return DummyMatrixSymbol('_'+var.name, var.shape[0], var.shape[1])
-    else:
-        raise TypeError('variable is not a symbol or matrix symbol: %s' % var)
-
-def rename_variables_in(variables, varspace):
-    names = [v.name for v in variables]
-    namespace = [v.name for v in varspace]
-    for i in range(len(names)):
-        while names[i] in namespace or names[i] in names[:i]:
-            names[i] += '_'
-    return list(Symbol(n, **v.assumptions0)
-                if isinstance(v, Symbol) else MatrixSymbol(n, v.rows, v.cols)
-                for n, v in zip(names, variables))
 
 
 class AbstractSet(Set):
@@ -326,17 +308,23 @@ class AbstractSet(Set):
             raise ValueError("Unknown argument '%s'" % other)
 
 
-def is_Tuple(t):
-    return isinstance(t, (list, tuple, Tuple))
+def as_dummy(var):
+    if isinstance(var, Symbol):
+        return var.as_dummy()
+    elif isinstance(var, MatrixSymbol):
+        return DummyMatrixSymbol('_'+var.name, var.shape[0], var.shape[1])
+    else:
+        raise TypeError('variable is not a symbol or matrix symbol: %s' % var)
 
-def is_Matrix(m):
-    return getattr(m, 'is_Matrix', False)
-
-def is_Symbol(s):
-    return isinstance(s, (Symbol, MatrixSymbol))
-
-def is_Boolean(b):
-    return getattr(b, 'is_Boolean', False) or getattr(b, 'is_Relational', False) or b in (true, false)
+def rename_variables_in(variables, varspace):
+    names = [v.name for v in variables]
+    namespace = [v.name for v in varspace]
+    for i in range(len(names)):
+        while names[i] in namespace or names[i] in names[:i]:
+            names[i] += '_'
+    return list(Symbol(n, **v.assumptions0)
+                if isinstance(v, Symbol) else MatrixSymbol(n, v.rows, v.cols)
+                for n, v in zip(names, variables))
 
 def var_type_match(var1, var2):
     if isinstance(var1, Symbol):
@@ -345,7 +333,6 @@ def var_type_match(var1, var2):
         return is_Matrix(var2) and var1.shape == var2.shape
     else:
         raise TypeError('variable is not a symbol or matrix symbol: %s' % var1)
-
 
 # TODO: improve algorithm
 def forall(variables, expr):
