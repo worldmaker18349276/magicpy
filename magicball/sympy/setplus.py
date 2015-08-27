@@ -1,6 +1,6 @@
 from matplus import DummyMatrixSymbol
 from util import *
-from sympy.sets.sets import Set, EmptySet
+from sympy.sets.sets import Set, EmptySet, UniversalSet
 from sympy.core.basic import Basic
 from sympy.core.containers import Tuple
 from sympy.core.symbol import Symbol, Dummy
@@ -313,6 +313,61 @@ class AbstractSet(Set):
             raise ValueError("Unknown argument '%s'" % other)
 
 
+class SetBuilder:
+    def __getitem__(self, asets):
+        """
+        >>> from sympy import *
+        >>> x, y = Symbol('x'), Symbol('y')
+        >>> St[x : abs(x)>1]
+        AbstractSet(x, Abs(x) > 1)
+        >>> St[(x, y) : abs(x-y)>1]
+        AbstractSet((x, y), Abs(x - y) > 1)
+        >>> St[x : x-y>1, x : x<1]
+        AbstractSet(x, And(x - y > 1, x < 1))
+        >>> St[S.Reals, x : x<1]
+        Intersection((-oo, oo), AbstractSet(x, x < 1))
+        """
+        asets = asets if isinstance(asets, tuple) else (asets,)
+        st = UniversalSet()
+        for aset in asets:
+            if isinstance(aset, slice):
+                if aset.start is None or aset.stop is None:
+                    raise SyntaxError
+                st &= AbstractSet(aset.start, aset.stop)
+            elif isinstance(aset, Set):
+                st &= aset
+            else:
+                raise SyntaxError
+        return st
+
+    def __call__(self, *asets):
+        """
+        >>> from sympy import *
+        >>> x, y = Symbol('x'), Symbol('y')
+        >>> St({x : abs(x)>1})
+        AbstractSet(x, Abs(x) > 1)
+        >>> St({(x, y) : abs(x-y)>1})
+        AbstractSet((x, y), Abs(x - y) > 1)
+        >>> St({x : x-y>1}, {x : x<1})
+        AbstractSet(x, And(x - y > 1, x < 1))
+        >>> St(S.Reals, {x : x<1})
+        Intersection((-oo, oo), AbstractSet(x, x < 1))
+        """
+        st = UniversalSet()
+        for aset in asets:
+            if isinstance(aset, dict):
+                if len(aset) != 1:
+                    raise SyntaxError
+                st &= AbstractSet(*list(aset.items())[0])
+            elif isinstance(aset, Set):
+                st &= aset
+            else:
+                raise SyntaxError
+        return st
+
+St = SetBuilder()
+
+
 def as_dummy(var):
     if isinstance(var, Symbol):
         return var.as_dummy()
@@ -381,7 +436,6 @@ class Forall(BooleanFunction):
     def _hashable_content(self):
         return (self.expr.xreplace(self.canonical_variables),)
 
-
 class Exist(BooleanFunction):
     def __new__(cls, variable, expr):
         for v in variable if is_Tuple(variable) else (variable,):
@@ -416,7 +470,6 @@ class Exist(BooleanFunction):
 
     def _hashable_content(self):
         return (self.expr.xreplace(self.canonical_variables),)
-
 
 def forall(variables, expr):
     expr = simplify(expr)
