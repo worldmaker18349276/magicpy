@@ -15,7 +15,10 @@ def is_Symbol(s):
     return isinstance(s, (Symbol, MatrixSymbol))
 
 def is_Boolean(b):
-    return getattr(b, 'is_Boolean', False) or getattr(b, 'is_Relational', False) or b in (true, false)
+    return (getattr(b, 'is_Boolean', False) or
+            getattr(b, 'is_Relational', False) or
+            b is true or
+            b is false)
 
 
 def deep_iter(sequence, depth=-1, types=(list, tuple), iter=iter):

@@ -4,16 +4,15 @@ from sympy.sets.sets import Set, EmptySet, UniversalSet
 from sympy.core.basic import Basic
 from sympy.core.containers import Tuple
 from sympy.core.symbol import Symbol, Dummy
+from sympy.core.evaluate import global_evaluate
 from sympy.logic.inference import satisfiable, valid
-from sympy.logic.boolalg import true, false, BooleanFunction, Equivalent
+from sympy.logic.boolalg import true, false, BooleanFunction
+from sympy.logic.boolalg import And, Or, Not, Nand, Implies, Equivalent
 from sympy.matrices.expressions.matexpr import MatrixSymbol
-from sympy.simplify.simplify import simplify
 
 
 class AbstractSet(Set):
-    is_AbstractSet = True
-    
-    def __new__(cls, variable, expr):
+    def __new__(cls, variable, expr, evaluate=False):
         """create AbstractSet by variable and expression
 
         >>> from sympy import *
@@ -31,6 +30,8 @@ class AbstractSet(Set):
         AbstractSet(m, m[0, 0] + m[1, 1] == 0)
         >>> AbstractSet((m, x), Eq(det(m),x))
         AbstractSet((m, x), Determinant(m) == x)
+        >>> AbstractSet(x, (x>1)&(x<3), evaluate=True)
+        (1, 3)
         >>> AbstractSet(x, x>y)
         AbstractSet(x, x > y)
         >>> AbstractSet(1, x>y)
@@ -54,7 +55,27 @@ class AbstractSet(Set):
             else:
                 variable = variable[0]
 
+        evaluate = evaluate if evaluate is not None else global_evaluate[0]
+        if evaluate:
+            evaluated = cls.eval(variable, expr)
+            if evaluated is not None:
+                return evaluated
+
         return Set.__new__(cls, variable, expr)
+
+    @classmethod
+    def eval(cls, var, expr):
+        if Exist(var, expr) == false:
+            return EmptySet()
+        if Forall(var, expr) == true:
+            return UniversalSet()
+        var = Tuple(*var) if is_Tuple(var) else Tuple(var)
+        if len(var) == 1 and expr.free_symbols == set(var):
+            try:
+                return expr.as_set()
+            except:
+                pass
+        return None
 
     @property
     def variable(self):
@@ -154,11 +175,8 @@ class AbstractSet(Set):
                 return EmptySet()
 
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
-            expr12 = (self.expr.xreplace(dict(zip(vars1, vars12))) &
-                      other.expr.xreplace(dict(zip(vars2, vars12))))
-            if not satisfiable(expr12):
-                return EmptySet()
-
+            expr12 = And(self.expr.xreplace(dict(zip(vars1, vars12))),
+                         other.expr.xreplace(dict(zip(vars2, vars12))))
             return AbstractSet(vars12, expr12)
         else:
             return None
@@ -188,11 +206,8 @@ class AbstractSet(Set):
                 return None
 
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
-            expr12 = (self.expr.xreplace(dict(zip(vars1, vars12))) |
-                      other.expr.xreplace(dict(zip(vars2, vars12))))
-            if not satisfiable(expr12):
-                return EmptySet()
-
+            expr12 = Or(self.expr.xreplace(dict(zip(vars1, vars12))),
+                        other.expr.xreplace(dict(zip(vars2, vars12))))
             return AbstractSet(vars12, expr12)
         else:
             return None
@@ -224,11 +239,8 @@ class AbstractSet(Set):
                 return EmptySet()
 
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
-            expr12 = (self.expr.xreplace(dict(zip(vars1, vars12))) &~
-                      other.expr.xreplace(dict(zip(vars2, vars12))))
-            if not satisfiable(expr12):
-                return EmptySet()
-
+            expr12 = And(self.expr.xreplace(dict(zip(vars1, vars12))),
+                         Not(other.expr.xreplace(dict(zip(vars2, vars12)))))
             return AbstractSet(vars12, expr12)
         else:
             return None
@@ -252,7 +264,7 @@ class AbstractSet(Set):
         val = other if is_Tuple(other) else Tuple(other)
         if not var_type_match(var, val):
             return false
-        return simplify(self.expr.xreplace(dict(zip(var, val))))
+        return self.expr.xreplace(dict(zip(var, val)))
     
     def is_subset(self, other):
         """
@@ -261,7 +273,7 @@ class AbstractSet(Set):
         >>> AbstractSet(x, x-y>1).is_subset(AbstractSet(x, (x-y>1)|(x+y>1)))
         True
         >>> AbstractSet((x,y), x-y>1).is_subset(AbstractSet((x,y), abs(x-y)>1))
-        Forall((x, y), Or(Abs(x - y) > 1, x - y <= 1))
+        Forall((x, y), Implies(x - y > 1, Abs(x - y) > 1))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -269,7 +281,9 @@ class AbstractSet(Set):
             if not var_type_match(vars1, vars2):
                 return false
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
-            return forall(vars12, self._contains(vars12) >> other._contains(vars12))
+            return Forall(vars12,
+                          Implies(self.expr.xreplace(dict(zip(vars1, vars12))),
+                                  other.expr.xreplace(dict(zip(vars2, vars12)))))
         else:
             raise ValueError("Unknown argument '%s'" % other)
 
@@ -280,7 +294,7 @@ class AbstractSet(Set):
         >>> AbstractSet(x, x-y>1).is_disjoint(AbstractSet(x, (x-y<=1)&(x+y>1)))
         True
         >>> AbstractSet((x,y), x-y>1).is_disjoint(AbstractSet((x,y), abs(x-y)<1))
-        Forall((x, y), Or(Abs(x - y) >= 1, x - y <= 1))
+        Forall((x, y), Not(And(Abs(x - y) < 1, x - y > 1)))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -288,7 +302,9 @@ class AbstractSet(Set):
             if not var_type_match(vars1, vars2):
                 return true
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
-            return forall(vars12, self._contains(vars12) >> ~other._contains(vars12))
+            return Forall(vars12,
+                          Nand(self.expr.xreplace(dict(zip(vars1, vars12))),
+                               other.expr.xreplace(dict(zip(vars2, vars12)))))
         else:
             raise ValueError("Unknown argument '%s'" % other)
 
@@ -299,7 +315,7 @@ class AbstractSet(Set):
         >>> AbstractSet(x, x-y>1).is_equivalent(AbstractSet(x, x-y>1))
         True
         >>> AbstractSet(x, x<1).is_equivalent(AbstractSet(x, x-1<0))
-        Forall(x, Or(And(x - 1 < 0, x < 1), And(x - 1 >= 0, x >= 1)))
+        Forall(x, Equivalent(x < 1, x - 1 < 0))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -307,11 +323,40 @@ class AbstractSet(Set):
             if not var_type_match(vars1, vars2):
                 return false
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
-            return forall(vars12, Equivalent(self._contains(vars12),
-                                             other._contains(vars12)))
+            return Forall(vars12,
+                          Equivalent(self.expr.xreplace(dict(zip(vars1, vars12))),
+                                     other.expr.xreplace(dict(zip(vars2, vars12)))))
         else:
             raise ValueError("Unknown argument '%s'" % other)
 
+    def is_proper_subset(self, other):
+        """
+        >>> from sympy import *
+        >>> x, y = Symbol('x'), Symbol('y')
+        >>> AbstractSet(x, x-y>1).is_proper_subset(AbstractSet(x, x-y>1))
+        False
+        >>> AbstractSet(x, x-y>1).is_proper_subset(AbstractSet(x, (x-y>1)|(x+y>1)))
+        Not(Forall(x, Equivalent(x - y > 1, Or(x + y > 1, x - y > 1))))
+        """
+        if isinstance(other, AbstractSet):
+            return And(Not(self.is_equivalent(other)), self.is_subset(other))
+        else:
+            raise ValueError("Unknown argument '%s'" % other)
+
+    def is_empty(self):
+        return Forall(self.variables, Not(self.expr))
+
+    def expand(self, depth=-1):
+        def expand0(var, expr, dp):
+            if dp == 0:
+                return AbstractSet(var, expr)
+            if isinstance(expr, Or):
+                return Union(*[expand(var, arg, dp-1) for arg in expr.args])
+            elif isinstance(expr, And):
+                return Intersection(*[expand(var, arg, dp-1) for arg in expr.args])
+            else:
+                return AbstractSet(var, expr)
+        return expand0(self.variable, self.expr, depth)
 
 class SetBuilder:
     def __getitem__(self, asets):
@@ -415,7 +460,13 @@ class Forall(BooleanFunction):
             else:
                 variable = variable[0]
 
-        return Basic.__new__(cls, variable, expr)
+        return BooleanFunction.__new__(cls, variable, expr)
+
+    @classmethod
+    def eval(cls, var, expr):
+        if valid(expr) == True:
+            return true
+        return None
 
     @property
     def variable(self):
@@ -450,7 +501,13 @@ class Exist(BooleanFunction):
             else:
                 variable = variable[0]
 
-        return Basic.__new__(cls, variable, expr)
+        return BooleanFunction.__new__(cls, variable, expr)
+
+    @classmethod
+    def eval(cls, variables, expr):
+        if satisfiable(expr) == False:
+            return false
+        return None
 
     @property
     def variable(self):
@@ -470,18 +527,6 @@ class Exist(BooleanFunction):
 
     def _hashable_content(self):
         return (self.expr.xreplace(self.canonical_variables),)
-
-def forall(variables, expr):
-    expr = simplify(expr)
-    if valid(expr) == True:
-        return True
-    return Forall(variables, expr)
-
-def exist(variables, expr):
-    expr = simplify(expr)
-    if satisfiable(expr) == False:
-        return False
-    return Exist(variables, expr)
 
 
 if __name__ == '__main__':
