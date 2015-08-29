@@ -1,8 +1,8 @@
-from setplus import AbstractSet
-from matplus import DummyMatrixSymbol
 from sympy.core.relational import Ne, Eq
 from sympy.core.numbers import pi
-from sympy.core.basic import Basic
+from sympy.core.symbol import Symbol
+from sympy.core.function import Lambda
+from sympy.core.containers import Tuple
 from sympy.matrices.dense import eye, zeros, diag, Matrix
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from sympy.matrices.matrices import ShapeError
@@ -11,6 +11,9 @@ from sympy.matrices.expressions.determinant import det
 from sympy.matrices.expressions.trace import trace
 from sympy.functions.elementary.trigonometric import cos, sin, acos
 from sympy.functions.elementary.miscellaneous import sqrt
+from util import is_Tuple, is_Matrix
+from setplus import AbstractSet
+from matplus import DummyMatrixSymbol
 
 
 m = MatrixSymbol('m', 4, 4)
@@ -161,6 +164,58 @@ def shearing(a, b):
     mat[0,2] = a
     mat[1,2] = b
     return Mat(mat)
+
+
+def as_function(mat):
+    """
+    >>> from sympy import *
+    >>> from matplus import matsimp
+    >>> translation(Mat([2,3,5]))
+    Matrix([
+    [1, 0, 0, 2],
+    [0, 1, 0, 3],
+    [0, 0, 1, 5],
+    [0, 0, 0, 1]])
+    >>> as_function(_)
+    Lambda((x, y, z), (x + 2, y + 3, z + 5))
+    """
+    x, y, z = Symbol('x', real=True), Symbol('y', real=True), Symbol('z', real=True)
+    vec = Mat([x,y,z,1])
+    expr = (mat * vec)
+    return Lambda((x,y,z), Tuple(*expr[:3]))
+
+def transform(st, mat):
+    """
+    >>> from sympy import *
+    >>> from matplus import matsimp
+    >>> m = translation(Mat([2,3,5]))
+    >>> transform((1,2,3), m)
+    (3, 5, 8)
+    >>> s = shearing(2,sqrt(3))
+    >>> transform(s, m)
+    Matrix([
+    [1, 0,       2,        -10],
+    [0, 1, sqrt(3), -5*sqrt(3)],
+    [0, 0,       1,          0],
+    [0, 0,       0,          1]])
+    >>> import setplus
+    >>> x, y, z = symbols('x,y,z')
+    >>> transform(AbstractSet((x,y,z), x**2+y**2+z**2<1), m)
+    AbstractSet((x, y, z), (x - 2)**2 + (y - 3)**2 + (z - 5)**2 < 1)
+    """
+    if is_Tuple(st) and len(st) == 3:
+        vec = Mat(list(st)+[1])
+        vec = mat * vec
+        return Tuple(*vec[:3])
+    elif is_Matrix(st):
+        return mat * st * mat.inv()
+    elif isinstance(st, AbstractSet) and len(st.variables) == 3:
+        from setplus import rename_variables_in
+        f = as_function(mat.inv())
+        var = rename_variables_in(f.variables, st.free_symbols)
+        return AbstractSet(var, st.contains(f(*var)))
+    else:
+        raise ValueError
 
 if __name__ == '__main__':
     import doctest
