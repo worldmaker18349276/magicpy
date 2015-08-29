@@ -1,14 +1,10 @@
-from matplus import DummyMatrixSymbol
-from util import *
-from sympy.sets.sets import Set, EmptySet, UniversalSet
-from sympy.core.basic import Basic
-from sympy.core.containers import Tuple
-from sympy.core.symbol import Symbol, Dummy
-from sympy.core.evaluate import global_evaluate
-from sympy.logic.inference import satisfiable, valid
-from sympy.logic.boolalg import true, false, BooleanFunction
-from sympy.logic.boolalg import And, Or, Not, Nand, Implies, Equivalent
-from sympy.matrices.expressions.matexpr import MatrixSymbol
+from sympy.core import S, Basic, Tuple, Symbol, Dummy
+from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent
+from sympy.logic.boolalg import BooleanFunction
+from sympy.sets import Set
+from sympy.matrices import MatrixSymbol
+from magicball.sympy.matplus import DummyMatrixSymbol
+from magicball.sympy.util import *
 
 
 class AbstractSet(Set):
@@ -43,6 +39,8 @@ class AbstractSet(Set):
             ...
         TypeError: expression is not boolean or relational: x + y
         """
+        from sympy.core.evaluate import global_evaluate
+
         for v in variable if is_Tuple(variable) else (variable,):
             if not is_Symbol(v):
                 raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
@@ -66,9 +64,9 @@ class AbstractSet(Set):
     @classmethod
     def eval(cls, var, expr):
         if Exist(var, expr) == false:
-            return EmptySet()
+            return S.EmptySet
         if Forall(var, expr) == true:
-            return UniversalSet()
+            return S.UniversalSet
         var = Tuple(*var) if is_Tuple(var) else Tuple(var)
         if len(var) == 1 and expr.free_symbols == set(var):
             try:
@@ -172,7 +170,7 @@ class AbstractSet(Set):
             vars1 = self.variables
             vars2 = other.variables
             if not var_type_match(vars1, vars2):
-                return EmptySet()
+                return S.EmptySet
 
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
             expr12 = And(self.expr.xreplace(dict(zip(vars1, vars12))),
@@ -236,7 +234,7 @@ class AbstractSet(Set):
             vars1 = self.variables
             vars2 = other.variables
             if not var_type_match(vars1, vars2):
-                return EmptySet()
+                return S.EmptySet
 
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
             expr12 = And(self.expr.xreplace(dict(zip(vars1, vars12))),
@@ -373,7 +371,7 @@ class SetBuilder:
         Intersection((-oo, oo), AbstractSet(x, x < 1))
         """
         asets = asets if isinstance(asets, tuple) else (asets,)
-        st = UniversalSet()
+        st = S.UniversalSet
         for aset in asets:
             if isinstance(aset, slice):
                 if aset.start is None or aset.stop is None:
@@ -398,7 +396,7 @@ class SetBuilder:
         >>> St(S.Reals, {x : x<1})
         Intersection((-oo, oo), AbstractSet(x, x < 1))
         """
-        st = UniversalSet()
+        st = S.UniversalSet
         for aset in asets:
             if isinstance(aset, dict):
                 if len(aset) != 1:
@@ -464,6 +462,7 @@ class Forall(BooleanFunction):
 
     @classmethod
     def eval(cls, var, expr):
+        from sympy.logic.inference import valid
         if valid(expr) == True:
             return true
         return None
@@ -505,6 +504,7 @@ class Exist(BooleanFunction):
 
     @classmethod
     def eval(cls, variables, expr):
+        from sympy.logic.inference import satisfiable
         if satisfiable(expr) == False:
             return false
         return None
@@ -528,7 +528,3 @@ class Exist(BooleanFunction):
     def _hashable_content(self):
         return (self.expr.xreplace(self.canonical_variables),)
 
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()

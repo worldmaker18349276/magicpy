@@ -1,8 +1,6 @@
-import operator
-from sympy.core.containers import Tuple
-from sympy.core.symbol import Symbol
-from sympy.matrices.expressions.matexpr import MatrixSymbol
-from sympy.logic.boolalg import true, false
+from sympy.core import Symbol, Tuple
+from sympy.matrices import MatrixSymbol
+from sympy.logic import true, false
 
 
 def is_Tuple(t):
@@ -37,6 +35,7 @@ def deep_enum(sequence, depth=-1, types=(list, tuple), iter=iter):
             yield (n,)+k, e
         n += 1
 
+import operator
 def deep_get(sequence, key, getter=operator.getitem):
     if key is ():
         return sequence

@@ -1,6 +1,6 @@
-from sympy.sets.sets import Intersection, Union, EmptySet, Set
-from setplus import AbstractSet
-from util import deep_iter
+from sympy.core import S
+from sympy.sets import Intersection, Union, Set
+from magicball.sympy.setplus import AbstractSet
 
 
 def is_empty(aset):
@@ -18,7 +18,7 @@ def is_empty(aset):
     elif isinstance(aset, AbstractSet):
         return aset.is_empty()
     elif isinstance(aset, Set):
-        return aset == EmptySet() or None
+        return aset == S.EmptySet or None
     else:
         raise TypeError('aset is not set: %r' % aset)
 
@@ -52,7 +52,7 @@ def is_closed(aset):
 
 def closure(aset):
     if isinstance(aset, Intersection): # need to prove
-        if (all(is_open(arg) or is_closed(arg) for arg in aset.args):
+        if all(is_open(arg) or is_closed(arg) for arg in aset.args):
             return Intersection(*[closure(arg) for arg in aset.args])
         else:
             raise NotImplementedError
@@ -67,7 +67,7 @@ def interior(aset):
     if isinstance(aset, Intersection):
         return Intersection(*[interior(arg) for arg in aset.args])
     elif isinstance(aset, Union): # need to prove
-        if (all(is_open(arg) or is_closed(arg) for arg in aset.args):
+        if all(is_open(arg) or is_closed(arg) for arg in aset.args):
             return Union(*[interior(arg) for arg in aset.args])
         else:
             raise NotImplementedError
@@ -99,6 +99,8 @@ def boundary(aset):
 
 
 def bdsetsimp(aset, bds=None): # need to prove
+    from magicball.sympy.util import deep_iter
+
     if bds is None:
         bds = boundarys(aset)
 

@@ -1,37 +1,60 @@
 from itertools import *
-from sympy.core import Pow, Mul, Rel, Eq, Ne, Gt, Lt, Ge, Le
-from sympy.assumptions import Q, ask
+from sympy.core import S, Pow, Mul, Rel, Eq, Ne, Gt, Lt, Ge, Le
 from sympy.logic import true, false, And, Or, Not
 from sympy.polys import factor, LC, Poly
+from sympy.assumptions import Q, ask
+from magicball.sympy.setplus import AbstractSet
 
 
-def _is_positive(term):
+def ask_is_positive(term):
     return ask(Q.positive(term), And(*map(Q.real, term.free_symbols)))
 
-def _is_negative(term):
+def ask_is_negative(term):
     return ask(Q.negative(term), And(*map(Q.real, term.free_symbols)))
 
+def _is_positive(term):
+    if getattr(term, 'is_number', False):
+        return term > 0
+    l = len(term.free_symbols)
+    t = Poly(term).as_dict()
+    if (all(c > 0 for c in t.values()) and
+        all(i % 2 == 0 for d in t.keys() for i in d) and
+        (0,)*l in t.keys()):
+        return True
+    else:
+        return ask_is_positive(term)
+
+def _is_negative(term):
+    if getattr(term, 'is_number', False):
+        return term < 0
+    l = len(term.free_symbols)
+    t = Poly(term).as_dict()
+    if (all(c < 0 for c in t.values()) and
+        all(i % 2 == 0 for d in t.keys() for i in d) and
+        (0,)*l in t.keys()):
+        return True
+    else:
+        return ask_is_negative(term)
+
 def _is_positive_or_zero(term):
-    res = _is_positive(term)
-    if res in (True, False):
-        return res
+    if getattr(term, 'is_number', False):
+        return term >= 0
     t = Poly(term).as_dict()
     if (all(c > 0 for c in t.values()) and
         all(i % 2 == 0 for d in t.keys() for i in d)):
         return True
     else:
-        return None
+        return ask_is_positive(term)
 
 def _is_negative_or_zero(term):
-    res = _is_negative(term)
-    if res in (True, False):
-        return res
+    if getattr(term, 'is_number', False):
+        return term <= 0
     t = Poly(term).as_dict()
     if (all(c < 0 for c in t.values()) and
         all(i % 2 == 0 for d in t.keys() for i in d)):
         return True
     else:
-        return None
+        return ask_is_negative(term)
 
 def polyeqsimp(eq, filling=False):
     """simplify poly equation/inequation and canonicalize it
@@ -45,10 +68,14 @@ def polyeqsimp(eq, filling=False):
     -x**2 + x + 1 > 0
     >>> polyeqsimp(_)
     x**2 - x - 1 < 0
+    >>> 2*x**2+6*y**2-4 > 0
+    2*x**2 + 6*y**2 - 4 > 0
+    >>> polyeqsimp(_)
+    x**2 + 3*y**2 - 2 > 0
     >>> 2*x**2+6*y**2+4 > 0
     2*x**2 + 6*y**2 + 4 > 0
     >>> polyeqsimp(_)
-    x**2 + 3*y**2 + 2 > 0
+    True
     >>> x**4+3*x**2*y**2 > 0
     x**4 + 3*x**2*y**2 > 0
     >>> polyeqsimp(_)
@@ -84,6 +111,8 @@ def polyeqsimp(eq, filling=False):
         sign = len(terms)
         terms = tuple(filterfalse(_is_negative_or_zero, terms))
         sign -= len(terms)
+    if len(terms) == 0:
+        terms = (S.One,)
 
     # reduce power terms
     terms0 = filterfalse(lambda t: isinstance(t, Pow), terms)
@@ -97,12 +126,17 @@ def polyeqsimp(eq, filling=False):
         terms2 = ()
     expr = Mul(*tuple(chain(terms0, terms1, terms2)))
 
-    # normalize leading coeff
-    expr = expr.expand()
-    lc = LC(expr)
-    if lc < 0:
-        sign += 1
-    expr = expr/lc
+    if getattr(expr, 'is_number', False):
+        if expr < 0:
+            sign += 1
+        expr = abs(expr)
+    else:
+        # normalize leading coeff
+        expr = expr.expand()
+        lc = LC(expr)
+        if lc < 0:
+            sign += 1
+        expr = expr/lc
 
     # swap relation
     if sign % 2 == 1:
@@ -155,9 +189,4 @@ def onesiderelsimp(expr, filling=False):
             expr = expr.replace(w<0,  Not(w>0))
 
     return simplify_logic(expr)
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
 

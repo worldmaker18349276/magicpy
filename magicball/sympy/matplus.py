@@ -1,12 +1,11 @@
-from util import *
-from sympy.matrices.expressions.matexpr import MatrixElement, MatrixSymbol, MatrixExpr
-from sympy.matrices.immutable import ImmutableMatrix as Mat
-from sympy.core.relational import Ne, Eq
-from sympy.simplify.simplify import bottom_up
-from sympy.logic.boolalg import And, Or
+from sympy.matrices import MatrixSymbol, MatrixExpr
+from sympy.core import Ne, Eq
+from sympy.logic import And, Or
+from magicball.sympy.util import *
 
 
 def do_indexing(expr):
+    from sympy.matrices.expressions.matexpr import MatrixElement
     return expr.replace(MatrixElement, lambda parent, i, j: parent[i,j])
 
 def matsimp(expr):
@@ -26,6 +25,8 @@ def matsimp(expr):
     >>> matsimp(_)
     And(-A[0, 1] + A[1, 0] == 0, A[0, 1] - A[1, 0] == 0)
     """
+    from sympy.simplify.simplify import bottom_up
+
     # expand MatrixSymbol as Matrix: A -> [ A[0,0] ,..]
     matsym = filter(lambda s: s.is_Matrix, expr.free_symbols)
     expr = expr.xreplace(dict((mat, mat.as_explicit()) for mat in matsym))
@@ -156,9 +157,4 @@ class MatrixLambda(MatrixExpr):
 
     def _entry(self, i, j):
         return Lambda(self.variables, self.expr[i,j])
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
 
