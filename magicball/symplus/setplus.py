@@ -3,6 +3,7 @@ from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent
 from sympy.sets import Set, Intersection, Union
 from magicball.symplus.util import *
 from magicball.symplus.logicplus import Forall, Exist
+from magicball.symplus.relplus import is_polyonesiderel
 
 
 class AbstractSet(Set):
@@ -68,12 +69,19 @@ class AbstractSet(Set):
                 return S.UniversalSet**len(var)
             else:
                 return S.UniversalSet
+
         var = Tuple(*var) if is_Tuple(var) else Tuple(var)
         if len(var) == 1 and expr.free_symbols == set(var):
             try:
                 return expr.as_set()
             except:
                 pass
+
+        if isinstance(expr, Rel):
+            newexpr = polyeqsimp(expr)
+            if newexpr != expr:
+                return AbstractSet(var, newexpr)
+
         return None
 
     @property
@@ -356,6 +364,59 @@ class AbstractSet(Set):
             else:
                 return AbstractSet(var, expr)
         return expand0(self.variable, self.expr, depth)
+
+    @property
+    def is_open(self):
+        if is_polyonesiderel(self.variables, self.expr):
+            if self.expr.func in (Gt, Lt, Ne):
+                return True
+            else:
+                return False
+        else:
+            return None
+
+    @property
+    def is_closed(self):
+        if is_polyonesiderel(self.variables, self.expr):
+            if self.expr.func in (Gt, Lt, Ne):
+                return False
+            else:
+                return True
+        else:
+            return None
+
+    @property
+    def closure(self):
+        if is_polyonesiderel(self.variables, self.expr):
+            cl = {Gt: Ge, Ge: Ge,
+                  Lt: Le, Le: Le,
+                  Eq: Eq, Ne: lambda *_: true}
+            func = cl[self.expr.func]
+            return AbstractSet(self.variables, func(*self.expr.args))
+        else:
+            super(AbstractSet, self).closure()
+
+    @property
+    def interior(self):
+        if is_polyonesiderel(self.variables, self.expr):
+            it = {Gt: Gt, Ge: Gt,
+                  Lt: Lt, Le: Lt,
+                  Ne: Ne, Eq: lambda *_: false}
+            func = it[self.expr.func]
+            return AbstractSet(self.variables, func(*self.expr.args))
+        else:
+            super(AbstractSet, self).interior()
+
+    @property
+    def _boundary(self):
+        if is_polyonesiderel(self.variables, self.expr):
+            bd = {Gt: Eq, Ge: Eq,
+                  Lt: Eq, Le: Eq,
+                  Eq: Eq, Ne: lambda *_: false}
+            func = bd[self.expr.func]
+            return AbstractSet(self.variables, func(*self.expr.args))
+        else:
+            super(AbstractSet, self)._boundary()
 
 class SetBuilder:
     def __getitem__(self, asets):

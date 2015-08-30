@@ -2,7 +2,7 @@ from itertools import *
 from sympy.core import S, Pow, Mul, Rel, Eq, Ne, Gt, Lt, Ge, Le
 from sympy.logic import true, false, And, Or, Not
 from sympy.logic.boolalg import BooleanFunction
-from sympy.polys import factor, LC, Poly
+from sympy.polys import factor, LC, Poly, PolynomialError
 from sympy.assumptions import Q, ask
 
 
@@ -176,13 +176,17 @@ def polyeqsimp(eq):
     return Or(*eqs)
 
 
-def _find_relations(expr):
-    if isinstance(expr, BooleanFunction):
-        return set.union(*(_find_relations(i) for i in expr.args))
-    elif isinstance(expr, Rel):
-        return set([expr])
+def is_polyonesiderel(var, expr):
+    if any(not isinstance(v, Symbol) for v in var):
+        return False
+    if not isinstance(expr, Rel) or expr.args[1] != 0:
+        return False
+    try:
+        Poly(expr.args[0], var)
+    except PolynomialError:
+        return False
     else:
-        return set()
+        return True
 
 def onesiderelsimp(expr, form='dnf', deep=True):
     """logic simplify for one side relation Rel(w, 0)
