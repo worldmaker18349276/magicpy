@@ -1,4 +1,6 @@
 from sympy.matrices import MatrixExpr
+from sympy.matrices.immutable import ImmutableMatrix as Mat
+from sympy.functions import sqrt
 from sympy.core import Ne, Eq
 from sympy.logic import And, Or
 from magicball.symplus.util import *
@@ -60,6 +62,29 @@ def matsimp(expr):
     expr = expr.replace(Ne, matne_expand)
 
     return expr
+
+
+i, j, k = e = Mat([1,0,0]), Mat([0,1,0]), Mat([0,0,1])
+x, y, z = Symbol('x', real=True), Symbol('y', real=True), Symbol('z', real=True)
+r = Mat([x, y, z])
+
+def norm(vec):
+    return sqrt(sum(v**2 for v in vec))
+
+def normalize(vec):
+    return vec/norm(vec)
+
+def dot(vec1, vec2):
+    return (vec1.T*vec2)[0]
+
+def cross(vec1, vec2=None):
+    if vec2 is None:
+        x, y, z = vec1
+        return Mat([[ 0,-z, y],
+                    [ z, 0,-x],
+                    [-y, x, 0]])
+    else:
+        return cross(vec1)*vec2
 
 
 class MatrixLambda(MatrixExpr):

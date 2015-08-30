@@ -2,9 +2,10 @@ from sympy.core import Ne, Eq, Symbol, Lambda, Tuple
 from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
                             MatrixSymbol, Identity, ZeroMatrix)
 from sympy.matrices.immutable import ImmutableMatrix as Mat
-from sympy.functions import cos, sin, acos, sqrt
+from sympy.functions import cos, sin, acos
 from magicball.symplus.util import is_Tuple, is_Matrix
 from magicball.symplus.setplus import AbstractSet
+from magicball.symplus.matplus import *
 
 
 m = MatrixSymbol('m', 4, 4)
@@ -12,7 +13,6 @@ eye3 = Identity(3)
 eye4 = Identity(4)
 eye4row3 = eye4[3,:]
 zeros3 = ZeroMatrix(3,1)
-i, j, k = e = Mat([1,0,0]), Mat([0,1,0]), Mat([0,0,1])
 def augment(mat=eye3, vec=zeros3):
     if mat.shape != (3, 3):
         raise ShapeError("Matrices size mismatch.")
@@ -40,18 +40,10 @@ T3 = TranslationGroup3 = AbstractSet(m,
     Eq(m[:3,:3], eye3))
 
 
-def norm(vec):
-    return sqrt(sum(v**2 for v in vec))
-
-def normalize(vec):
-    return vec/norm(vec)
-
 def rvec2rmat(rvec):
-    x, y, z = axis = normalize(rvec)
+    axis = normalize(rvec)
     angle = norm(rvec)
-    cpm = Mat([[ 0,-z, y],
-               [ z, 0,-x],
-               [-y, x, 0]])
+    cpm = cross(axis)
     return eye3*cos(angle) + cpm*sin(angle) + axis*axis.T*(1-cos(angle))
 
 def rmat2rvec(rmat):
@@ -170,7 +162,6 @@ def as_function(mat):
     >>> as_function(_)
     Lambda((x, y, z), (x + 2, y + 3, z + 5))
     """
-    x, y, z = Symbol('x', real=True), Symbol('y', real=True), Symbol('z', real=True)
     vec = Mat([x,y,z,1])
     expr = (mat * vec)
     return Lambda((x,y,z), Tuple(*expr[:3]))

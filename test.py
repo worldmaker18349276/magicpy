@@ -19,3 +19,5 @@ doctest.testmod(setplus)
 import magicball.symplus.affine as affine
 doctest.testmod(affine)
 
+import magicball.symplus.euclid as euclid
+doctest.testmod(euclid)
