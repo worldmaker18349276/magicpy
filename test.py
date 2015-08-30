@@ -16,9 +16,6 @@ doctest.testmod(relplus)
 import magicball.symplus.setplus as setplus
 doctest.testmod(setplus)
 
-import magicball.symplus.toplus as toplus
-doctest.testmod(toplus)
-
 import magicball.symplus.affine as affine
 doctest.testmod(affine)
 
