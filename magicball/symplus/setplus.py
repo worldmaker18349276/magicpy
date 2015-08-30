@@ -1,10 +1,8 @@
-from sympy.core import S, Basic, Tuple, Symbol, Dummy
+from sympy.core import S, Tuple
 from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent
-from sympy.logic.boolalg import BooleanFunction
-from sympy.sets import Set
-from sympy.matrices import MatrixSymbol
-from magicball.sympy.matplus import DummyMatrixSymbol
-from magicball.sympy.util import *
+from sympy.sets import Set, Intersection, Union
+from magicball.symplus.util import *
+from magicball.symplus.logicplus import Forall, Exist
 
 
 class AbstractSet(Set):
@@ -66,7 +64,10 @@ class AbstractSet(Set):
         if Exist(var, expr) == false:
             return S.EmptySet
         if Forall(var, expr) == true:
-            return S.UniversalSet
+            if is_Tuple(var):
+                return S.UniversalSet**len(var)
+            else:
+                return S.UniversalSet
         var = Tuple(*var) if is_Tuple(var) else Tuple(var)
         if len(var) == 1 and expr.free_symbols == set(var):
             try:
@@ -411,120 +412,131 @@ class SetBuilder:
 St = SetBuilder()
 
 
-def as_dummy(var):
-    if isinstance(var, Symbol):
-        return var.as_dummy()
-    elif isinstance(var, MatrixSymbol):
-        return DummyMatrixSymbol('_'+var.name, var.shape[0], var.shape[1])
+def is_empty(aset):
+    if isinstance(aset, Intersection):
+        return any(is_empty(arg) == True for arg in aset.args) or None
+    elif isinstance(aset, Union):
+        res = True
+        for arg in aset.args:
+            val = is_empty(arg)
+            if val == False:
+                return False
+            elif val == None:
+                res = None
+        return res
+    elif isinstance(aset, AbstractSet):
+        return aset.is_empty()
+    elif isinstance(aset, Set):
+        return aset == S.EmptySet or None
     else:
-        raise TypeError('variable is not a symbol or matrix symbol: %s' % var)
+        raise TypeError('aset is not set: %r' % aset)
 
-def rename_variables_in(variables, varspace):
-    names = [v.name for v in variables]
-    namespace = [v.name for v in varspace]
-    for i in range(len(names)):
-        while names[i] in namespace or names[i] in names[:i]:
-            names[i] += '_'
-    return list(Symbol(n, **v.assumptions0)
-                if isinstance(v, Symbol) else MatrixSymbol(n, v.rows, v.cols)
-                for n, v in zip(names, variables))
+def is_open(aset):
+    if isinstance(aset, (Union, Intersection)):
+        for arg in aset.args:
+            if is_open(arg) in (False, None):
+                return None
+        return True
+    elif isinstance(aset, Set):
+        try:
+            return arg.is_open()
+        except NotImplementedError:
+            return None
+    else:
+        raise TypeError('aset is not set: %r' % aset)
 
-def var_type_match(vars1, vars2):
-    if len(vars1) != len(vars2):
-        return false
-    for v1, v2 in zip(vars1, vars2):
-        if isinstance(v1, Symbol):
-            if is_Matrix(v2): # TODO: real/complex test
-                return false
-        elif isinstance(v1, MatrixSymbol):
-            if not is_Matrix(v2) or v1.shape != v2.shape:
-                return false
+def is_closed(aset):
+    if isinstance(aset, (Union, Intersection)):
+        for arg in aset.args:
+            if is_closed(arg) in (False, None):
+                return None
+        return True
+    elif isinstance(aset, Set):
+        try:
+            return arg.is_closed()
+        except NotImplementedError:
+            return None
+    else:
+        raise TypeError('aset is not set: %r' % aset)
+
+def closure(aset):
+    if isinstance(aset, Intersection): # need to prove
+        if all(is_open(arg) or is_closed(arg) for arg in aset.args):
+            return Intersection(*[closure(arg) for arg in aset.args])
         else:
-            raise TypeError('variable is not a symbol or matrix symbol: %s' % v1)
-    return true
+            raise NotImplementedError
+    elif isinstance(aset, Union):
+        return Union(*[closure(arg) for arg in aset.args])
+    elif isinstance(aset, Set):
+        return arg.closure()
+    else:
+        raise TypeError('aset is not set: %r' % aset)
+
+def interior(aset):
+    if isinstance(aset, Intersection):
+        return Intersection(*[interior(arg) for arg in aset.args])
+    elif isinstance(aset, Union): # need to prove
+        if all(is_open(arg) or is_closed(arg) for arg in aset.args):
+            return Union(*[interior(arg) for arg in aset.args])
+        else:
+            raise NotImplementedError
+    elif isinstance(aset, Set):
+        return arg.closure()
+    else:
+        raise TypeError('aset is not set: %r' % aset)
+
+def boundarys(aset): # need to prove
+    if isinstance(aset, Intersection):
+        bds = []
+        cl = closure(aset)
+        for arg in aset.args:
+            bds.append([bd & cl for bd in boundarys(arg)])
+        return bds
+    elif isinstance(aset, Union):
+        bds = []
+        it = interior(aset)
+        for arg in aset.args:
+            bds.append([bd - it for bd in boundarys(arg)])
+        return bds
+    elif isinstance(aset, Set):
+        return [arg.boundary()]
+    else:
+        raise TypeError('aset is not set: %r' % aset)
+
+def boundary(aset):
+    return sum(boundarys(aset))
 
 
-class Forall(BooleanFunction):
-    def __new__(cls, variable, expr):
-        for v in variable if is_Tuple(variable) else (variable,):
-            if not is_Symbol(v):
-                raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
-        if not is_Boolean(expr):
-            raise TypeError('expression is not boolean or relational: %r' % expr)
+def bdsetsimp(aset, bds=None): # need to prove
+    from magicball.symplus.util import deep_iter
 
-        if is_Tuple(variable):
-            if len(variable) > 1:
-                variable = Tuple(*variable)
-            else:
-                variable = variable[0]
+    if bds is None:
+        bds = boundarys(aset)
 
-        return BooleanFunction.__new__(cls, variable, expr)
+    if isinstance(aset, Intersection):
+        args = []
+        for arg, bd in zip(aset.args, bds):
+            if is_empty(sum(deep_iter(bd))) != True:
+                args.append(bdsetsimp(arg, bd))
+        return Intersection(*args)
+    elif isinstance(aset, Union):
+        args = []
+        for arg, bd in zip(aset.args, bds):
+            if is_empty(sum(deep_iter(bd))) != True:
+                args.append(bdsetsimp(arg, bd))
+        return Union(*args)
+    elif isinstance(aset, Set):
+        return aset
+    else:
+        raise TypeError('aset is not set: %r' % aset)
 
-    @classmethod
-    def eval(cls, var, expr):
-        from sympy.logic.inference import valid
-        if valid(expr) == True:
-            return true
+def is_disjoint(*asets): # need to prove
+    if all(is_open(aset) for aset in asets):
+        bds = tuple(boundary(aset) for aset in asets)
+        for bd, aset in zip(bds, asets):
+            if bd.is_disjoint(aset) == False:
+                return False
+        return True
+    else:
         return None
-
-    @property
-    def variable(self):
-        return self._args[0]
-
-    @property
-    def variables(self):
-        return self._args[0] if is_Tuple(self._args[0]) else Tuple(self._args[0])
-
-    @property
-    def expr(self):
-        return self._args[1]
-
-    @property
-    def free_symbols(self):
-        return self.expr.free_symbols - set(self.variables)
-
-    def _hashable_content(self):
-        return (self.expr.xreplace(self.canonical_variables),)
-
-class Exist(BooleanFunction):
-    def __new__(cls, variable, expr):
-        for v in variable if is_Tuple(variable) else (variable,):
-            if not is_Symbol(v):
-                raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
-        if not is_Boolean(expr):
-            raise TypeError('expression is not boolean or relational: %r' % expr)
-
-        if is_Tuple(variable):
-            if len(variable) > 1:
-                variable = Tuple(*variable)
-            else:
-                variable = variable[0]
-
-        return BooleanFunction.__new__(cls, variable, expr)
-
-    @classmethod
-    def eval(cls, variables, expr):
-        from sympy.logic.inference import satisfiable
-        if satisfiable(expr) == False:
-            return false
-        return None
-
-    @property
-    def variable(self):
-        return self._args[0]
-
-    @property
-    def variables(self):
-        return self._args[0] if is_Tuple(self._args[0]) else Tuple(self._args[0])
-
-    @property
-    def expr(self):
-        return self._args[1]
-
-    @property
-    def free_symbols(self):
-        return self.expr.free_symbols - set(self.variables)
-
-    def _hashable_content(self):
-        return (self.expr.xreplace(self.canonical_variables),)
 

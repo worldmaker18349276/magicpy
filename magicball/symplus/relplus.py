@@ -3,7 +3,6 @@ from sympy.core import S, Pow, Mul, Rel, Eq, Ne, Gt, Lt, Ge, Le
 from sympy.logic import true, false, And, Or, Not
 from sympy.polys import factor, LC, Poly
 from sympy.assumptions import Q, ask
-from magicball.sympy.setplus import AbstractSet
 
 
 def ask_is_positive(term):

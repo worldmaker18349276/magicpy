@@ -3,8 +3,8 @@ from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
                             MatrixSymbol, Identity, ZeroMatrix)
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from sympy.functions import cos, sin, acos, sqrt
-from magicball.sympy.util import is_Tuple, is_Matrix
-from magicball.sympy.setplus import AbstractSet
+from magicball.symplus.util import is_Tuple, is_Matrix
+from magicball.symplus.setplus import AbstractSet
 
 
 m = MatrixSymbol('m', 4, 4)
@@ -66,7 +66,7 @@ def rmat2rvec(rmat):
 def rotation(rvec):
     """
     >>> from sympy import *
-    >>> from magicball.sympy.matplus import matsimp
+    >>> from magicball.symplus.matplus import matsimp
     >>> t = Symbol('t', positive=True)
     >>> rotation(t*i)
     Matrix([
@@ -88,7 +88,7 @@ def rotation(rvec):
 def reflection(fvec):
     """
     >>> from sympy import *
-    >>> from magicball.sympy.matplus import matsimp
+    >>> from magicball.symplus.matplus import matsimp
     >>> reflection(i)
     Matrix([
     [-1, 0, 0, 0],
@@ -111,7 +111,7 @@ def reflection(fvec):
 def translation(sh):
     """
     >>> from sympy import *
-    >>> from magicball.sympy.matplus import matsimp
+    >>> from magicball.symplus.matplus import matsimp
     >>> translation(Mat([2,3,5]))
     Matrix([
     [1, 0, 0, 2],
@@ -126,7 +126,7 @@ def translation(sh):
 def scaling(fx, fy, fz):
     """
     >>> from sympy import *
-    >>> from magicball.sympy.matplus import matsimp
+    >>> from magicball.symplus.matplus import matsimp
     >>> scaling(2,sqrt(2),sqrt(2))
     Matrix([
     [2,       0,       0, 0],
@@ -141,7 +141,7 @@ def scaling(fx, fy, fz):
 def shearing(a, b):
     """
     >>> from sympy import *
-    >>> from magicball.sympy.matplus import matsimp
+    >>> from magicball.symplus.matplus import matsimp
     >>> shearing(2,sqrt(3))
     Matrix([
     [1, 0,       2, 0],
@@ -160,7 +160,7 @@ def shearing(a, b):
 def as_function(mat):
     """
     >>> from sympy import *
-    >>> from magicball.sympy.matplus import matsimp
+    >>> from magicball.symplus.matplus import matsimp
     >>> translation(Mat([2,3,5]))
     Matrix([
     [1, 0, 0, 2],
@@ -178,7 +178,7 @@ def as_function(mat):
 def transform(st, mat):
     """
     >>> from sympy import *
-    >>> from magicball.sympy.matplus import matsimp
+    >>> from magicball.symplus.matplus import matsimp
     >>> m = translation(Mat([2,3,5]))
     >>> transform((1,2,3), m)
     (3, 5, 8)
@@ -189,7 +189,7 @@ def transform(st, mat):
     [0, 1, sqrt(3), -5*sqrt(3)],
     [0, 0,       1,          0],
     [0, 0,       0,          1]])
-    >>> import magicball.sympy.setplus
+    >>> import magicball.symplus.setplus
     >>> x, y, z = symbols('x,y,z')
     >>> transform(AbstractSet((x,y,z), x**2+y**2+z**2<1), m)
     AbstractSet((x, y, z), (x - 2)**2 + (y - 3)**2 + (z - 5)**2 < 1)
@@ -201,7 +201,7 @@ def transform(st, mat):
     elif is_Matrix(st):
         return mat * st * mat.inv()
     elif isinstance(st, AbstractSet) and len(st.variables) == 3:
-        from magicball.sympy.setplus import rename_variables_in
+        from magicball.symplus.setplus import rename_variables_in
         f = as_function(mat.inv())
         var = rename_variables_in(f.variables, st.free_symbols)
         return AbstractSet(var, st.contains(f(*var)))

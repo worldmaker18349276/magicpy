@@ -1,7 +1,7 @@
-from sympy.matrices import MatrixSymbol, MatrixExpr
+from sympy.matrices import MatrixExpr
 from sympy.core import Ne, Eq
 from sympy.logic import And, Or
-from magicball.sympy.util import *
+from magicball.symplus.util import *
 
 
 def do_indexing(expr):
@@ -60,19 +60,6 @@ def matsimp(expr):
     expr = expr.replace(Ne, matne_expand)
 
     return expr
-
-
-class DummyMatrixSymbol(MatrixSymbol):
-    _count = 0
-    __slots__ = ['dummy_index']
-    is_Dummy = True
-    def __new__(cls, name, n, m):
-        obj = MatrixSymbol.__new__(cls, name, n, m)
-        cls._count += 1
-        obj.dummy_index = cls._count
-        return obj
-    def _hashable_content(self):
-        return self.name, self.shape, self.dummy_index
 
 
 class MatrixLambda(MatrixExpr):
