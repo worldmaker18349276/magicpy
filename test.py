@@ -16,11 +16,11 @@ doctest.testmod(relplus)
 import magicball.symplus.setplus as setplus
 doctest.testmod(setplus)
 
-import magicball.symplus.affine as affine
+import magicball.affine as affine
 doctest.testmod(affine)
 
-import magicball.symplus.euclid as euclid
+import magicball.euclid as euclid
 doctest.testmod(euclid)
 
-import magicball.mathplus as mathplus
-doctest.testmod(mathplus)
+import magicball.path as path
+doctest.testmod(path)
