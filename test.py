@@ -21,3 +21,6 @@ doctest.testmod(affine)
 
 import magicball.symplus.euclid as euclid
 doctest.testmod(euclid)
+
+import magicball.mathplus as mathplus
+doctest.testmod(mathplus)
