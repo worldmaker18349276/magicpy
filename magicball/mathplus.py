@@ -1,13 +1,27 @@
-from sympy.core import Basic, Lambda
+from sympy.core import Basic, Lambda, Tuple, sympify
 from sympy.functions import Piecewise
 from sympy.sets import Set, FiniteSet, ProductSet, Interval
 from magicball.symplus.util import *
 
 
 class FreeMonoid(Set):
+    """
+    >>> from sympy import *
+    >>> fmnd1 = FreeMonoid(FiniteSet('a', 'b', 'c')); fmnd1
+    FreeMonoid({a, b, c})
+    >>> Tuple(*'aabc') in fmnd1
+    True
+    >>> fmnd2 = FreeMonoid(FiniteSet('x', 'y', 'z'))
+    >>> fmnd12 = fmnd1 * fmnd2; fmnd12
+    FreeMonoid({a, b, c} x {x, y, z})
+    >>> Tuple(('a', 'x'), ('c', 'x'), ('c', 'y')) in fmnd12
+    True
+    >>> Tuple(*zip('aac','zxy')) in fmnd12
+    True
+    """
     def __new__(cls, alphabet):
-        if not isinstance(alphabet, FiniteSet):
-            raise TypeError
+        if not isinstance(alphabet, Set):
+            raise TypeError('alphabet is not a Set: %r' % alphabet)
         return Set.__new__(cls, alphabet)
 
     @property
@@ -15,7 +29,7 @@ class FreeMonoid(Set):
         return self.args[0]
 
     def _contains(self, word):
-        if not isinstance(word, list):
+        if not isinstance(word, Tuple):
             return False
         return all(word[t] in self.alphabet for t in range(len(word)))
 
@@ -33,9 +47,25 @@ class FreeMonoid(Set):
         return FreeMonoid(ProductSet(*[fmnd.alphabet for fmnd in fmnds]))
 
 class PathMonoid(Set):
-    def __init__(self, base):
+    """
+    >>> from sympy import *
+    >>> t = Symbol('t', positive=True)
+    >>> pmnd1 = PathMonoid(S.Reals); pmnd1
+    PathMonoid((-oo, oo))
+    >>> Path(t**2+1, 10) in pmnd1
+    True
+    >>> Path(t*I+1, 10) in pmnd1
+    False
+    >>> Path(exp(t), 4.3) in PathMonoid(Interval(0, 100))
+    True
+    >>> pmnd2 = pmnd1**2; pmnd2
+    PathMonoid((-oo, oo) x (-oo, oo))
+    >>> Path(t**2+1, 10)*Path(exp(t), 10) in pmnd2
+    True
+    """
+    def __new__(cls, base):
         if not isinstance(base, Set):
-            raise TypeError
+            raise TypeError('base is not a Set: %r' % base)
         return Set.__new__(cls, base)
 
     @property
@@ -45,10 +75,10 @@ class PathMonoid(Set):
     def _contains(self, pth):
         if not isinstance(pth, Path):
             return False
-        if pth.function.expr in self.base:
-            return True
-        return None
-        # return all(pth(t) in self.base for t in range(int(pth.length)+1))
+        res = self.base.contains(pth.function.expr)
+        if res in (True, False):
+            return res
+        return all(pth(t) in self.base for t in range(int(pth.length)+1))
 
     def __mul__(self, other):
         return PathMonoid.tensor((self, other))
@@ -64,13 +94,45 @@ class PathMonoid(Set):
         return PathMonoid(ProductSet(*[pmnd.base for pmnd in pmnds]))
 
 class Path(Basic):
+    """
+    >>> from sympy import *
+    >>> t = Symbol('t', positive=True)
+    >>> pth1 = Path(Lambda(t, t**2+1), 10); pth1
+    Path(Lambda(t, t**2 + 1), 10)
+    >>> pth2 = Path(exp(t), 10); pth2
+    Path(Lambda(t, exp(t)), 10)
+    >>> pth1(2)
+    5
+    >>> len(pth1)
+    10
+    >>> pth1+pth2
+    Path(Lambda(t, Piecewise((t**2 + 1, t <= 10), (101*exp(t - 10), True))), 20)
+    >>> pth2[2:5]
+    Path(Lambda(t, exp(-2)*exp(t + 2)), 3)
+    >>> pth12 = pth1 * pth2; pth12
+    TensorPath(Path(Lambda(t, t**2 + 1), 10), Path(Lambda(t, exp(t)), 10))
+    >>> pth12.function
+    Lambda(t, (t**2 + 1, exp(t)))
+    >>> pth12.length
+    10
+    >>> (pth12 + pth12).function.expr
+    (Piecewise((t**2 + 1, t <= 10), (101*(t - 10)**2 + 101, True)), \
+Piecewise((exp(t), t <= 10), (exp(10)*exp(t - 10), True)))
+    >>> pth12[2:7]
+    TensorPath(Path(Lambda(t, (t + 2)**2/5 + 1/5), 5), \
+Path(Lambda(t, exp(-2)*exp(t + 2)), 5))
+    """
     def __new__(cls, func, flen):
-        if (not isinstance(func, Lambda) or
-            len(func.variables) > 1 or
-            func.free_symbols != set()):
-            raise TypeError
+        if not isinstance(func, Lambda):
+            if len(func.free_symbols) != 1:
+                raise TypeError('func is not a one variable expression: %r' % func)
+            t = tuple(func.free_symbols)[0]
+            func = Lambda(t, func)
+        else:
+            if len(func.variables) > 1 or len(func.free_symbols) != 0:
+                raise TypeError('func is not a one variable Lambda: %r' % func)
         if flen < 0:
-            raise TypeError
+            raise ValueError('flen must be positive: %s' % flen)
         return Basic.__new__(cls, func, flen)
 
     @property
@@ -83,10 +145,11 @@ class Path(Basic):
 
     def concat(self, other):
         if not isinstance(other, Path):
-            raise ValueError
+            raise ValueError('other is not a Path: %s' % other)
         t = self.function.variables[0]
-        expr12 = Piecewise((self.function(t), t<=self.length),
-                           (other.function(t), True))
+        l = self.length
+        expr12 = Piecewise((self.function(t), t<=l),
+                           (other.function(t-l)*self.function(l), True))
         return Path(Lambda(t, expr12), self.length+other.length)
 
     def slice(self, start, stop):
@@ -138,11 +201,16 @@ class TensorPath(Path):
             raise TypeError
         if len(set(pth.length for pth in paths)) != 1:
             raise ValueError
-        obj = Basic.__new__(cls, *paths)
-        t = paths[0].function.variables[0]
-        obj.function = Lambda(t, tuple(map(pth.function(t) for pth in paths)))
-        obj.length = paths[0].length
-        return obj
+        return Basic.__new__(cls, *paths)
+
+    @property
+    def function(self):
+        t = self.args[0].function.variables[0]
+        return Lambda(t, tuple(pth.function(t) for pth in self.args))
+
+    @property
+    def length(self):
+        return self.args[0].length
 
     def concat(self, other):
         if (not isinstance(other, TensorPath) or
