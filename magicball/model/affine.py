@@ -199,3 +199,16 @@ def transform(st, mat):
     else:
         raise ValueError
 
+
+t = Symbol('t', positive=True)
+n = 100
+
+def rotate(rvec):
+    if norm(rvec) == 0:
+        return Path(eye4, 0)
+    return Path(rotation(t/n*rvec), n)
+
+def shift(sh):
+    if norm(sh) == 0:
+        return Path(eye4, 0)
+    return Path(translation(t/n*sh), n)

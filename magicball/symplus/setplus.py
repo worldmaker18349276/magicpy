@@ -1,4 +1,4 @@
-from sympy.core import S, Tuple, Rel
+from sympy.core import S, Tuple, Rel, Basic
 from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent
 from sympy.sets import Set, Intersection, Union
 from magicball.symplus.util import *
@@ -472,3 +472,22 @@ class SetBuilder:
 
 St = SetBuilder()
 
+
+class Topology(Basic):
+    def __new__(cls, space):
+        if isinstance(space, Set):
+            return TypeError
+        return Basic.__new__(cls, space)
+
+    @property
+    def space(self):
+        return self.args[0]
+
+    def contains(self, other):
+        return self.space.is_superset(other) & other.is_open()
+
+    def __contains__(self, other):
+        symb = self.contains(other)
+        if symb not in (true, false):
+            raise TypeError('contains did not evaluate to a bool: %r' % symb)
+        return bool(symb)
