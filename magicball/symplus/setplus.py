@@ -1,4 +1,4 @@
-from sympy.core import S, Tuple
+from sympy.core import S, Tuple, Rel
 from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent
 from sympy.sets import Set, Intersection, Union
 from magicball.symplus.util import *
@@ -26,7 +26,7 @@ class AbstractSet(Set):
         >>> AbstractSet((m, x), Eq(det(m),x))
         AbstractSet((m, x), Determinant(m) == x)
         >>> AbstractSet(x, (x>1)&(x<3), evaluate=True)
-        (1, 3)
+        AbstractSet(x, And(x < 3, x > 1))
         >>> AbstractSet(x, x>y)
         AbstractSet(x, x > y)
         >>> AbstractSet(1, x>y)
@@ -70,12 +70,12 @@ class AbstractSet(Set):
             else:
                 return S.UniversalSet
 
-        var = Tuple(*var) if is_Tuple(var) else Tuple(var)
-        if len(var) == 1 and expr.free_symbols == set(var):
-            try:
-                return expr.as_set()
-            except:
-                pass
+        # var = Tuple(*var) if is_Tuple(var) else Tuple(var)
+        # if len(var) == 1 and expr.free_symbols == set(var):
+        #     try:
+        #         return expr.as_set()
+        #     except:
+        #         pass
 
         if isinstance(expr, Rel):
             newexpr = polyeqsimp(expr)
