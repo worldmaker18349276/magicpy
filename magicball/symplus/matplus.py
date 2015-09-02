@@ -3,7 +3,6 @@ from sympy.matrices.immutable import ImmutableMatrix as Mat
 from sympy.functions import sqrt
 from sympy.core import Ne, Eq, Dummy
 from sympy.logic import And, Or
-from sympy.simplify import simplify
 from magicball.symplus.util import *
 
 
@@ -69,37 +68,39 @@ def matsimp(expr):
 
     return expr
 
-def simplify_with_mat(expr, *args, **kwargs):
+def with_matsym(*simplifies):
     """
     >>> from sympy import *
     >>> A = MatrixSymbol('A', 2, 2)
     >>> Eq(det(A), 0)
     Determinant(A) == 0
-    >>> simplify_with_mat(_)
+    >>> with_matsym(matsimp)(_)
     A[0, 0]*A[1, 1] - A[0, 1]*A[1, 0] == 0
     >>> Eq(A.T*A, Identity(2))
     A'*A == I
-    >>> simplify_with_mat(_)
+    >>> with_matsym(matsimp)(_)
     And(A[0, 0]**2 + A[1, 0]**2 == 1, A[0, 0]*A[0, 1] + \
 A[1, 0]*A[1, 1] == 0, A[0, 1]**2 + A[1, 1]**2 == 1)
     """
-    # expand MatrixSymbol as Matrix: A -> [ A[0,0] ,..]
-    mats = expr.atoms(MatrixSymbol)
-    expr = expr.xreplace(dict((mat, mat.as_explicit()) for mat in mats))
+    def simplify_with_matsym(expr, *args, **kwargs):
+        # expand MatrixSymbol as Matrix: A -> [ A[0,0] ,..]
+        mats = expr.atoms(MatrixSymbol)
+        expr = expr.xreplace(dict((mat, mat.as_explicit()) for mat in mats))
 
-    # replace MatrixElement as Symbol: A[i,j] -> Aij
-    elems = tuple(elem for mat in mats for elem in mat)
-    syms = tuple(map(lambda e: Dummy(str(e)), elems))
-    expr = expr.xreplace(dict(zip(elems, syms)))
+        # replace MatrixElement as Symbol: A[i,j] -> Aij
+        elems = tuple(elem for mat in mats for elem in mat)
+        syms = tuple(map(lambda e: Dummy(str(e)), elems))
+        expr = expr.xreplace(dict(zip(elems, syms)))
 
-    # simplify expression
-    expr = matsimp(expr)
-    expr = simplify(expr, *args, **kwargs)
+        # simplify expression
+        for simp in simplifies:
+            expr = simp(expr, *args, **kwargs)
 
-    # replace Symbol as MatrixElement: Aij -> A[i,j]
-    expr = expr.xreplace(dict(zip(syms, elems)))
+        # replace Symbol as MatrixElement: Aij -> A[i,j]
+        expr = expr.xreplace(dict(zip(syms, elems)))
 
-    return expr
+        return expr
+    return simplify_with_matsym
 
 
 i, j, k = e = Mat([1,0,0]), Mat([0,1,0]), Mat([0,0,1])
