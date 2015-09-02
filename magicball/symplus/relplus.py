@@ -83,6 +83,14 @@ def is_polynomial(expr):
     else:
         return True
 
+def is_polyrel(var, expr):
+    if any(not isinstance(v, Symbol) or not v.is_real for v in var):
+        return False
+    if isinstance(expr, (And, Or, Not, Implies, Equivalent)):
+        return all(is_polyrel(arg) for arg in expr.args)
+    elif isinstance(expr, Rel):
+        return is_polynomial(expr.args[0]-expr.args[1])
+
 def is_polyonesiderel(var, expr):
     if any(not isinstance(v, Symbol) for v in var):
         return False

@@ -1,17 +1,18 @@
 from sympy.core import S, Tuple, Rel, Basic
-from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent
+from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent, to_nnf
 from sympy.sets import Set, Intersection, Union
 from magicball.symplus.util import *
+from magicball.symplus.matplus import matsimp, with_matsym
 from magicball.symplus.logicplus import Forall, Exist
-from magicball.symplus.relplus import is_polyonesiderel
+from magicball.symplus.relplus import is_polyonesiderel, polyrelsimp, onesiderelsimp
 
 
 class AbstractSet(Set):
-    def __new__(cls, variable, expr, evaluate=False):
+    def __new__(cls, variable, expr, **kwargs):
         """create AbstractSet by variable and expression
 
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1)
         AbstractSet(x, Abs(x) > 1)
         >>> AbstractSet((x,), abs(x)>1)
@@ -25,7 +26,7 @@ class AbstractSet(Set):
         AbstractSet(m, m[0, 0] + m[1, 1] == 0)
         >>> AbstractSet((m, x), Eq(det(m),x))
         AbstractSet((m, x), Determinant(m) == x)
-        >>> AbstractSet(x, (x>1)&(x<3), evaluate=True)
+        >>> AbstractSet(x, (x>1)&(x<3))
         AbstractSet(x, And(x < 3, x > 1))
         >>> AbstractSet(x, x>y)
         AbstractSet(x, x > y)
@@ -38,8 +39,6 @@ class AbstractSet(Set):
             ...
         TypeError: expression is not boolean or relational: x + y
         """
-        from sympy.core.evaluate import global_evaluate
-
         for v in variable if is_Tuple(variable) else (variable,):
             if not is_Symbol(v):
                 raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
@@ -52,44 +51,14 @@ class AbstractSet(Set):
             else:
                 variable = variable[0]
 
-        evaluate = evaluate if evaluate is not None else global_evaluate[0]
-        if evaluate:
-            evaluated = cls.eval(variable, expr)
-            if evaluated is not None:
-                return evaluated
-
-        return Set.__new__(cls, variable, expr)
-
-    @classmethod
-    def eval(cls, var, expr):
-        if Exist(var, expr) == false:
-            return S.EmptySet
-        if Forall(var, expr) == true:
-            if is_Tuple(var):
-                return S.UniversalSet**len(var)
-            else:
-                return S.UniversalSet
-
-        # var = Tuple(*var) if is_Tuple(var) else Tuple(var)
-        # if len(var) == 1 and expr.free_symbols == set(var):
-        #     try:
-        #         return expr.as_set()
-        #     except:
-        #         pass
-
-        if isinstance(expr, Rel):
-            newexpr = polyeqsimp(expr)
-            if newexpr != expr:
-                return AbstractSet(var, newexpr)
-
-        return None
+        return Set.__new__(cls, variable, expr, **kwargs)
 
     @property
     def variable(self):
         """get variable of set builder
 
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1).variable
         x
         >>> AbstractSet((x,), abs(x)>1).variable
@@ -106,7 +75,7 @@ class AbstractSet(Set):
         """get variable with tuple of set builder
 
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1).variables
         (x,)
         >>> AbstractSet((x,), abs(x)>1).variables
@@ -123,7 +92,7 @@ class AbstractSet(Set):
         """get expression of set builder
 
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1).expr
         Abs(x) > 1
         >>> AbstractSet((x,), abs(x)>1).expr
@@ -140,7 +109,7 @@ class AbstractSet(Set):
         """get free symbols of set builder
 
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1).free_symbols
         set()
         >>> AbstractSet((x,), abs(x)>1).free_symbols
@@ -159,14 +128,14 @@ class AbstractSet(Set):
         """intersect two set builder
 
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet(y, abs(y)<3))
         AbstractSet(x, And(Abs(x) < 3, Abs(x) > 1))
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet((x,y), abs(x-y)>1))
         EmptySet()
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet(y, y<x))
         AbstractSet(x_, And(Abs(x_) > 1, x_ < x))
-        >>> x2 = Symbol('x2', positive=True)
+        >>> x2 = symbols('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet(x2, x2<y))
         AbstractSet(x, And(Abs(x) > 1, x < y))
         >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
@@ -192,13 +161,13 @@ class AbstractSet(Set):
         """union two set builder
 
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet(y, abs(y)<3))
         AbstractSet(x, Or(Abs(x) < 3, Abs(x) > 1))
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet((x,y), abs(x-y)>1))
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet(y, y<x))
         AbstractSet(x_, Or(Abs(x_) > 1, x_ < x))
-        >>> x2 = Symbol('x2', positive=True)
+        >>> x2 = symbols('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet(x2, x2<y))
         AbstractSet(x, Or(Abs(x) > 1, x < y))
         >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
@@ -223,16 +192,16 @@ class AbstractSet(Set):
         """complement two set builder
 
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
-        >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(y, abs(y)<3))
-        AbstractSet(x, And(Abs(x) > 1, Abs(x) >= 3))
+        >>> x, y = symbols('x y')
+        >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(y, abs(y)<=3))
+        AbstractSet(x, And(Abs(x) > 1, Abs(x) > 3))
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet((x,y), abs(x-y)>1))
         EmptySet()
-        >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(y, y<x))
-        AbstractSet(x_, And(Abs(x_) > 1, x_ >= x))
-        >>> x2 = Symbol('x2', positive=True)
-        >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(x2, x2<y))
-        AbstractSet(x, And(Abs(x) > 1, x >= y))
+        >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(y, y<=x))
+        AbstractSet(x_, And(Abs(x_) > 1, x_ > x))
+        >>> x2 = symbols('x2', positive=True)
+        >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(x2, x2<=y))
+        AbstractSet(x, And(Abs(x) > 1, x > y))
         >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._complement(AbstractSet(n, Eq(det(n),0)))
         AbstractSet(m, And(Determinant(m) != 0, m[0, 0] + m[1, 1] == 0))
@@ -255,7 +224,7 @@ class AbstractSet(Set):
     def _contains(self, other):
         """
         >>> from sympy import *
-        >>> x, y, z = Symbol('x'), Symbol('y'), Symbol('z')
+        >>> x, y, z = symbols('x y z')
         >>> AbstractSet(x, abs(x)>1)._contains(2)
         True
         >>> AbstractSet((x,y), abs(x-y)>1)._contains((3,1))
@@ -276,7 +245,7 @@ class AbstractSet(Set):
     def is_subset(self, other):
         """
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> AbstractSet(x, x-y>1).is_subset(AbstractSet(x, (x-y>1)|(x+y>1)))
         True
         >>> AbstractSet((x,y), x-y>1).is_subset(AbstractSet((x,y), abs(x-y)>1))
@@ -297,7 +266,7 @@ class AbstractSet(Set):
     def is_disjoint(self, other):
         """
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> AbstractSet(x, x-y>1).is_disjoint(AbstractSet(x, (x-y<=1)&(x+y>1)))
         True
         >>> AbstractSet((x,y), x-y>1).is_disjoint(AbstractSet((x,y), abs(x-y)<1))
@@ -318,7 +287,7 @@ class AbstractSet(Set):
     def is_equivalent(self, other):
         """
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> AbstractSet(x, x-y>1).is_equivalent(AbstractSet(x, x-y>1))
         True
         >>> AbstractSet(x, x<1).is_equivalent(AbstractSet(x, x-1<0))
@@ -339,7 +308,7 @@ class AbstractSet(Set):
     def is_proper_subset(self, other):
         """
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> AbstractSet(x, x-y>1).is_proper_subset(AbstractSet(x, x-y>1))
         False
         >>> AbstractSet(x, x-y>1).is_proper_subset(AbstractSet(x, (x-y>1)|(x+y>1)))
@@ -351,78 +320,49 @@ class AbstractSet(Set):
             raise ValueError("Unknown argument '%s'" % other)
 
     def is_empty(self):
+        """
+        >>> from sympy import *
+        >>> x, y = symbols('x y')
+        >>> AbstractSet(x, false).is_empty()
+        True
+        >>> AbstractSet(x, (x>0)&(x<0))
+        AbstractSet(x, And(x < 0, x > 0))
+        >>> _.is_empty()
+        Forall(x, Not(And(x < 0, x > 0)))
+        """
         return Forall(self.variables, Not(self.expr))
 
     def expand(self, depth=-1):
+        """
+        >>> from sympy import *
+        >>> x, y = symbols('x y')
+        >>> AbstractSet(x, (x>0)&(x<0))
+        AbstractSet(x, And(x < 0, x > 0))
+        >>> _.expand()
+        Intersection(AbstractSet(x, x > 0), AbstractSet(x, x < 0))
+        >>> AbstractSet((x,y), (x>0)>>(y>1))
+        AbstractSet((x, y), Implies(x > 0, y > 1))
+        >>> _.expand()
+        AbstractSet((x, y), x <= 0) U AbstractSet((x, y), y > 1)
+        """
         def expand0(var, expr, dp):
             if dp == 0:
                 return AbstractSet(var, expr)
             if isinstance(expr, Or):
-                return Union(*[expand(var, arg, dp-1) for arg in expr.args])
+                return Union(*[expand0(var, arg, dp-1) for arg in expr.args],
+                             evaluate=False)
             elif isinstance(expr, And):
-                return Intersection(*[expand(var, arg, dp-1) for arg in expr.args])
+                return Intersection(*[expand0(var, arg, dp-1) for arg in expr.args],
+                                    evaluate=False)
             else:
                 return AbstractSet(var, expr)
-        return expand0(self.variable, self.expr, depth)
-
-    @property
-    def is_open(self):
-        if is_polyonesiderel(self.variables, self.expr):
-            if self.expr.func in (Gt, Lt, Ne):
-                return True
-            else:
-                return False
-        else:
-            return None
-
-    @property
-    def is_closed(self):
-        if is_polyonesiderel(self.variables, self.expr):
-            if self.expr.func in (Gt, Lt, Ne):
-                return False
-            else:
-                return True
-        else:
-            return None
-
-    @property
-    def closure(self):
-        if is_polyonesiderel(self.variables, self.expr):
-            cl = {Gt: Ge, Ge: Ge,
-                  Lt: Le, Le: Le,
-                  Eq: Eq, Ne: lambda *_: true}
-            func = cl[self.expr.func]
-            return AbstractSet(self.variables, func(*self.expr.args))
-        else:
-            super(AbstractSet, self).closure()
-
-    @property
-    def interior(self):
-        if is_polyonesiderel(self.variables, self.expr):
-            it = {Gt: Gt, Ge: Gt,
-                  Lt: Lt, Le: Lt,
-                  Ne: Ne, Eq: lambda *_: false}
-            func = it[self.expr.func]
-            return AbstractSet(self.variables, func(*self.expr.args))
-        else:
-            super(AbstractSet, self).interior()
-
-    @property
-    def _boundary(self):
-        if is_polyonesiderel(self.variables, self.expr):
-            bd = {Gt: Eq, Ge: Eq,
-                  Lt: Eq, Le: Eq,
-                  Eq: Eq, Ne: lambda *_: false}
-            func = bd[self.expr.func]
-            return AbstractSet(self.variables, func(*self.expr.args))
-        else:
-            super(AbstractSet, self)._boundary()
+        return expand0(self.variable, to_nnf(self.expr), depth)
 
 class SetBuilder:
     def __getitem__(self, asets):
         """
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> St[x : abs(x)>1]
         AbstractSet(x, Abs(x) > 1)
         >>> St[(x, y) : abs(x-y)>1]
@@ -448,7 +388,7 @@ class SetBuilder:
     def __call__(self, *asets):
         """
         >>> from sympy import *
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = symbols('x y')
         >>> St({x : abs(x)>1})
         AbstractSet(x, Abs(x) > 1)
         >>> St({(x, y) : abs(x-y)>1})
@@ -491,3 +431,39 @@ class Topology(Basic):
         if symb not in (true, false):
             raise TypeError('contains did not evaluate to a bool: %r' % symb)
         return bool(symb)
+
+
+def setsimp(aset):
+    """
+    >>> from sympy import *
+    >>> x, y = symbols('x y')
+    >>> setsimp(AbstractSet((x,y), x**2>y**2))
+    AbstractSet((x, y), Or(And(x + y < 0, x - y < 0), And(x + y > 0, x - y > 0)))
+    >>> A = MatrixSymbol('A', 2, 2)
+    >>> setsimp(AbstractSet(A, Eq(A.T, A)))
+    AbstractSet(A, A[0, 1] - A[1, 0] == 0)
+    """
+    var = aset.variables
+    expr = aset.expr
+
+    expr = with_matsym(matsimp, polyrelsimp, onesiderelsimp)(expr)
+
+    if expr == false or Exist(var, expr) == false:
+        return S.EmptySet
+    if expr == true or Forall(var, expr) == true:
+        if all(isinstance(v, Symbol) for v in var):
+            return S.UniversalSet**len(var)
+        else: # TODO: MatrixUniversalSet
+            return AbstractSet(var, true)
+
+    # if len(var) == 1 and expr.free_symbols == set(var):
+    #     try:
+    #         return expr.as_set()
+    #     except:
+    #         pass
+
+    if expr != aset.expr:
+        return AbstractSet(var, expr)
+    else:
+        return None
+
