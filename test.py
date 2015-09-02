@@ -19,6 +19,9 @@ doctest.testmod(setplus)
 import magicball.symplus.path as path
 doctest.testmod(path)
 
+import magicball.num.sample as sample
+doctest.testmod(sample)
+
 import magicball.model.affine as affine
 doctest.testmod(affine)
 
