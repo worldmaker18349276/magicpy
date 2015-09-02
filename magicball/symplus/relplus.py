@@ -74,6 +74,7 @@ def _is_negative_or_zero(term):
         return True
     return ask_is_negative(term)
 
+
 def is_polynomial(expr):
     try:
         Poly(expr, expr.free_symbols)
@@ -82,39 +83,52 @@ def is_polynomial(expr):
     else:
         return True
 
-def polyeqsimp(eq):
-    """simplify poly equation/inequation and canonicalize it
+def is_polyonesiderel(var, expr):
+    if any(not isinstance(v, Symbol) for v in var):
+        return False
+    if not isinstance(expr, Rel) or expr.args[1] != 0:
+        return False
+    try:
+        Poly(expr.args[0], var)
+    except PolynomialError:
+        return False
+    else:
+        return True
+
+
+def expand_polyeq(eq):
+    """expand (polynomial) equation/inequation and canonicalize it
     >>> from sympy import *
     >>> x, y, z = symbols('x, y, z')
     >>> Eq(x**2+y, 2*y-1)
     x**2 + y == 2*y - 1
-    >>> polyeqsimp(_)
+    >>> expand_polyeq(_)
     x**2 - y + 1 == 0
     >>> -x**2+x+1 > 0
     -x**2 + x + 1 > 0
-    >>> polyeqsimp(_)
+    >>> expand_polyeq(_)
     x**2 - x - 1 < 0
     >>> 2*x**2+6*y**2-4 > 0
     2*x**2 + 6*y**2 - 4 > 0
-    >>> polyeqsimp(_)
+    >>> expand_polyeq(_)
     x**2 + 3*y**2 - 2 > 0
     >>> 2*x**2+6*y**2+4 > 0
     2*x**2 + 6*y**2 + 4 > 0
-    >>> polyeqsimp(_)
+    >>> expand_polyeq(_)
     True
     >>> x**4+3*x**2*y**3 > 0
     x**4 + 3*x**2*y**3 > 0
-    >>> polyeqsimp(_)
+    >>> expand_polyeq(_)
     And(x != 0, x**2 + 3*y**3 > 0)
     >>> (x**2+1)*(2*x-y) > 0
     (2*x - y)*(x**2 + 1) > 0
-    >>> polyeqsimp(_)
+    >>> expand_polyeq(_)
     x - y/2 > 0
     >>> eq = Gt((x**2+y**2)*(2*x-y), 0); eq
     (2*x - y)*(x**2 + y**2) > 0
-    >>> polyeqsimp(eq)
+    >>> expand_polyeq(eq)
     And(x != 0, x - y/2 > 0, y != 0)
-    >>> polyeqsimp(Gt(1,1, evaluate=False))
+    >>> expand_polyeq(Gt(1,1, evaluate=False))
     False
     """
     if not isinstance(eq, Rel):
@@ -219,18 +233,9 @@ def polyeqsimp(eq):
 
     return Or(*eqs)
 
-
-def is_polyonesiderel(var, expr):
-    if any(not isinstance(v, Symbol) for v in var):
-        return False
-    if not isinstance(expr, Rel) or expr.args[1] != 0:
-        return False
-    try:
-        Poly(expr.args[0], var)
-    except PolynomialError:
-        return False
-    else:
-        return True
+def polyrelsimp(expr):
+    return expr.replace(lambda rel: isinstance(rel, Rel),
+                        lambda rel: expand_polyeq(rel))
 
 def onesiderelsimp(expr, form='dnf', deep=True):
     """logic simplify for one side relation Rel(w, 0)
