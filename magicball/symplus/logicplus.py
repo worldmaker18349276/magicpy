@@ -5,7 +5,7 @@ from magicball.symplus.util import *
 
 
 class Forall(BooleanFunction):
-    def __new__(cls, variable, expr):
+    def __new__(cls, variable, expr, **kwargs):
         for v in variable if is_Tuple(variable) else (variable,):
             if not is_Symbol(v):
                 raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
@@ -18,7 +18,7 @@ class Forall(BooleanFunction):
             else:
                 variable = variable[0]
 
-        return BooleanFunction.__new__(cls, variable, expr)
+        return BooleanFunction.__new__(cls, variable, expr, **kwargs)
 
     @classmethod
     def eval(cls, var, expr):
@@ -46,7 +46,7 @@ class Forall(BooleanFunction):
         return (self.expr.xreplace(self.canonical_variables),)
 
 class Exist(BooleanFunction):
-    def __new__(cls, variable, expr):
+    def __new__(cls, variable, expr, **kwargs):
         for v in variable if is_Tuple(variable) else (variable,):
             if not is_Symbol(v):
                 raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
@@ -59,7 +59,7 @@ class Exist(BooleanFunction):
             else:
                 variable = variable[0]
 
-        return BooleanFunction.__new__(cls, variable, expr)
+        return BooleanFunction.__new__(cls, variable, expr, **kwargs)
 
     @classmethod
     def eval(cls, variables, expr):

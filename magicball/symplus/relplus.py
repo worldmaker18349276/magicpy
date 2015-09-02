@@ -240,7 +240,9 @@ def polyrelsimp(expr):
 def onesiderelsimp(expr, form='dnf', deep=True):
     """logic simplify for one side relation Rel(w, 0)
     >>> from sympy import *
-    >>> x, y, z = symbols('x, y, z')
+    >>> x, y, z = symbols('x y z')
+    >>> onesiderelsimp((x>0) >> ((x<=0)&(y<0)))
+    x <= 0
     >>> onesiderelsimp((x>0) >> (x>=0))
     True
     >>> onesiderelsimp((x<0) & (x>0))
@@ -253,7 +255,8 @@ def onesiderelsimp(expr, form='dnf', deep=True):
     from sympy.core.symbol import Wild
     from sympy.core import sympify
     from sympy.simplify import simplify
-    from sympy.logic.boolalg import SOPform, POSform, to_nnf, _find_predicates
+    from sympy.logic.boolalg import (SOPform, POSform, to_nnf,
+        _find_predicates, simplify_logic)
     Nt = lambda x: Not(x, evaluate=False)
 
     if form not in ('cnf', 'dnf'):
@@ -267,36 +270,58 @@ def onesiderelsimp(expr, form='dnf', deep=True):
     expr = to_nnf(expr)
     expr = expr.replace(Not(w), lambda w: Not(w, evaluate=True))
 
-    # standardize relation
-    expr = expr.replace(Ne(w,0), Nt(Eq(w,0)))
-    expr = expr.replace(Ge(w,0), Or(Gt(w,0), Eq(w,0)))
-    expr = expr.replace(Le(w,0), Or(Lt(w,0), Eq(w,0)))
-
-    # make totality
+    # determine case
     variables = _find_predicates(expr)
     relations = filter(lambda v: isinstance(v, Rel) and v.args[1] == 0, variables)
-    totalities = []
-    for a in set(rel.args[0] for rel in relations):
-        totalities.append(
-            Or(And(Gt(a,0), Nt(Eq(a,0)), Nt(Lt(a,0))),
-               And(Nt(Gt(a,0)), Eq(a,0), Nt(Lt(a,0))),
-               And(Nt(Gt(a,0)), Nt(Eq(a,0)), Lt(a,0))))
-    totality = And(*totalities)
+    simple_form = {Eq: Eq, Ne: Eq,
+                   Gt: Gt, Le: Gt,
+                   Lt: Lt, Ge: Lt}
+    is_simple = all(len(set(simple_form[rel.func] for rel in rels)) == 1
+                    for _, rels in groupby(relations, lambda r: r.args[0]))
 
-    # make truth table, don't care table
-    truthtable = []
-    dontcares = []
-    for t in product([0, 1], repeat=len(variables)):
-        t = list(t)
-        if totality.xreplace(dict(zip(variables, t))) == False:
-            dontcares.append(t)
-        elif expr.xreplace(dict(zip(variables, t))) == True:
-            truthtable.append(t)
+    if is_simple:
+        # standardize relation
+        expr = expr.replace(Ne(w,0), Nt(Eq(w,0)))
+        expr = expr.replace(Ge(w,0), Nt(Lt(w,0)))
+        expr = expr.replace(Le(w,0), Nt(Gt(w,0)))
 
-    if deep:
-        variables = [simplify(v) for v in variables]
-    if form == 'dnf':
-        return SOPform(variables, truthtable, dontcares)
-    elif form == 'cnf':
-        return POSform(variables, truthtable, dontcares)
+        expr = simplify_logic(expr, form, deep)
+
+        return expr
+
+    else:
+        # standardize relation
+        expr = expr.replace(Ne(w,0), Nt(Eq(w,0)))
+        expr = expr.replace(Ge(w,0), Or(Gt(w,0), Eq(w,0)))
+        expr = expr.replace(Le(w,0), Or(Lt(w,0), Eq(w,0)))
+
+        # make totality
+        variables = _find_predicates(expr)
+        relations = filter(lambda v: isinstance(v, Rel) and v.args[1] == 0, variables)
+        totalities = []
+        for a in set(rel.args[0] for rel in relations):
+            totalities.append(
+                Or(And(Gt(a,0), Nt(Eq(a,0)), Nt(Lt(a,0))),
+                   And(Nt(Gt(a,0)), Eq(a,0), Nt(Lt(a,0))),
+                   And(Nt(Gt(a,0)), Nt(Eq(a,0)), Lt(a,0))))
+        totality = And(*totalities)
+
+        # make truth table, don't care table
+        truthtable = []
+        dontcares = []
+        for t in product([0, 1], repeat=len(variables)):
+            t = list(t)
+            if totality.xreplace(dict(zip(variables, t))) == False:
+                dontcares.append(t)
+            elif expr.xreplace(dict(zip(variables, t))) == True:
+                truthtable.append(t)
+
+        if deep:
+            variables = [simplify(v) for v in variables]
+        if form == 'dnf':
+            expr = SOPform(variables, truthtable, dontcares)
+        elif form == 'cnf':
+            expr = POSform(variables, truthtable, dontcares)
+
+        return expr
 
