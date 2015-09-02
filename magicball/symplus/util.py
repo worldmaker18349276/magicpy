@@ -19,26 +19,6 @@ def is_Boolean(b):
             b is false)
 
 
-class DummyMatrixSymbol(MatrixSymbol):
-    _count = 0
-    __slots__ = ['dummy_index']
-    is_Dummy = True
-    def __new__(cls, name, n, m):
-        obj = MatrixSymbol.__new__(cls, name, n, m)
-        cls._count += 1
-        obj.dummy_index = cls._count
-        return obj
-    def _hashable_content(self):
-        return self.name, self.shape, self.dummy_index
-
-def as_dummy(var):
-    if isinstance(var, Symbol):
-        return var.as_dummy()
-    elif isinstance(var, MatrixSymbol):
-        return DummyMatrixSymbol('_'+var.name, var.shape[0], var.shape[1])
-    else:
-        raise TypeError('variable is not a symbol or matrix symbol: %s' % var)
-
 def rename_variables_in(variables, varspace):
     names = [v.name for v in variables]
     namespace = [v.name for v in varspace]
