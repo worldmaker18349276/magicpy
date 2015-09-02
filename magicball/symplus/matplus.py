@@ -1,8 +1,9 @@
 from sympy.matrices import MatrixExpr
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from sympy.functions import sqrt
-from sympy.core import Ne, Eq
+from sympy.core import Ne, Eq, Dummy
 from sympy.logic import And, Or
+from sympy.simplify import simplify
 from magicball.symplus.util import *
 
 
@@ -13,29 +14,34 @@ def do_indexing(expr):
 def matsimp(expr):
     """
     >>> from sympy import *
-    >>> A, B, C = MatrixSymbol('A', 2, 2), MatrixSymbol('B', 2, 2), MatrixSymbol('C', 2, 2)
+    >>> A = ImmutableMatrix(2, 2, symbols('A(:2)(:2)'))
+    >>> B = ImmutableMatrix(2, 2, symbols('B(:2)(:2)'))
+    >>> C = ImmutableMatrix(2, 2, symbols('C(:2)(:2)'))
+    >>> M = MatrixSymbol('M', 2, 2)
+    >>> M[1,1].xreplace({M: B*C})
+    Matrix([
+    [B00*C00 + B01*C10, B00*C01 + B01*C11],
+    [B10*C00 + B11*C10, B10*C01 + B11*C11]])[1, 1]
+    >>> matsimp(_)
+    B10*C01 + B11*C11
     >>> Eq(Trace(B+C), 0)
-    Trace(B + C) == 0
+    Trace(Matrix([
+    [B00 + C00, B01 + C01],
+    [B10 + C10, B11 + C11]])) == 0
     >>> matsimp(_)
-    B[0, 0] + B[1, 1] + C[0, 0] + C[1, 1] == 0
-    >>> A[1,1].xreplace({A: B*C})
-    B*C[1, 1]
-    >>> matsimp(_)
-    B[1, 0]*C[0, 1] + B[1, 1]*C[1, 1]
+    B00 + B11 + C00 + C11 == 0
     >>> Eq(A.T-A, ZeroMatrix(2,2))
-    (-1)*A + A' == 0
+    Matrix([
+    [        0, -A01 + A10],
+    [A01 - A10,          0]]) == 0
     >>> matsimp(_)
-    And(-A[0, 1] + A[1, 0] == 0, A[0, 1] - A[1, 0] == 0)
+    And(-A01 + A10 == 0, A01 - A10 == 0)
     """
     from sympy.simplify.simplify import bottom_up
 
-    # expand MatrixSymbol as Matrix: A -> [ A[0,0] ,..]
-    matsym = filter(lambda s: s.is_Matrix, expr.free_symbols)
-    expr = expr.xreplace(dict((mat, mat.as_explicit()) for mat in matsym))
-
     # do indexing: [.., aij ,..][i,j] -> aij
     expr = do_indexing(expr)
-    # deep doit
+    # deep doit: Trace([.., aij ,..]) -> ..+ aii +..
     expr = bottom_up(expr, lambda e: e.doit())
 
     def mateq_expand(m1, m2):
@@ -60,6 +66,38 @@ def matsimp(expr):
     #                         [.., aij ,..] != [.., bij ,..] -> ..| aij != bij |..
     expr = expr.replace(Eq, mateq_expand)
     expr = expr.replace(Ne, matne_expand)
+
+    return expr
+
+def simplify_with_mat(expr, *args, **kwargs):
+    """
+    >>> from sympy import *
+    >>> A = MatrixSymbol('A', 2, 2)
+    >>> Eq(det(A), 0)
+    Determinant(A) == 0
+    >>> simplify_with_mat(_)
+    A[0, 0]*A[1, 1] - A[0, 1]*A[1, 0] == 0
+    >>> Eq(A.T*A, Identity(2))
+    A'*A == I
+    >>> simplify_with_mat(_)
+    And(A[0, 0]**2 + A[1, 0]**2 == 1, A[0, 0]*A[0, 1] + \
+A[1, 0]*A[1, 1] == 0, A[0, 1]**2 + A[1, 1]**2 == 1)
+    """
+    # expand MatrixSymbol as Matrix: A -> [ A[0,0] ,..]
+    mats = expr.atoms(MatrixSymbol)
+    expr = expr.xreplace(dict((mat, mat.as_explicit()) for mat in mats))
+
+    # replace MatrixElement as Symbol: A[i,j] -> Aij
+    elems = tuple(elem for mat in mats for elem in mat)
+    syms = tuple(map(lambda e: Dummy(str(e)), elems))
+    expr = expr.xreplace(dict(zip(elems, syms)))
+
+    # simplify expression
+    expr = matsimp(expr)
+    expr = simplify(expr, *args, **kwargs)
+
+    # replace Symbol as MatrixElement: Aij -> A[i,j]
+    expr = expr.xreplace(dict(zip(syms, elems)))
 
     return expr
 
