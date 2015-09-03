@@ -30,15 +30,13 @@ class Sample:
     def __init__(self, iter_getter, length):
         self._getter = iter_getter
         self.length = length
+        self.ran = ~(-2<<length)
 
     def __iter__(self):
         return self._getter()
 
     def __len__(self):
         return self.length
-
-    def ran(self):
-        return ~(-2<<self.length)
 
     @lru_cache(maxsize=128)
     def _get_bits(self, aset):
@@ -61,7 +59,7 @@ class Sample:
         elif isinstance(aset, EmptySet):
             return 0
         elif isinstance(aset, UniversalSet):
-            return self.ran()
+            return self.ran
         elif isinstance(aset, Set):
             return self._get_bits(aset)
         else:
@@ -76,49 +74,101 @@ class Sample:
     def equal(self, aset1, aset2):
         return self.get_bits(aset1) == self.get_bits(aset2)
 
-def cube_sample(length=2, n=50):
-    return map(lambda v: (v[0]/n, v[1]/n, v[2]/n),
-               product(range(-length*n, length*n+1), repeat=3))
+def cube_sample(length=2, n=10):
+    def sample_iter():
+        return map(lambda v: (v[0]/n, v[1]/n, v[2]/n),
+                   product(range(-length*n, length*n+1), repeat=3))
+    return Sample(sample_iter, (2*length*n+1)**3)
 
 
-def spsetsimp(sample, aset, ran=-1):
-    if isinstance(aset, Intersection):
-        args = []
-        rans = []
-        bits = sample.get_bits(aset) & ran
-        for arg in aset.args:
-            args_ = set(args) - {arg}
-            bits_ = sample.get_bits(Intersection(*args_)) & ran
-            if bits_ != bits:
-                args.append(arg)
-                rans.append(bits_)
-        for i in range(len(args)):
-            args[i] = spsetsimp(sample, args[i], rans[i])
-        return Intersection(*args)
-    elif isinstance(aset, Union):
-        args = []
-        rans = []
-        bits = sample.get_bits(aset) & ran
-        for arg in aset.args:
-            args_ = set(args) - {arg}
-            bits_ = sample.get_bits(Union(*args_)) & ran
-            if bits_ != bits:
-                args.append(arg)
-                rans.append(~bits_)
-        for i in range(len(args)):
-            args[i] = spsetsimp(sample, args[i], rans[i])
-        return Union(*args)
-    elif isinstance(aset, Set):
-        if isinstance(aset, (EmptySet, UniversalSet)):
-            return aset
-        else:
-            bits = sample.get_bits(aset) & ran
-            if bits == 0:
-                return EmptySet()
-            elif bits == ran:
-                return UniversalSet()
-            else:
-                return aset
+def n_(*args):
+    if len(args) > 1:
+        return Intersection(*args, evaluate=False)
+    elif len(args) == 1:
+        return args[0]
     else:
+        return UniversalSet()
+
+def u_(*args):
+    if len(args) > 1:
+        return Union(*args, evaluate=False)
+    elif len(args) == 1:
+        return args[0]
+    else:
+        return EmptySet()
+
+def spsetsimp(sample, aset, ran=None):
+    """
+    >>> from sympy import *
+    >>> from magicball.symplus.setplus import *
+    >>> x, y, z = symbols('x y z', real=True)
+    >>> sample = cube_sample(2,10)
+    >>> s1 = AbstractSet((x,y,z), x*2+y-z>0)
+    >>> s2 = AbstractSet((x,y,z), x*2+y-z>1)
+    >>> s12 = Intersection(s1, s2, evaluate=False); s12
+    Intersection(AbstractSet((x, y, z), 2*x + y - z > 0), \
+AbstractSet((x, y, z), 2*x + y - z > 1))
+    >>> spsetsimp(sample, s12)
+    AbstractSet((x, y, z), 2*x + y - z > 1)
+    >>> s3 = AbstractSet((x,y,z), x+2*y>0)
+    >>> s4 = AbstractSet((x,y,z), x-2*y>0)
+    >>> s5 = AbstractSet((x,y,z), 2*x+y>-1)
+    >>> s345 = Intersection(s3, s4, s5, evaluate=False)
+    >>> spsetsimp(sample, s345)
+    Intersection(AbstractSet((x, y, z), x - 2*y > 0), \
+AbstractSet((x, y, z), x + 2*y > 0))
+    >>> s6 = AbstractSet((x,y,z), 2*x+y<-1)
+    >>> s346 = Intersection(s3, s4, s6, evaluate=False)
+    >>> spsetsimp(sample, s346)
+    EmptySet()
+    """
+    if not isinstance(aset, Set):
         raise TypeError('aset is not set: %r' % aset)
+
+    if isinstance(aset, (EmptySet, UniversalSet)):
+        return aset
+
+    if ran is None:
+        ran = sample.ran
+
+    bits = sample.get_bits(aset) & ran
+    if bits == 0:
+        return EmptySet()
+    elif bits == ran:
+        return UniversalSet()
+
+    if isinstance(aset, Intersection):
+        # select important arguments
+        args = []
+        for arg in aset.args:
+            args_ = set(aset.args) - {arg}
+            bits_ = sample.get_bits(n_(*args_)) & ran
+            if bits_ != bits:
+                args.append(arg)
+
+        # simplify arguments
+        for i in range(len(args)):
+            args_ = set(args) - {args[i]}
+            ran_ = ran & sample.get_bits(n_(*args_))
+            args[i] = spsetsimp(sample, args[i], ran_)
+        return n_(*args)
+
+    elif isinstance(aset, Union):
+        # select important arguments
+        args = []
+        for arg in aset.args:
+            args_ = set(aset.args) - {arg}
+            bits_ = sample.get_bits(u_(*args_)) & ran
+            if bits_ != bits:
+                args.append(arg)
+
+        # simplify arguments
+        for i in range(len(args)):
+            args_ = set(args) - {args[i]}
+            ran_ = ran &~sample.get_bits(n_(*args_))
+            args[i] = spsetsimp(sample, args[i], ran_)
+        return u_(*args)
+
+    else:
+        return aset
 
