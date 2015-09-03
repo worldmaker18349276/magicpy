@@ -64,15 +64,15 @@ def cone(direction=[1,0,0], slope=1):
 def revolution(func, direction=[1,0,0]):
     """
     >>> from sympy import *
-    >>> revolution(lambda x: x)
-    AbstractSet((x, y, z), y**2 + z**2 < x**2)
-    >>> revolution(lambda x: x**2+1, [3,4,0])
-    AbstractSet((x, y, z), z**2 + (4*x/5 - 3*y/5)**2 < ((3*x/5 + 4*y/5)**2 + 1)**2)
+    >>> revolution(lambda h, s: h**2<s**2)
+    AbstractSet((x, y, z), x**2 < y**2 + z**2)
+    >>> revolution(lambda h, s: h+1<s**2, [3,4,0])
+    AbstractSet((x, y, z), 3*x/5 + 4*y/5 + 1 < z**2 + (4*x/5 - 3*y/5)**2)
     """
     direction = Mat(direction)
     if norm(direction) == 0:
         raise ValueError
     direction = normalize(direction)
-    expr = norm(cross(r, direction))**2 < (func(dot(r, direction)))**2
+    expr = func(dot(r, direction), norm(cross(r, direction)))
     return AbstractSet((x,y,z), expr)
 

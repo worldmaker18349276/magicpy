@@ -7,12 +7,6 @@ from sympy.utilities import lambdify
 from magicball.symplus.setplus import AbstractSet
 
 
-def boolarray(bits):
-    if bits >= 0:
-        return map(lambda b: b=='1', bin(bits)[:1:-1])
-    else:
-        return map(lambda b: b=='1', bin(bits)[:2:-1])
-
 def setbit1(bits, index):
     return bits|(1<<index)
 
@@ -33,11 +27,18 @@ def bitmap(func, sample):
 
 
 class Sample:
-    def __init__(self, iter_getter):
+    def __init__(self, iter_getter, length):
         self._getter = iter_getter
+        self.length = length
 
     def __iter__(self):
         return self._getter()
+
+    def __len__(self):
+        return self.length
+
+    def ran(self):
+        return ~(-2<<self.length)
 
     @lru_cache(maxsize=128)
     def _get_bits(self, aset):
@@ -56,11 +57,11 @@ class Sample:
         elif isinstance(aset, Union):
             return reduce(or_, map(self.get_bits, aset.args))
         elif isinstance(aset, Complement):
-            return self.get_bits(aset.args[0]) &~ self.get_bits(aset.args[1])
+            return self.get_bits(aset.args[0]) &~self.get_bits(aset.args[1])
         elif isinstance(aset, EmptySet):
             return 0
         elif isinstance(aset, UniversalSet):
-            return -1
+            return self.ran()
         elif isinstance(aset, Set):
             return self._get_bits(aset)
         else:
@@ -75,7 +76,7 @@ class Sample:
     def equal(self, aset1, aset2):
         return self.get_bits(aset1) == self.get_bits(aset2)
 
-def cube_sample(length=1, n=50):
+def cube_sample(length=2, n=50):
     return map(lambda v: (v[0]/n, v[1]/n, v[2]/n),
                product(range(-length*n, length*n+1), repeat=3))
 
@@ -83,29 +84,29 @@ def cube_sample(length=1, n=50):
 def spsetsimp(sample, aset, ran=-1):
     if isinstance(aset, Intersection):
         args = []
+        rans = []
         bits = sample.get_bits(aset) & ran
         for arg in aset.args:
             args_ = set(args) - {arg}
             bits_ = sample.get_bits(Intersection(*args_)) & ran
             if bits_ != bits:
                 args.append(arg)
-        for i, arg in enumerate(args):
-            args_ = set(args) - {arg}
-            bits_ = sample.get_bits(Intersection(*args_)) & ran
-            args[i] = spsetsimp(sample, arg, bits_)
+                rans.append(bits_)
+        for i in range(len(args)):
+            args[i] = spsetsimp(sample, args[i], rans[i])
         return Intersection(*args)
     elif isinstance(aset, Union):
         args = []
+        rans = []
         bits = sample.get_bits(aset) & ran
         for arg in aset.args:
             args_ = set(args) - {arg}
             bits_ = sample.get_bits(Union(*args_)) & ran
             if bits_ != bits:
                 args.append(arg)
-        for i, arg in enumerate(args):
-            args_ = set(args) - {arg}
-            bits_ = sample.get_bits(Union(*args_)) & ran
-            args[i] = spsetsimp(sample, arg, ~bits_)
+                rans.append(~bits_)
+        for i in range(len(args)):
+            args[i] = spsetsimp(sample, args[i], rans[i])
         return Union(*args)
     elif isinstance(aset, Set):
         if isinstance(aset, (EmptySet, UniversalSet)):
