@@ -27,3 +27,7 @@ doctest.testmod(affine)
 
 import magicball.model.euclid as euclid
 doctest.testmod(euclid)
+
+import magicball.phy as phy
+doctest.testmod(phy)
+
