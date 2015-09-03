@@ -83,25 +83,18 @@ def is_polynomial(expr):
     else:
         return True
 
-def is_polyrel(var, expr):
-    if any(not isinstance(v, Symbol) or not v.is_real for v in var):
-        return False
-    if isinstance(expr, (And, Or, Not, Implies, Equivalent)):
-        return all(is_polyrel(arg) for arg in expr.args)
-    elif isinstance(expr, Rel):
-        return is_polynomial(expr.args[0]-expr.args[1])
+def is_simplerel(expr):
+    from sympy.logic.boolalg import _find_predicates
 
-def is_polyonesiderel(var, expr):
-    if any(not isinstance(v, Symbol) for v in var):
+    variables = _find_predicates(expr)
+    relations = tuple(filter(lambda v: isinstance(v, Rel), variables))
+    if any(rel.args[1] != 0 for rel in relations):
         return False
-    if not isinstance(expr, Rel) or expr.args[1] != 0:
-        return False
-    try:
-        Poly(expr.args[0], var)
-    except PolynomialError:
-        return False
-    else:
-        return True
+    simple_form = {Eq: Eq, Ne: Eq,
+                   Gt: Gt, Le: Gt,
+                   Lt: Lt, Ge: Lt}
+    return all(len(set(simple_form[rel.func] for rel in rels)) == 1
+               for _, rels in groupby(relations, lambda r: r.args[0]))
 
 
 def expand_polyeq(eq):
@@ -143,8 +136,8 @@ def expand_polyeq(eq):
         return eq
     rel = eq.func
     expr = factor(eq.args[0]-eq.args[1])
-    if expr == 0:
-        return rel(0, 0, evaluate=True)
+    if expr.is_number:
+        return rel(expr, 0, evaluate=True)
     elif isinstance(expr, Mul):
         terms = expr.args
     else:
@@ -241,23 +234,47 @@ def expand_polyeq(eq):
 
     return Or(*eqs)
 
+def canonicalize_polyeq(eq):
+    if not isinstance(eq, Rel):
+        return eq
+    rel = eq.func
+    expr = eq.args[0]-eq.args[1]
+    if expr.is_number:
+        return rel(expr, 0, evaluate=True)
+
+    # normalize leading coeff
+    sign = 0
+    lc = LC(expr)
+    if lc < 0:
+        sign += 1
+    expr = expr/lc
+
+    # swap relation
+    if sign % 2 == 1:
+        swap = {Eq: Eq, Ne: Ne,
+                Lt: Gt, Le: Ge,
+                Gt: Lt, Ge: Le}
+        rel = swap[rel]
+
+    return rel(expr, 0)
+
 def polyrelsimp(expr):
     return expr.replace(lambda rel: isinstance(rel, Rel),
                         lambda rel: expand_polyeq(rel))
 
-def onesiderelsimp(expr, form='dnf', deep=True):
-    """logic simplify for one side relation Rel(w, 0)
+def logicrelsimp(expr, form='dnf', deep=True):
+    """logic simplify for relation
     >>> from sympy import *
     >>> x, y, z = symbols('x y z')
-    >>> onesiderelsimp((x>0) >> ((x<=0)&(y<0)))
+    >>> logicrelsimp((x>0) >> ((x<=0)&(y<0)))
     x <= 0
-    >>> onesiderelsimp((x>0) >> (x>=0))
+    >>> logicrelsimp((x>0) >> (x>=0))
     True
-    >>> onesiderelsimp((x<0) & (x>0))
+    >>> logicrelsimp((x<0) & (x>0))
     False
-    >>> onesiderelsimp(((x<0) | (y>0)) & ((x>0) | (y<0)))
+    >>> logicrelsimp(((x<0) | (y>0)) & ((x>0) | (y<0)))
     Or(And(x < 0, y < 0), And(x > 0, y > 0))
-    >>> onesiderelsimp(((x<0) & (y>0)) | ((x>0) & (y<0)))
+    >>> logicrelsimp(((x<0) & (y>0)) | ((x>0) & (y<0)))
     Or(And(x < 0, y > 0), And(x > 0, y < 0))
     """
     from sympy.core.symbol import Wild
@@ -273,21 +290,16 @@ def onesiderelsimp(expr, form='dnf', deep=True):
     if not isinstance(expr, BooleanFunction):
         return expr
 
+    # canonicalize relations
+    expr = expr.replace(lambda rel: isinstance(rel, Rel),
+                        lambda rel: canonicalize_polyeq(rel))
+
     # to nnf
     w = Wild('w')
     expr = to_nnf(expr)
     expr = expr.replace(Not(w), lambda w: Not(w, evaluate=True))
 
-    # determine case
-    variables = _find_predicates(expr)
-    relations = filter(lambda v: isinstance(v, Rel) and v.args[1] == 0, variables)
-    simple_form = {Eq: Eq, Ne: Eq,
-                   Gt: Gt, Le: Gt,
-                   Lt: Lt, Ge: Lt}
-    is_simple = all(len(set(simple_form[rel.func] for rel in rels)) == 1
-                    for _, rels in groupby(relations, lambda r: r.args[0]))
-
-    if is_simple:
+    if is_simplerel(expr):
         # standardize relation
         expr = expr.replace(Ne(w,0), Nt(Eq(w,0)))
         expr = expr.replace(Ge(w,0), Nt(Lt(w,0)))
@@ -299,7 +311,7 @@ def onesiderelsimp(expr, form='dnf', deep=True):
 
     else:
         # standardize relation
-        expr = expr.replace(Ne(w,0), Nt(Eq(w,0)))
+        expr = expr.replace(Ne(w,0), Or(Gt(w,0), Lt(w,0)))
         expr = expr.replace(Ge(w,0), Or(Gt(w,0), Eq(w,0)))
         expr = expr.replace(Le(w,0), Or(Lt(w,0), Eq(w,0)))
 

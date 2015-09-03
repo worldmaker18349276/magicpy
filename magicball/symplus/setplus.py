@@ -4,7 +4,7 @@ from sympy.sets import Set, Intersection, Union
 from magicball.symplus.util import *
 from magicball.symplus.matplus import matsimp, with_matsym
 from magicball.symplus.logicplus import Forall, Exist
-from magicball.symplus.relplus import is_polyonesiderel, polyrelsimp, onesiderelsimp
+from magicball.symplus.relplus import polyrelsimp, logicrelsimp
 
 
 class AbstractSet(Set):
@@ -446,24 +446,18 @@ def setsimp(aset):
     var = aset.variables
     expr = aset.expr
 
-    expr = with_matsym(matsimp, polyrelsimp, onesiderelsimp)(expr)
+    expr = with_matsym(matsimp, polyrelsimp, logicrelsimp)(expr)
 
     if expr == false or Exist(var, expr) == false:
         return S.EmptySet
     if expr == true or Forall(var, expr) == true:
         if all(isinstance(v, Symbol) for v in var):
             return S.UniversalSet**len(var)
-        else: # TODO: MatrixUniversalSet
+        else:
             return AbstractSet(var, true)
-
-    # if len(var) == 1 and expr.free_symbols == set(var):
-    #     try:
-    #         return expr.as_set()
-    #     except:
-    #         pass
 
     if expr != aset.expr:
         return AbstractSet(var, expr)
     else:
-        return None
+        return aset
 
