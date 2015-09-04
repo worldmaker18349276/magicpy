@@ -4,6 +4,7 @@ from operator import and_, or_
 from sympy.sets import Set, Intersection, Union, Complement, EmptySet
 from sympy.sets.sets import UniversalSet
 from sympy.utilities import lambdify
+from magicball.symplus.relplus import logicrelsimp
 from magicball.symplus.setplus import AbstractSet
 
 
@@ -25,8 +26,7 @@ def bitmap(func, sample):
         t <<= 1
     return bits
 
-
-class Sample:
+class SpaceSample:
     def __init__(self, iter_getter, length):
         self._getter = iter_getter
         self.length = length
@@ -65,20 +65,11 @@ class Sample:
         else:
             raise TypeError
 
-    def is_disjoint(self, aset1, aset2):
-        return self.get_bits(aset1) & self.get_bits(aset2) == 0
-
-    def is_subset(self, aset1, aset2):
-        return self.get_bits(aset1) &~self.get_bits(aset2) == 0
-
-    def equal(self, aset1, aset2):
-        return self.get_bits(aset1) == self.get_bits(aset2)
-
 def cube_sample(length=2, n=10):
     def sample_iter():
         return map(lambda v: (v[0]/n, v[1]/n, v[2]/n),
                    product(range(-length*n, length*n+1), repeat=3))
-    return Sample(sample_iter, (2*length*n+1)**3)
+    return SpaceSample(sample_iter, (2*length*n+1)**3)
 
 
 def n_(*args):
@@ -170,5 +161,27 @@ AbstractSet((x, y, z), x + 2*y > 0))
         return u_(*args)
 
     else:
+        return aset
+
+
+class SpaceSampleEngine:
+    def __init__(self, sample=cube_sample()):
+        self.sample = sample
+
+    def is_disjoint(self, aset1, aset2):
+        return self.sample.get_bits(aset1) & self.sample.get_bits(aset2) == 0
+
+    def is_subset(self, aset1, aset2):
+        return self.sample.get_bits(aset1) &~self.sample.get_bits(aset2) == 0
+
+    def equal(self, aset1, aset2):
+        return self.sample.get_bits(aset1) == self.sample.get_bits(aset2)
+
+    def simp(self, aset):
+        aset = aset.doit()
+        expr = logicrelsimp(aset.expr)
+        aset = AbstractSet(aset.variables, expr)
+        aset = aset.expand()
+        aset = spsetsimp(self.sample, aset)
         return aset
 

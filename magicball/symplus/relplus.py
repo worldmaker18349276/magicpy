@@ -179,12 +179,12 @@ def expand_polyeq(eq):
 
     # normalize leading coeff
     for i in range(len(termsn)):
-        lc = LC(termsn[i])
+        lc = LC(termsn[i], sorted(termsn[i].free_symbols, key=lambda x: x.name))
         if lc < 0:
             sign += 1
         termsn[i] = termsn[i]/lc
     for i in range(len(termsp)):
-        lc = LC(termsp[i])
+        lc = LC(termsp[i], sorted(termsp[i].free_symbols, key=lambda x: x.name))
         termsp[i] = termsp[i]/lc
 
     # swap relation
@@ -244,7 +244,7 @@ def canonicalize_polyeq(eq):
 
     # normalize leading coeff
     sign = 0
-    lc = LC(expr, expr.free_symbols)
+    lc = LC(expr, sorted(expr.free_symbols, key=lambda x: x.name))
     if lc < 0:
         sign += 1
     expr = expr/lc

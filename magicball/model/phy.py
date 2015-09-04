@@ -3,9 +3,8 @@ from sympy.core import S
 from sympy.sets import Set, Intersection
 from magicball.model.affine import SE3, SO3, T3, transform
 from magicball.symplus.setplus import AbstractSet, Topology
-from magicball.symplus.relplus import logicrelsimp
 from magicball.symplus.path import PathMonoid, Path
-from magicball.engine.sample import spsetsimp, cube_sample
+from magicball.engine.sample import SpaceSampleEngine
 from magicball.model.euclid import complement
 
 
@@ -32,13 +31,13 @@ class RegionalMotion:
 
 
 class PhysicalPuzzle(frozenset):
-    def __new__(cls, regions, sample=cube_sample()):
+    def __new__(cls, regions, engine=SpaceSampleEngine()):
         obj = frozenset.__new__(cls, regions)
-        obj.sample = sample
+        obj.engine = engine
         return obj
 
     def new(self, regions):
-        return PhysicalPuzzle(regions, sample=self.sample)
+        return PhysicalPuzzle(regions, engine=self.engine)
 
     def __str__(self):
         return '\n'.join(sorted(str(p.doit().expr) for p in self))
@@ -68,9 +67,10 @@ class PhysicalPuzzle(frozenset):
         """
         >>> from sympy import *
         >>> from magicball.model.euclid import *
-        >>> sample = cube_sample(4, 5)
+        >>> from magicball.engine.sample import *
+        >>> engine = SpaceSampleEngine(cube_sample(4, 5))
         >>> knives = halfspace(i, 1), halfspace(j, 1), halfspace(-i, 1), halfspace(-j, 1)
-        >>> floppy3x3x1 = PhysicalPuzzle({sphere(3)}, sample)
+        >>> floppy3x3x1 = PhysicalPuzzle({sphere(3)}, engine)
         >>> floppy3x3x1 = floppy3x3x1.cut_by(*knives)
         >>> print(str(floppy3x3x1))
         And(-x <= 1, -y <= 1, x <= 1, x**2 + y**2 + z**2 < 9, y <= 1)
@@ -103,24 +103,20 @@ class PhysicalPuzzle(frozenset):
         """
         simplified = set()
         for aset in self:
-            aset = aset.doit()
-            expr = logicrelsimp(aset.expr)
-            aset = AbstractSet(aset.variables, expr)
-            aset = aset.expand()
-            aset = spsetsimp(self.sample, aset)
+            aset = self.engine.simp(aset)
             if aset != S.EmptySet:
                 simplified.add(aset)
         return self.new(simplified)
 
     def no_collision(self):
         for reg1, reg2 in combinations(self, 2):
-            if not self.sample.is_disjoint(reg1, reg2):
+            if not self.engine.is_disjoint(reg1, reg2):
                 return False
         return True
 
     def no_collision_with(self, other):
         for reg1, reg2 in product(self, other):
-            if not self.sample.is_disjoint(reg1, reg2):
+            if not self.engine.is_disjoint(reg1, reg2):
                 return False
         return True
 
@@ -128,8 +124,8 @@ class PhysicalPuzzle(frozenset):
         selected = set()
         unselected = set()
         for reg in self:
-            res1 = self.sample.is_subset(reg, region)
-            res2 = self.sample.is_disjoint(reg, region)
+            res1 = self.engine.is_subset(reg, region)
+            res2 = self.engine.is_disjoint(reg, region)
             if res1:
                 selected.add(reg)
             elif res2:
