@@ -169,7 +169,8 @@ Path(Lambda(t, exp(-2)*exp(t + 2)), 5))
                 expr = self.function(start+t)/self.function(start)
             return Path(Lambda(t, expr), stop-start)
 
-    def __call__(self, t):
+    def __call__(self, t=None):
+        t = t if t is not None else self.length
         if t not in Interval(0, self.length):
             raise ValueError
         return self.function(t)

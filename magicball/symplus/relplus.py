@@ -244,7 +244,7 @@ def canonicalize_polyeq(eq):
 
     # normalize leading coeff
     sign = 0
-    lc = LC(expr)
+    lc = LC(expr, expr.free_symbols)
     if lc < 0:
         sign += 1
     expr = expr/lc

@@ -373,19 +373,25 @@ class SetBuilder:
         Intersection((-oo, oo), AbstractSet(x, x < 1))
         """
         asets = asets if isinstance(asets, tuple) else (asets,)
-        st = S.UniversalSet
+        sts = []
         for aset in asets:
             if isinstance(aset, slice):
                 if aset.start is None or aset.stop is None:
                     raise SyntaxError
-                st &= AbstractSet(aset.start, aset.stop)
+                sts.append(AbstractSet(aset.start, aset.stop))
             elif isinstance(aset, Set):
-                st &= aset
+                sts.append(aset)
             else:
                 raise SyntaxError
-        return st
 
-    def __call__(self, *asets):
+        if len(sts) == 0:
+            return S.UniversalSet
+        if len(sts) == 1:
+            return sts[0]
+        else:
+            return Intersection(*sts)
+
+    def __call__(self, *asets, evaluate=True):
         """
         >>> from sympy import *
         >>> x, y = symbols('x y')
@@ -398,25 +404,31 @@ class SetBuilder:
         >>> St(S.Reals, {x : x<1})
         Intersection((-oo, oo), AbstractSet(x, x < 1))
         """
-        st = S.UniversalSet
+        sts = []
         for aset in asets:
             if isinstance(aset, dict):
                 if len(aset) != 1:
                     raise SyntaxError
-                st &= AbstractSet(*list(aset.items())[0])
+                sts.append(AbstractSet(*list(aset.items())[0]))
             elif isinstance(aset, Set):
-                st &= aset
+                sts.append(aset)
             else:
                 raise SyntaxError
-        return st
+
+        if len(sts) == 0:
+            return S.UniversalSet
+        if len(sts) == 1:
+            return sts[0]
+        else:
+            return Intersection(*sts, evaluate=evaluate)
 
 St = SetBuilder()
 
 
 class Topology(Basic):
     def __new__(cls, space):
-        if isinstance(space, Set):
-            return TypeError
+        if not isinstance(space, Set):
+            raise TypeError
         return Basic.__new__(cls, space)
 
     @property

@@ -23,10 +23,10 @@ def is_motion(mot):
 
 class RegionalMotion:
     def __init__(self, region, motion):
-        if is_region(region):
-            raise TypeError
-        if is_motion(motion):
-            raise TypeError
+        # if is_region(region):
+        #     raise TypeError
+        # if is_motion(motion):
+        #     raise TypeError
         self.region = region
         self.motion = motion
 
@@ -39,44 +39,6 @@ class PhysicalPuzzle(frozenset):
 
     def new(self, regions):
         return PhysicalPuzzle(regions, sample=self.sample)
-
-    def no_collision(self):
-        for reg1, reg2 in combinations(self, 2):
-            if not self.sample.is_disjoint(reg1, reg2):
-                return False
-        return True
-
-    def no_collision_with(self, other):
-        for reg1, reg2 in product(self, other):
-            if not self.sample.is_disjoint(reg1, reg2):
-                return False
-        return True
-
-    def select_by(self, region):
-        selected = set()
-        unselected = set()
-        for reg in self:
-            res1 = self.sample.is_subset(reg, region)
-            res2 = self.sample.is_disjoint(reg, region)
-            if res1:
-                selected.add(reg)
-            elif res2:
-                unselected.add(reg)
-            else:
-                raise ValueError
-        return self.new(selected), self.new(unselected)
-
-    def move_by(self, motion):
-        return self.new(map(lambda r: transform(r, motion), self))
-
-    def apply(self, regmot):
-        target, others = self.select_by(regmot.region)
-        for i in range(int(regmot.motion.length)+1):
-            movedtarget = target.move_by(regmot.motion[:i])
-            if not others.no_collision_with(movedtarget):
-                raise ValueError
-        movedtarget = target.move_by(regmot.motion)
-        return self.new(others + movedtarget)
 
     def __str__(self):
         return '\n'.join(sorted(str(p.doit().expr) for p in self))
@@ -149,4 +111,80 @@ class PhysicalPuzzle(frozenset):
             if aset != S.EmptySet:
                 simplified.add(aset)
         return self.new(simplified)
+
+    def no_collision(self):
+        for reg1, reg2 in combinations(self, 2):
+            if not self.sample.is_disjoint(reg1, reg2):
+                return False
+        return True
+
+    def no_collision_with(self, other):
+        for reg1, reg2 in product(self, other):
+            if not self.sample.is_disjoint(reg1, reg2):
+                return False
+        return True
+
+    def select_by(self, region):
+        selected = set()
+        unselected = set()
+        for reg in self:
+            res1 = self.sample.is_subset(reg, region)
+            res2 = self.sample.is_disjoint(reg, region)
+            if res1:
+                selected.add(reg)
+            elif res2:
+                unselected.add(reg)
+            else:
+                raise ValueError
+        return self.new(selected), self.new(unselected)
+
+    def transform_by(self, mat):
+        return self.new(map(lambda r: transform(r, mat), self))
+
+    def move_by(self, action):
+        """
+        >>> from sympy import *
+        >>> from magicball.model.euclid import *
+        >>> from magicball.model.affine import *
+        >>> cube2x2x2 = PhysicalPuzzle({sphere()})
+        >>> cube2x2x2 = cube2x2x2.cut_by(halfspace(i), halfspace(j), halfspace(k))
+        >>> print(str(cube2x2x2))
+        And(x <= 0, x**2 + y**2 + z**2 < 1, y <= 0, z <= 0)
+        And(x <= 0, x**2 + y**2 + z**2 < 1, y <= 0, z > 0)
+        And(x <= 0, x**2 + y**2 + z**2 < 1, y > 0, z <= 0)
+        And(x <= 0, x**2 + y**2 + z**2 < 1, y > 0, z > 0)
+        And(x > 0, x**2 + y**2 + z**2 < 1, y <= 0, z <= 0)
+        And(x > 0, x**2 + y**2 + z**2 < 1, y <= 0, z > 0)
+        And(x > 0, x**2 + y**2 + z**2 < 1, y > 0, z <= 0)
+        And(x > 0, x**2 + y**2 + z**2 < 1, y > 0, z > 0)
+        >>> rot = rotate(i*pi/4); rot
+        Path(Lambda(t, Matrix([
+        [1,            0,             0, 0],
+        [0, cos(pi*t/40), -sin(pi*t/40), 0],
+        [0, sin(pi*t/40),  cos(pi*t/40), 0],
+        [0,            0,             0, 1]])), 10)
+        >>> cube2x2x2 = cube2x2x2.move_by(RegionalMotion(halfspace(i), rot))
+        >>> cube2x2x2 = cube2x2x2.simp()
+        >>> print(str(cube2x2x2))
+        And(x <= 0, x**2 + y**2 + z**2 - 1 < 0, y <= 0, z <= 0)
+        And(x <= 0, x**2 + y**2 + z**2 - 1 < 0, y <= 0, z > 0)
+        And(x <= 0, x**2 + y**2 + z**2 - 1 < 0, y > 0, z <= 0)
+        And(x <= 0, x**2 + y**2 + z**2 - 1 < 0, y > 0, z > 0)
+        And(x > 0, x**2 + y**2 + z**2 - 1 < 0, y + z <= 0, y - z < 0)
+        And(x > 0, x**2 + y**2 + z**2 - 1 < 0, y + z <= 0, y - z >= 0)
+        And(x > 0, x**2 + y**2 + z**2 - 1 < 0, y + z > 0, y - z < 0)
+        And(x > 0, x**2 + y**2 + z**2 - 1 < 0, y + z > 0, y - z >= 0)
+        """
+        if isinstance(action, Path):
+            return self.transform_by(action())
+        elif isinstance(action, RegionalMotion):
+            target, others = self.select_by(action.region)
+            for i in range(int(action.motion.length)+1):
+                movedtarget = target.transform_by(action.motion(i))
+                if not others.no_collision_with(movedtarget):
+                    raise ValueError
+            movedtarget = target.transform_by(action.motion())
+            return self.new(others | movedtarget)
+        else:
+            raise TypeError
 
