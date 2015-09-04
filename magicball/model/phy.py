@@ -5,7 +5,7 @@ from magicball.model.affine import SE3, SO3, T3, transform
 from magicball.symplus.setplus import AbstractSet, Topology
 from magicball.symplus.relplus import logicrelsimp
 from magicball.symplus.path import PathMonoid, Path
-from magicball.num.sample import spsetsimp, cube_sample
+from magicball.engine.sample import spsetsimp, cube_sample
 from magicball.model.euclid import complement
 
 

@@ -16,10 +16,13 @@ doctest.testmod(relplus)
 import magicball.symplus.setplus as setplus
 doctest.testmod(setplus)
 
+import magicball.symplus.strplus as strplus
+doctest.testmod(strplus)
+
 import magicball.symplus.path as path
 doctest.testmod(path)
 
-import magicball.num.sample as sample
+import magicball.engine.sample as sample
 doctest.testmod(sample)
 
 import magicball.model.affine as affine
@@ -28,6 +31,6 @@ doctest.testmod(affine)
 import magicball.model.euclid as euclid
 doctest.testmod(euclid)
 
-import magicball.phy as phy
+import magicball.model.phy as phy
 doctest.testmod(phy)
 
