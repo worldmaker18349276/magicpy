@@ -3,8 +3,9 @@ from sympy.core import S
 from sympy.sets import Set, Intersection
 from magicball.model.affine import SE3, SO3, T3, transform
 from magicball.symplus.setplus import AbstractSet, Topology
+from magicball.symplus.strplus import mstr
 from magicball.symplus.path import PathMonoid, Path
-from magicball.engine.sample import SpaceSampleEngine
+from magicball.engine.sample import SpaceSampleEngine, cube_engine
 from magicball.model.euclid import complement
 
 
@@ -31,7 +32,7 @@ class RegionalMotion:
 
 
 class PhysicalPuzzle(frozenset):
-    def __new__(cls, regions, engine=SpaceSampleEngine()):
+    def __new__(cls, regions, engine=cube_engine()):
         obj = frozenset.__new__(cls, regions)
         obj.engine = engine
         return obj
@@ -40,7 +41,7 @@ class PhysicalPuzzle(frozenset):
         return PhysicalPuzzle(regions, engine=self.engine)
 
     def __str__(self):
-        return '\n'.join(sorted(str(p.doit().expr) for p in self))
+        return '%s({\n%s})'%(type(self).__name__, ',\n'.join(sorted(map(mstr, self))))
 
     def cut_by(self, *knives):
         """
@@ -48,19 +49,20 @@ class PhysicalPuzzle(frozenset):
         >>> cube2x2x2 = PhysicalPuzzle({sphere()})
         >>> cube2x2x2 = cube2x2x2.cut_by(halfspace(i), halfspace(j), halfspace(k))
         >>> print(str(cube2x2x2))
-        And(x <= 0, x**2 + y**2 + z**2 < 1, y <= 0, z <= 0)
-        And(x <= 0, x**2 + y**2 + z**2 < 1, y <= 0, z > 0)
-        And(x <= 0, x**2 + y**2 + z**2 < 1, y > 0, z <= 0)
-        And(x <= 0, x**2 + y**2 + z**2 < 1, y > 0, z > 0)
-        And(x > 0, x**2 + y**2 + z**2 < 1, y <= 0, z <= 0)
-        And(x > 0, x**2 + y**2 + z**2 < 1, y <= 0, z > 0)
-        And(x > 0, x**2 + y**2 + z**2 < 1, y > 0, z <= 0)
-        And(x > 0, x**2 + y**2 + z**2 < 1, y > 0, z > 0)
+        PhysicalPuzzle({
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 < 1) & (y <= 0) & (z <= 0)},
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 < 1) & (y <= 0) & (z > 0)},
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z <= 0)},
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z > 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 < 1) & (y <= 0) & (z <= 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 < 1) & (y <= 0) & (z > 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z <= 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z > 0)}})
         """
         subspaces = tuple(zip(knives, map(complement, knives)))
         cutted = set()
         for sub in product(self, *subspaces):
-            cutted.add(Intersection(*sub, evaluate=False))
+            cutted.add(Intersection(*sub))
         return self.new(cutted)
 
     def simp(self):
@@ -68,38 +70,40 @@ class PhysicalPuzzle(frozenset):
         >>> from sympy import *
         >>> from magicball.model.euclid import *
         >>> from magicball.engine.sample import *
-        >>> engine = SpaceSampleEngine(cube_sample(4, 5))
+        >>> engine = cube_engine(4, 5)
         >>> knives = halfspace(i, 1), halfspace(j, 1), halfspace(-i, 1), halfspace(-j, 1)
         >>> floppy3x3x1 = PhysicalPuzzle({sphere(3)}, engine)
         >>> floppy3x3x1 = floppy3x3x1.cut_by(*knives)
         >>> print(str(floppy3x3x1))
-        And(-x <= 1, -y <= 1, x <= 1, x**2 + y**2 + z**2 < 9, y <= 1)
-        And(-x <= 1, -y <= 1, x <= 1, x**2 + y**2 + z**2 < 9, y > 1)
-        And(-x <= 1, -y <= 1, x > 1, x**2 + y**2 + z**2 < 9, y <= 1)
-        And(-x <= 1, -y <= 1, x > 1, x**2 + y**2 + z**2 < 9, y > 1)
-        And(-x <= 1, -y > 1, x <= 1, x**2 + y**2 + z**2 < 9, y <= 1)
-        And(-x <= 1, -y > 1, x <= 1, x**2 + y**2 + z**2 < 9, y > 1)
-        And(-x <= 1, -y > 1, x > 1, x**2 + y**2 + z**2 < 9, y <= 1)
-        And(-x <= 1, -y > 1, x > 1, x**2 + y**2 + z**2 < 9, y > 1)
-        And(-x > 1, -y <= 1, x <= 1, x**2 + y**2 + z**2 < 9, y <= 1)
-        And(-x > 1, -y <= 1, x <= 1, x**2 + y**2 + z**2 < 9, y > 1)
-        And(-x > 1, -y <= 1, x > 1, x**2 + y**2 + z**2 < 9, y <= 1)
-        And(-x > 1, -y <= 1, x > 1, x**2 + y**2 + z**2 < 9, y > 1)
-        And(-x > 1, -y > 1, x <= 1, x**2 + y**2 + z**2 < 9, y <= 1)
-        And(-x > 1, -y > 1, x <= 1, x**2 + y**2 + z**2 < 9, y > 1)
-        And(-x > 1, -y > 1, x > 1, x**2 + y**2 + z**2 < 9, y <= 1)
-        And(-x > 1, -y > 1, x > 1, x**2 + y**2 + z**2 < 9, y > 1)
+        PhysicalPuzzle({
+        {(x, y, z) : (-x <= 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+        {(x, y, z) : (-x <= 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+        {(x, y, z) : (-x <= 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+        {(x, y, z) : (-x <= 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+        {(x, y, z) : (-x <= 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+        {(x, y, z) : (-x <= 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+        {(x, y, z) : (-x <= 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+        {(x, y, z) : (-x <= 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+        {(x, y, z) : (-x > 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+        {(x, y, z) : (-x > 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+        {(x, y, z) : (-x > 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+        {(x, y, z) : (-x > 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+        {(x, y, z) : (-x > 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+        {(x, y, z) : (-x > 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+        {(x, y, z) : (-x > 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+        {(x, y, z) : (-x > 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)}})
         >>> floppy3x3x1 = floppy3x3x1.simp()
         >>> print(str(floppy3x3x1))
-        And(x + 1 < 0, x**2 + y**2 + z**2 - 9 < 0, y + 1 < 0)
-        And(x + 1 < 0, x**2 + y**2 + z**2 - 9 < 0, y + 1 >= 0, y - 1 <= 0)
-        And(x + 1 < 0, x**2 + y**2 + z**2 - 9 < 0, y - 1 > 0)
-        And(x + 1 >= 0, x - 1 <= 0, x**2 + y**2 + z**2 - 9 < 0, y + 1 < 0)
-        And(x + 1 >= 0, x - 1 <= 0, x**2 + y**2 + z**2 - 9 < 0, y + 1 >= 0, y - 1 <= 0)
-        And(x + 1 >= 0, x - 1 <= 0, x**2 + y**2 + z**2 - 9 < 0, y - 1 > 0)
-        And(x - 1 > 0, x**2 + y**2 + z**2 - 9 < 0, y + 1 < 0)
-        And(x - 1 > 0, x**2 + y**2 + z**2 - 9 < 0, y + 1 >= 0, y - 1 <= 0)
-        And(x - 1 > 0, x**2 + y**2 + z**2 - 9 < 0, y - 1 > 0)
+        PhysicalPuzzle({
+        {(x, y, z) : (x + 1 < 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 < 0)},
+        {(x, y, z) : (x + 1 < 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 >= 0) & (y - 1 <= 0)},
+        {(x, y, z) : (x + 1 < 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y - 1 > 0)},
+        {(x, y, z) : (x + 1 >= 0) & (x - 1 <= 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 < 0)},
+        {(x, y, z) : (x + 1 >= 0) & (x - 1 <= 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 >= 0) & (y - 1 <= 0)},
+        {(x, y, z) : (x + 1 >= 0) & (x - 1 <= 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y - 1 > 0)},
+        {(x, y, z) : (x - 1 > 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 < 0)},
+        {(x, y, z) : (x - 1 > 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 >= 0) & (y - 1 <= 0)},
+        {(x, y, z) : (x - 1 > 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y - 1 > 0)}})
         """
         simplified = set()
         for aset in self:
@@ -144,15 +148,17 @@ class PhysicalPuzzle(frozenset):
         >>> from magicball.model.affine import *
         >>> cube2x2x2 = PhysicalPuzzle({sphere()})
         >>> cube2x2x2 = cube2x2x2.cut_by(halfspace(i), halfspace(j), halfspace(k))
+        >>> cube2x2x2 = cube2x2x2.simp()
         >>> print(str(cube2x2x2))
-        And(x <= 0, x**2 + y**2 + z**2 < 1, y <= 0, z <= 0)
-        And(x <= 0, x**2 + y**2 + z**2 < 1, y <= 0, z > 0)
-        And(x <= 0, x**2 + y**2 + z**2 < 1, y > 0, z <= 0)
-        And(x <= 0, x**2 + y**2 + z**2 < 1, y > 0, z > 0)
-        And(x > 0, x**2 + y**2 + z**2 < 1, y <= 0, z <= 0)
-        And(x > 0, x**2 + y**2 + z**2 < 1, y <= 0, z > 0)
-        And(x > 0, x**2 + y**2 + z**2 < 1, y > 0, z <= 0)
-        And(x > 0, x**2 + y**2 + z**2 < 1, y > 0, z > 0)
+        PhysicalPuzzle({
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z <= 0)},
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z > 0)},
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z <= 0)},
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z <= 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z > 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z <= 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)}})
         >>> rot = rotate(i*pi/4); rot
         Path(Lambda(t, Matrix([
         [1,            0,             0, 0],
@@ -162,14 +168,15 @@ class PhysicalPuzzle(frozenset):
         >>> cube2x2x2 = cube2x2x2.move_by(RegionalMotion(halfspace(i), rot))
         >>> cube2x2x2 = cube2x2x2.simp()
         >>> print(str(cube2x2x2))
-        And(x <= 0, x**2 + y**2 + z**2 - 1 < 0, y <= 0, z <= 0)
-        And(x <= 0, x**2 + y**2 + z**2 - 1 < 0, y <= 0, z > 0)
-        And(x <= 0, x**2 + y**2 + z**2 - 1 < 0, y > 0, z <= 0)
-        And(x <= 0, x**2 + y**2 + z**2 - 1 < 0, y > 0, z > 0)
-        And(x > 0, x**2 + y**2 + z**2 - 1 < 0, y + z <= 0, y - z < 0)
-        And(x > 0, x**2 + y**2 + z**2 - 1 < 0, y + z <= 0, y - z >= 0)
-        And(x > 0, x**2 + y**2 + z**2 - 1 < 0, y + z > 0, y - z < 0)
-        And(x > 0, x**2 + y**2 + z**2 - 1 < 0, y + z > 0, y - z >= 0)
+        PhysicalPuzzle({
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z <= 0)},
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z > 0)},
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z <= 0)},
+        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z <= 0) & (y - z < 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z <= 0) & (y - z >= 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z > 0) & (y - z < 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z > 0) & (y - z >= 0)}})
         """
         if isinstance(action, Path):
             return self.transform_by(action())

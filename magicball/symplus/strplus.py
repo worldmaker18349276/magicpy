@@ -9,31 +9,31 @@ class StrplusPrinter(StrPrinter):
     """
     >>> from sympy import *
     >>> x, y, z = symbols('x y z')
-    >>> sprint((x&y)|(y&~z))
+    >>> mprint((x&y)|(y&~z))
     x & y | y & ~z
-    >>> sprint((x|y)&~(y|z))
+    >>> mprint((x|y)&~(y|z))
     (x | y) & ~(y | z)
-    >>> sprint(((x>0) & y) >> z)
+    >>> mprint(((x>0) & y) >> z)
     (x > 0) & y => z
-    >>> sprint((x>0) & y >> z)
+    >>> mprint((x>0) & y >> z)
     (x > 0) & (y => z)
     >>> from magicball.symplus.setplus import *
-    >>> sprint(St({x : x>y}))
-    {x | x > y}
-    >>> sprint(St({(x,y) : (x<1)&(y>0)}))
-    {(x, y) | (x < 1) & (y > 0)}
-    >>> sprint(St({(x,y) : (x<1)&(y>0)}))
-    {(x, y) | (x < 1) & (y > 0)}
-    >>> sprint(St({x : x<1}, {x : x>0}, evaluate=False) | S.Reals)
-    (-oo, oo) u {x | x < 1} n {x | x > 0}
-    >>> sprint(St({x : x>0}) | Interval(-1,1))
-    [-1, 1] u {x | x > 0}
-    >>> sprint(St({x : x<1}) - S.Reals)
-    {x | x < 1} \ (-oo, oo)
-    >>> sprint(imageset(Lambda(x, x**2), St({x : x>y})))
-    {x**2 | x > y}
-    >>> sprint(imageset(Lambda(x, x*y), S.Naturals))
-    {x*y | x in Naturals()}
+    >>> mprint(St({x : x>y}))
+    {x : x > y}
+    >>> mprint(St({(x,y) : (x<1)&(y>0)}))
+    {(x, y) : (x < 1) & (y > 0)}
+    >>> mprint(St({(x,y) : (x<1)&(y>0)}))
+    {(x, y) : (x < 1) & (y > 0)}
+    >>> mprint(St({x : x<1}, {x : x>0}, evaluate=False) | S.Reals)
+    (-oo, oo) u {x : x < 1} n {x : x > 0}
+    >>> mprint(St({x : x>0}) | Interval(-1,1))
+    [-1, 1] u {x : x > 0}
+    >>> mprint(St({x : x<1}) - S.Reals)
+    {x : x < 1} \ (-oo, oo)
+    >>> mprint(imageset(Lambda(x, x**2), St({x : x>y})))
+    {x**2 : x > y}
+    >>> mprint(imageset(Lambda(x, x*y), S.Naturals))
+    {x*y : x in Naturals()}
     """
     def _print_Not(self, expr):
         if isinstance(expr.args[0], (Atom, Not)):
@@ -121,13 +121,13 @@ class StrplusPrinter(StrPrinter):
         return ' u '.join(sorted(argstr))
 
     def _print_AbstractSet(self, expr):
-        return '{{{0} | {1}}}'.format(*[self._print(arg) for arg in expr.args])
+        return '{{{0} : {1}}}'.format(*[self._print(arg) for arg in expr.args])
 
     def _print_ImageSet(self, expr):
         if isinstance(expr.args[1], AbstractSet):
             varstr = self._print(expr.args[0](*expr.args[1].variables))
             exprstr = self._print(expr.args[1].expr)
-            return '{{{0} | {1}}}'.format(varstr, exprstr)
+            return '{{{0} : {1}}}'.format(varstr, exprstr)
         else:
             if len(expr.args[0].variables) == 1:
                 varstr = self._print(expr.args[0].variables[0])
@@ -135,7 +135,7 @@ class StrplusPrinter(StrPrinter):
                 varstr = self._print(expr.args[0].variables)
             elemstr = self._print(expr.args[0].expr)
             setstr = self._print(expr.args[1])
-            return '{{{0} | {1} in {2}}}'.format(elemstr, varstr, setstr)
+            return '{{{0} : {1} in {2}}}'.format(elemstr, varstr, setstr)
 
     def _print_Contains(self, expr):
         return '{0} in {1}'.format(*[self._print(arg) for arg in expr.args])
@@ -172,6 +172,9 @@ class StrplusPrinter(StrPrinter):
         _print_MatrixBase
 
 pr = StrplusPrinter()
-def sprint(expr):
+def mprint(expr):
     print(pr.doprint(expr))
+
+def mstr(expr):
+    return pr.doprint(expr)
 
