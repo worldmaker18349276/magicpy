@@ -97,7 +97,7 @@ def with_complement(aset):
     return (aset, complement(aset))
 
 
-phi = S.GoldenRatio
+phi = (sqrt(5)+1)/2
 vertices_tetra = {
     Mat([ 1, 1, 1]),
     Mat([ 1,-1,-1]),
@@ -163,8 +163,8 @@ ru_dodeca = sqrt(3)
 ri_tetra = 1/sqrt(3)
 ri_octa = 1/sqrt(3)
 ri_cube = S.One
-ri_icosa = sqrt(3)*(1+phi)
-ri_dodeca = sqrt(3+4*phi)
+ri_icosa = (phi+1)/sqrt(3)
+ri_dodeca = sqrt(4*phi+3)/sqrt(5)
 
 tetrahedron = Intersection(*[halfspace(v, -ri_tetra, True) for v in vertices_tetra])
 octahedron = Intersection(*[halfspace(v, -ri_octa, True) for v in vertices_cube])

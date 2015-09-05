@@ -1,4 +1,5 @@
-from sympy.core import Symbol, Tuple
+from sympy.core import Symbol, Tuple, Wild
+from sympy.functions import sqrt, sign
 from sympy.matrices import MatrixSymbol
 from sympy.logic import true, false
 
@@ -42,6 +43,19 @@ def var_type_match(vars1, vars2):
         else:
             raise TypeError('variable is not a symbol or matrix symbol: %s' % v1)
     return true
+
+
+def sqrtsimp(expr):
+    # Ref: http://mathforum.org/library/drmath/view/65302.html
+    def sqrtofsqrtsimp(a=0, b=0, c=0): # sqrt(a + b*sqrt(c))
+        q = sqrt(a**2 - b**2*c)
+        if not q.is_Rational:
+            return sqrt(a + b*sqrt(c))
+        return sqrt((a+q)/2) + sign(b)*sqrt((a-q)/2)
+
+    a, b, c = Wild('a'), Wild('b'), Wild('c')
+    expr = expr.replace(sqrt(a + b*sqrt(c)), sqrtofsqrtsimp)
+    return expr
 
 
 def deep_iter(sequence, depth=-1, types=(list, tuple), iter=iter):
