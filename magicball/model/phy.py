@@ -47,21 +47,23 @@ class PhysicalPuzzle(frozenset):
         """
         >>> from magicball.model.euclid import *
         >>> cube2x2x2 = PhysicalPuzzle({sphere()})
-        >>> cube2x2x2 = cube2x2x2.cut_by(halfspace(i), halfspace(j), halfspace(k))
+        >>> cube2x2x2 = cube2x2x2.cut_by(
+        ...     (halfspace(-i), halfspace(i)),
+        ...     (halfspace(-j), halfspace(j)),
+        ...     (halfspace(-k), halfspace(k)))
         >>> print(str(cube2x2x2))
         PhysicalPuzzle({
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 < 1) & (y <= 0) & (z <= 0)},
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 < 1) & (y <= 0) & (z > 0)},
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z <= 0)},
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z > 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 < 1) & (y <= 0) & (z <= 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 < 1) & (y <= 0) & (z > 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z <= 0)},
+        {(x, y, z) : (-x > 0) & (-y > 0) & (-z > 0) & (x**2 + y**2 + z**2 < 1)},
+        {(x, y, z) : (-x > 0) & (-y > 0) & (x**2 + y**2 + z**2 < 1) & (z > 0)},
+        {(x, y, z) : (-x > 0) & (-z > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0)},
+        {(x, y, z) : (-x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z > 0)},
+        {(x, y, z) : (-y > 0) & (-z > 0) & (x > 0) & (x**2 + y**2 + z**2 < 1)},
+        {(x, y, z) : (-y > 0) & (x > 0) & (x**2 + y**2 + z**2 < 1) & (z > 0)},
+        {(x, y, z) : (-z > 0) & (x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0)},
         {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z > 0)}})
         """
-        subspaces = tuple(zip(knives, map(complement, knives)))
         cutted = set()
-        for sub in product(self, *subspaces):
+        for sub in product(self, *knives):
             cutted.add(Intersection(*sub))
         return self.new(cutted)
 
@@ -73,7 +75,7 @@ class PhysicalPuzzle(frozenset):
         >>> engine = cube_engine(4, 5)
         >>> knives = halfspace(i, 1), halfspace(j, 1), halfspace(-i, 1), halfspace(-j, 1)
         >>> floppy3x3x1 = PhysicalPuzzle({sphere(3)}, engine)
-        >>> floppy3x3x1 = floppy3x3x1.cut_by(*knives)
+        >>> floppy3x3x1 = floppy3x3x1.cut_by(*map(with_complement, knives))
         >>> print(str(floppy3x3x1))
         PhysicalPuzzle({
         {(x, y, z) : (-x <= 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
@@ -147,17 +149,20 @@ class PhysicalPuzzle(frozenset):
         >>> from magicball.model.euclid import *
         >>> from magicball.model.affine import *
         >>> cube2x2x2 = PhysicalPuzzle({sphere()})
-        >>> cube2x2x2 = cube2x2x2.cut_by(halfspace(i), halfspace(j), halfspace(k))
+        >>> cube2x2x2 = cube2x2x2.cut_by(
+        ...     (halfspace(-i), halfspace(i)),
+        ...     (halfspace(-j), halfspace(j)),
+        ...     (halfspace(-k), halfspace(k)))
         >>> cube2x2x2 = cube2x2x2.simp()
         >>> print(str(cube2x2x2))
         PhysicalPuzzle({
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z <= 0)},
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z > 0)},
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z <= 0)},
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z <= 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z > 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z <= 0)},
+        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z < 0)},
+        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z > 0)},
+        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z < 0)},
+        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z < 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z > 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z < 0)},
         {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)}})
         >>> rot = rotate(i*pi/4); rot
         Path(Lambda(t, Matrix([
@@ -169,14 +174,14 @@ class PhysicalPuzzle(frozenset):
         >>> cube2x2x2 = cube2x2x2.simp()
         >>> print(str(cube2x2x2))
         PhysicalPuzzle({
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z <= 0)},
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y <= 0) & (z > 0)},
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z <= 0)},
-        {(x, y, z) : (x <= 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z <= 0) & (y - z < 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z <= 0) & (y - z >= 0)},
+        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z < 0)},
+        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z > 0)},
+        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z < 0)},
+        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z < 0) & (y - z < 0)},
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z < 0) & (y - z > 0)},
         {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z > 0) & (y - z < 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z > 0) & (y - z >= 0)}})
+        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z > 0) & (y - z > 0)}})
         """
         if isinstance(action, Path):
             return self.transform_by(action())

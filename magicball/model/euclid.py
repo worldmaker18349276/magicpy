@@ -6,7 +6,7 @@ from magicball.symplus.setplus import AbstractSet
 from magicball.symplus.matplus import *
 
 
-def halfspace(direction=[1,0,0], offset=0):
+def halfspace(direction=[1,0,0], offset=0, closed=False):
     """
     >>> from sympy import *
     >>> halfspace()
@@ -18,10 +18,13 @@ def halfspace(direction=[1,0,0], offset=0):
     if norm(direction) == 0:
         raise ValueError
     direction = normalize(direction)
-    expr = dot(r, direction) > offset
+    if closed:
+        expr = dot(r, direction) >= offset
+    else:
+        expr = dot(r, direction) > offset
     return AbstractSet((x,y,z), expr)
 
-def sphere(radius=1, center=[0,0,0]):
+def sphere(radius=1, center=[0,0,0], closed=False):
     """
     >>> from sympy import *
     >>> sphere()
@@ -30,10 +33,13 @@ def sphere(radius=1, center=[0,0,0]):
     AbstractSet((x, y, z), y**2 + (x - 1)**2 + (z - 2)**2 < 9)
     """
     center = Mat(center)
-    expr = norm(r-center)**2 < radius**2
+    if closed:
+        expr = norm(r-center)**2 <= radius**2
+    else:
+        expr = norm(r-center)**2 < radius**2
     return AbstractSet((x,y,z), expr)
 
-def cylinder(direction=[1,0,0], radius=1):
+def cylinder(direction=[1,0,0], radius=1, closed=False):
     """
     >>> from sympy import *
     >>> cylinder()
@@ -45,10 +51,13 @@ def cylinder(direction=[1,0,0], radius=1):
     if norm(direction) == 0:
         raise ValueError
     direction = normalize(direction)
-    expr = norm(cross(r, direction))**2 < radius**2
+    if closed:
+        expr = norm(cross(r, direction))**2 <= radius**2
+    else:
+        expr = norm(cross(r, direction))**2 < radius**2
     return AbstractSet((x,y,z), expr)
 
-def cone(direction=[1,0,0], slope=1):
+def cone(direction=[1,0,0], slope=1, closed=False):
     """
     >>> from sympy import *
     >>> cone()
@@ -60,7 +69,10 @@ def cone(direction=[1,0,0], slope=1):
     if norm(direction) == 0:
         raise ValueError
     direction = normalize(direction)
-    expr = norm(cross(r, direction))**2 < (slope*dot(r, direction))**2
+    if closed:
+        expr = norm(cross(r, direction))**2 <= (slope*dot(r, direction))**2
+    else:
+        expr = norm(cross(r, direction))**2 < (slope*dot(r, direction))**2
     return AbstractSet((x,y,z), expr)
 
 def revolution(func, direction=[1,0,0]):
@@ -80,4 +92,7 @@ def revolution(func, direction=[1,0,0]):
 
 def complement(aset):
     return AbstractSet(aset.variables, Not(aset.expr))
+
+def with_complement(aset):
+    return (aset, complement(aset))
 
