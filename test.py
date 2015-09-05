@@ -25,6 +25,9 @@ doctest.testmod(path)
 import magicball.engine.sample as sample
 doctest.testmod(sample)
 
+import magicball.engine.poly as poly
+doctest.testmod(poly)
+
 import magicball.model.affine as affine
 doctest.testmod(affine)
 
