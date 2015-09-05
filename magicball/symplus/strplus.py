@@ -5,36 +5,7 @@ from sympy.sets import Complement, Intersection, Union, Contains, Interval
 from magicball.symplus.setplus import AbstractSet
 
 
-class StrplusPrinter(StrPrinter):
-    """
-    >>> from sympy import *
-    >>> x, y, z = symbols('x y z')
-    >>> mprint((x&y)|(y&~z))
-    x & y | y & ~z
-    >>> mprint((x|y)&~(y|z))
-    (x | y) & ~(y | z)
-    >>> mprint(((x>0) & y) >> z)
-    (x > 0) & y => z
-    >>> mprint((x>0) & y >> z)
-    (x > 0) & (y => z)
-    >>> from magicball.symplus.setplus import *
-    >>> mprint(St({x : x>y}))
-    {x : x > y}
-    >>> mprint(St({(x,y) : (x<1)&(y>0)}))
-    {(x, y) : (x < 1) & (y > 0)}
-    >>> mprint(St({(x,y) : (x<1)&(y>0)}))
-    {(x, y) : (x < 1) & (y > 0)}
-    >>> mprint(St({x : x<1}, {x : x>0}, evaluate=False) | S.Reals)
-    (-oo, oo) u {x : x < 1} n {x : x > 0}
-    >>> mprint(St({x : x>0}) | Interval(-1,1))
-    [-1, 1] u {x : x > 0}
-    >>> mprint(St({x : x<1}) - S.Reals)
-    {x : x < 1} \ (-oo, oo)
-    >>> mprint(imageset(Lambda(x, x**2), St({x : x>y})))
-    {x**2 : x > y}
-    >>> mprint(imageset(Lambda(x, x*y), S.Naturals))
-    {x*y : x in Naturals()}
-    """
+class SymplusPrinter(StrPrinter):
     def _print_Not(self, expr):
         if isinstance(expr.args[0], (Atom, Not)):
             return '~'+self._print(expr.args[0])
@@ -171,8 +142,37 @@ class StrplusPrinter(StrPrinter):
         _print_ImmutableDenseMatrix = \
         _print_MatrixBase
 
-pr = StrplusPrinter()
+pr = SymplusPrinter()
 def mprint(expr):
+    """
+    >>> from sympy import *
+    >>> x, y, z = symbols('x y z')
+    >>> mprint((x&y)|(y&~z))
+    x & y | y & ~z
+    >>> mprint((x|y)&~(y|z))
+    (x | y) & ~(y | z)
+    >>> mprint(((x>0) & y) >> z)
+    (x > 0) & y => z
+    >>> mprint((x>0) & y >> z)
+    (x > 0) & (y => z)
+    >>> from magicball.symplus.setplus import *
+    >>> mprint(St({x : x>y}))
+    {x : x > y}
+    >>> mprint(St({(x,y) : (x<1)&(y>0)}))
+    {(x, y) : (x < 1) & (y > 0)}
+    >>> mprint(St({(x,y) : (x<1)&(y>0)}))
+    {(x, y) : (x < 1) & (y > 0)}
+    >>> mprint(St({x : x<1}, {x : x>0}, evaluate=False) | S.Reals)
+    (-oo, oo) u {x : x < 1} n {x : x > 0}
+    >>> mprint(St({x : x>0}) | Interval(-1,1))
+    [-1, 1] u {x : x > 0}
+    >>> mprint(St({x : x<1}) - S.Reals)
+    {x : x < 1} \ (-oo, oo)
+    >>> mprint(imageset(Lambda(x, x**2), St({x : x>y})))
+    {x**2 : x > y}
+    >>> mprint(imageset(Lambda(x, x*y), S.Naturals))
+    {x*y : x in Naturals()}
+    """
     print(pr.doprint(expr))
 
 def mstr(expr):
