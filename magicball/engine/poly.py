@@ -1,14 +1,14 @@
 from itertools import combinations
 from collections import defaultdict
-from sympy.core import Ge, Le, Rel
+from sympy.core import Ge, Le, symbols, nan, oo, zoo
 from sympy.polys import Poly
 from sympy.logic import And
 from sympy.matrices import Matrix
-from sympy.simplify import simplify
+from sympy.utilities import lambdify
 from sympy.solvers import solve_linear_system
 from magicball.symplus.relplus import is_polynomial
 from magicball.symplus.setplus import AbstractSet
-from magicball.symplus.util import sqrtsimp
+from magicball.symplus.util import simplify_with_sqrt
 
 
 def is_convex_polyhedron(aset):
@@ -22,65 +22,98 @@ def is_convex_polyhedron(aset):
     if any(not is_polynomial(p) or not Poly(p, aset.variables).is_linear for p in planes):
         return False
 
-def vertices_of(convex_polyhedron):
+
+_arguments = Matrix(3,4, symbols('a(:3)(:4)'))
+_formula = solve_linear_system(_arguments, 0,1,2)
+_formula_ = tuple(lambdify(_arguments, _formula[var]) for var in (0,1,2))
+def _solve_linsys_(mat):
+    try:
+        args = tuple(arg.evalf() for arg in mat)
+        vertex = tuple(f(*args) for f in _formula_)
+    except ZeroDivisionError:
+        return None
+    else:
+        if any(v.has(nan, oo, zoo) for v in vertex):
+            return None
+        return vertex
+
+def _solve_linsys(mat):
+    try:
+        vertex = tuple(f(*mat) for f in _formula_)
+    except ZeroDivisionError:
+        return None
+    else:
+        vertex = tuple(simplify_with_sqrt(v) for v in vertex)
+        if any(v.has(nan, oo, zoo) for v in vertex):
+            return None
+        return vertex
+
+def to_mesh(convex_polyhedron):
     """
     >>> from sympy import *
     >>> from magicball.model.euclid import *
+
     >>> p1 = halfspace([-1,-1, 0],-1, closed=True)
     >>> p2 = halfspace([-1, 0,-1],-1, closed=True)
     >>> p3 = halfspace([ 0,-1,-1],-1, closed=True)
     >>> p4 = halfspace([ 1, 1, 1], 0, closed=True)
-    >>> v = vertices_of(p1 & p2 & p3 & p4)
-    >>> tuple(sorted(v.keys()))
+    >>> vf = to_mesh(p1 & p2 & p3 & p4)
+    >>> tuple(sorted(vf[0]))
     ((-sqrt(2), -sqrt(2), 2*sqrt(2)), (-sqrt(2), 2*sqrt(2), -sqrt(2)), \
 (sqrt(2)/2, sqrt(2)/2, sqrt(2)/2), (2*sqrt(2), -sqrt(2), -sqrt(2)))
-    >>> v_octa = vertices_of(octahedron)
-    >>> set(map(ImmutableMatrix, v_octa.keys())) == vertices_octa
+    >>> vf_octa = to_mesh(octahedron)
+    >>> set(map(ImmutableMatrix, vf_octa[0])) == vertices_octa
     True
-
-    # too slow!
-    # >>> v_dodeca = vertices_of(dodecahedron)
-    # >>> set(map(ImmutableMatrix, v_dodeca.keys())) == vertices_dodeca
-    # True
     """
-    halfspaces = convex_polyhedron.expr.args
     variables = convex_polyhedron.variables
-    rels = tuple(h.func for h in halfspaces)
-    planes = tuple(Poly(h.args[0]-h.args[1], variables) for h in halfspaces)
-    planes_coeff = tuple([p.nth(1,0,0), p.nth(0,1,0), p.nth(0,0,1), -p.nth(0,0,0)]
-                           for p in planes)
-    vertices_indices = defaultdict(set)
-    for inds in combinations(range(len(planes)), len(variables)):
-        if any(set(inds) <= faces for faces in vertices_indices.values()):
+    faces = []
+    for h in convex_polyhedron.expr.args:
+        if isinstance(h, Ge):
+            faces.append(Poly(h.args[0]-h.args[1], variables))
+        else:
+            faces.append(Poly(h.args[1]-h.args[0], variables))
+    faces_coeff = tuple([f.nth(1,0,0), f.nth(0,1,0), f.nth(0,0,1), -f.nth(0,0,0)]
+                        for f in faces)
+    faces_func = tuple(lambdify(variables, f.args[0]) for f in faces)
+    vertices = []
+    vertices_faces = defaultdict(set)
+    faces_vertices = defaultdict(set)
+    edges_faces = dict()
+    for finds in combinations(range(len(faces)), 3):
+        if any(set(finds) <= vfaces for vfaces in vertices_faces.values()):
+            continue
+        if any(efaces < set(finds) for efaces in edges_faces.values()):
             continue
 
-        res = solve_linear_system(
-            Matrix([planes_coeff[ind] for ind in inds]),
-            *variables, simplify=False)
-        if res is None or res == {}:
+        linsys = Matrix([faces_coeff[find] for find in finds])
+        vertexf = _solve_linsys_(linsys)
+        if vertexf is None:
             continue
-        if any(var not in res for var in variables):
+        if not all(faces_func[find](*vertexf) >= -1e-6 for find in range(len(faces))):
             continue
-        vertex = tuple(res[var] for var in variables)
-        if any(not v.is_number for v in vertex):
-            continue
+        vertex = _solve_linsys(linsys)
+        # print('find vertex '+str(vertex))
 
-        vertex = simplify(sqrtsimp(simplify(vertex)))
-        if any(not r(p(*vertex), 0) for r, p in zip(rels, planes)):
-            continue
+        vind = len(vertices)
+        vertices.append(vertex)
+        for find in range(len(faces)):
+            if abs(faces_func[find](*vertexf)) <= 1e-6:
+                # print('    lies on face '+str(find))
+                vertices_faces[vind].add(find)
+                faces_vertices[find].add(vind)
 
-        # vertexf = tuple(v.evalf() for v in vertex)
-        # if any(not r(p(*vertexf), 0) for r, p in zip(rels, planes)):
-        #     continue
-        # vertex = simplify(sqrtsimp(simplify(vertex)))
+        for vind2 in range(len(vertices)):
+            if vind == vind2:
+                continue
+            edge = frozenset({vind, vind2})
+            if edge in edges_faces.keys():
+                continue
+            efaces = vertices_faces[vind] & vertices_faces[vind2]
+            if len(efaces) == 2:
+                # print('find edge '+str(tuple(edge)))
+                # for find in efaces:
+                #     print('    lies on face '+str(find))
+                edges_faces[edge] = efaces
 
-        assert vertex not in vertices_indices
-        for ind in range(len(planes)):
-            if planes[ind](*vertex) == 0:
-                vertices_indices[vertex].add(ind)
-
-    vertices_faces = {}
-    for v, inds in vertices_indices.items():
-        vertices_faces[v] = set(halfspaces[ind] for ind in inds)
-    return vertices_faces
+    return (vertices, faces, vertices_faces, faces_vertices, edges_faces)
 

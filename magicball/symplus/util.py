@@ -1,6 +1,7 @@
 from sympy.core import Symbol, Tuple, Wild
 from sympy.functions import sqrt, sign
 from sympy.matrices import MatrixSymbol
+from sympy.simplify import simplify
 from sympy.logic import true, false
 
 
@@ -50,12 +51,27 @@ def sqrtsimp(expr):
     def sqrtofsqrtsimp(a=0, b=0, c=0): # sqrt(a + b*sqrt(c))
         q = sqrt(a**2 - b**2*c)
         if not q.is_Rational:
-            return sqrt(a + b*sqrt(c))
+            return None
         return sqrt((a+q)/2) + sign(b)*sqrt((a-q)/2)
 
+    def sqrtofsqrtsimp_(a=0, b=0, c=0): # 1/sqrt(a + b*sqrt(c))
+        q = sqrt(a**2 - b**2*c)
+        if not q.is_Rational:
+            return None
+        return 1/(sqrt((a+q)/2) + sign(b)*sqrt((a-q)/2))
+
     a, b, c = Wild('a'), Wild('b'), Wild('c')
-    expr = expr.replace(sqrt(a + b*sqrt(c)), sqrtofsqrtsimp)
+    expr = expr.replace(sqrt(a + b*sqrt(c)), sqrtofsqrtsimp, exact=True)
+    expr = expr.replace(1/sqrt(a + b*sqrt(c)), sqrtofsqrtsimp_, exact=True)
     return expr
+
+def simplify_with_sqrt(expr):
+    while True:
+        expr = simplify(expr)
+        expr_ = sqrtsimp(expr)
+        if expr_ == expr:
+            return expr
+        expr = expr_
 
 
 def deep_iter(sequence, depth=-1, types=(list, tuple), iter=iter):
