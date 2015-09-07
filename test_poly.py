@@ -1,10 +1,9 @@
 import time
 from sympy import *
-from magicball.engine.poly import *
-from magicball.model.euclid import *
+from magicball.model.poly import *
 
 
-print('======test1===========')
+print('===== test dodeca ====')
 t = time.time()
 vf_dodeca = to_mesh(dodecahedron)
 print('======================')
@@ -22,7 +21,7 @@ elapsed = time.time() - t
 print('elapsed time: '+str(elapsed))
 
 
-print('======test2===========')
+print('===== test icosa =====')
 t = time.time()
 vf_icosa = to_mesh(icosahedron)
 print('======================')

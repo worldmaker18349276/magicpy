@@ -1,11 +1,11 @@
 from itertools import combinations, product
 from sympy.core import S
 from sympy.sets import Set, Intersection
-from magicball.model.affine import SE3, SO3, T3, transform
 from magicball.symplus.setplus import AbstractSet, Topology
 from magicball.symplus.strplus import mstr
 from magicball.symplus.path import PathMonoid, Path
 from magicball.engine.sample import SpaceSampleEngine, cube_engine
+from magicball.model.affine import SE3, SO3, T3, transform
 from magicball.model.euclid import complement
 
 
@@ -45,6 +45,7 @@ class PhysicalPuzzle(frozenset):
 
     def cut_by(self, *knives):
         """
+        >>> from magicball.symplus.matplus import *
         >>> from magicball.model.euclid import *
         >>> cube2x2x2 = PhysicalPuzzle({sphere()})
         >>> cube2x2x2 = cube2x2x2.cut_by(
@@ -70,6 +71,7 @@ class PhysicalPuzzle(frozenset):
     def simp(self):
         """
         >>> from sympy import *
+        >>> from magicball.symplus.matplus import *
         >>> from magicball.model.euclid import *
         >>> from magicball.engine.sample import *
         >>> engine = cube_engine(4, 5)
@@ -146,6 +148,7 @@ class PhysicalPuzzle(frozenset):
     def move_by(self, action):
         """
         >>> from sympy import *
+        >>> from magicball.symplus.matplus import *
         >>> from magicball.model.euclid import *
         >>> from magicball.model.affine import *
         >>> cube2x2x2 = PhysicalPuzzle({sphere()})

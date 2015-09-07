@@ -25,15 +25,15 @@ doctest.testmod(path)
 import magicball.engine.sample as sample
 doctest.testmod(sample)
 
-import magicball.engine.poly as poly
-doctest.testmod(poly)
-
 import magicball.model.affine as affine
 doctest.testmod(affine)
 
 import magicball.model.euclid as euclid
 doctest.testmod(euclid)
 
-import magicball.model.phy as phy
+import magicball.model.poly as poly
+doctest.testmod(poly)
+
+import magicball.puzzle.phy as phy
 doctest.testmod(phy)
 
