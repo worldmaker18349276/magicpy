@@ -1,7 +1,7 @@
 from sympy.matrices import MatrixExpr
 from sympy.matrices.immutable import ImmutableMatrix as Mat
-from sympy.functions import sqrt
-from sympy.core import Ne, Eq, Dummy
+from sympy.functions import sqrt, acos
+from sympy.core import Ne, Eq, Dummy, pi
 from sympy.logic import And, Or
 from magicball.symplus.util import *
 
@@ -124,4 +124,17 @@ def cross(vec1, vec2=None):
                     [-y, x, 0]])
     else:
         return cross(vec1)*vec2
+
+def angle(vec1, vec2, vec3=None):
+    if vec3 is None:
+        return acos(dot(normalize(vec1), normalize(vec2)))
+    else:
+        if dot(cross(vec1, vec2), vec3) > 0:
+            return angle(cross(vec1, vec3), cross(vec2, vec3))
+        else:
+            return 2*pi-angle(cross(vec1, vec3), cross(vec2, vec3))
+
+def project(vec1, vec2):
+    vec2 = normalize(vec2)
+    return dot(vec1, vec2)*vec2
 
