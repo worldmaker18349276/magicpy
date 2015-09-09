@@ -1,6 +1,7 @@
+import operator
 from sympy.core import S, Tuple, Rel, Basic
 from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent, to_nnf
-from sympy.sets import Set, Intersection, Union
+from sympy.sets import Set, Intersection, Union, ProductSet, Contains
 from magicball.symplus.util import *
 from magicball.symplus.matplus import matsimp, with_matsym
 from magicball.symplus.logicplus import Forall, Exist
@@ -143,6 +144,8 @@ class AbstractSet(Set):
         AbstractSet(m, And(Determinant(m) == 0, m[0, 0] + m[1, 1] == 0))
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._intersect(AbstractSet(x, abs(x)>1))
         EmptySet()
+        >>> AbstractSet(x, abs(x)>1)._intersect(Interval(1,2))
+        AbstractSet(x, And(Abs(x) > 1, x <= 2, x >= 1))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -155,7 +158,11 @@ class AbstractSet(Set):
                          other.expr.xreplace(dict(zip(vars2, vars12))))
             return AbstractSet(vars12, expr12)
         else:
-            return None
+            other_ = as_abstract(other)
+            if isinstance(other_, AbstractSet):
+                return self._intersect(other_)
+            else:
+                return None
 
     def _union(self, other):
         """union two set builder
@@ -174,6 +181,8 @@ class AbstractSet(Set):
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._union(AbstractSet(n, Eq(det(n),0)))
         AbstractSet(m, Or(Determinant(m) == 0, m[0, 0] + m[1, 1] == 0))
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._union(AbstractSet(x, abs(x)>1))
+        >>> AbstractSet(x, abs(x)>1)._union(Interval(1,2))
+        AbstractSet(x, Or(Abs(x) > 1, And(x <= 2, x >= 1)))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -186,7 +195,11 @@ class AbstractSet(Set):
                         other.expr.xreplace(dict(zip(vars2, vars12))))
             return AbstractSet(vars12, expr12)
         else:
-            return None
+            other_ = as_abstract(other)
+            if isinstance(other_, AbstractSet):
+                return self._union(other_)
+            else:
+                return None
 
     def _complement(self, other):
         """complement two set builder
@@ -207,6 +220,8 @@ class AbstractSet(Set):
         AbstractSet(m, And(Determinant(m) != 0, m[0, 0] + m[1, 1] == 0))
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._complement(AbstractSet(x, abs(x)>1))
         EmptySet()
+        >>> AbstractSet(x, abs(x)>1)._complement(Interval(1,2))
+        AbstractSet(x, Or(Abs(x) > 1, And(x <= 2, x >= 1)))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -219,7 +234,11 @@ class AbstractSet(Set):
                          Not(other.expr.xreplace(dict(zip(vars2, vars12)))))
             return AbstractSet(vars12, expr12)
         else:
-            return None
+            other_ = as_abstract(other)
+            if isinstance(other_, AbstractSet):
+                return self._union(other_)
+            else:
+                return None
 
     def _contains(self, other):
         """
@@ -250,6 +269,8 @@ class AbstractSet(Set):
         True
         >>> AbstractSet((x,y), x-y>1).is_subset(AbstractSet((x,y), abs(x-y)>1))
         Forall((x, y), Implies(x - y > 1, Abs(x - y) > 1))
+        >>> AbstractSet(x, abs(x)>1).is_subset(Interval(1,2))
+        Forall(x, Implies(Abs(x) > 1, And(x <= 2, x >= 1)))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -261,7 +282,11 @@ class AbstractSet(Set):
                           Implies(self.expr.xreplace(dict(zip(vars1, vars12))),
                                   other.expr.xreplace(dict(zip(vars2, vars12)))))
         else:
-            raise ValueError("Unknown argument '%s'" % other)
+            other_ = as_abstract(other)
+            if isinstance(other_, AbstractSet):
+                return self.is_subset(other_)
+            else:
+                raise ValueError("Unknown argument '%s'" % other)
 
     def is_disjoint(self, other):
         """
@@ -271,6 +296,8 @@ class AbstractSet(Set):
         True
         >>> AbstractSet((x,y), x-y>1).is_disjoint(AbstractSet((x,y), abs(x-y)<1))
         Forall((x, y), Not(And(Abs(x - y) < 1, x - y > 1)))
+        >>> AbstractSet(x, abs(x)>1).is_disjoint(Interval(1,2))
+        Forall(x, Not(And(Abs(x) > 1, x <= 2, x >= 1)))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -282,7 +309,11 @@ class AbstractSet(Set):
                           Nand(self.expr.xreplace(dict(zip(vars1, vars12))),
                                other.expr.xreplace(dict(zip(vars2, vars12)))))
         else:
-            raise ValueError("Unknown argument '%s'" % other)
+            other_ = as_abstract(other)
+            if isinstance(other_, AbstractSet):
+                return self.is_disjoint(other_)
+            else:
+                raise ValueError("Unknown argument '%s'" % other)
 
     def is_equivalent(self, other):
         """
@@ -292,6 +323,8 @@ class AbstractSet(Set):
         True
         >>> AbstractSet(x, x<1).is_equivalent(AbstractSet(x, x-1<0))
         Forall(x, Equivalent(x < 1, x - 1 < 0))
+        >>> AbstractSet(x, abs(x)>1).is_equivalent(Interval(1,2))
+        Forall(x, Equivalent(Abs(x) > 1, And(x <= 2, x >= 1)))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -303,7 +336,11 @@ class AbstractSet(Set):
                           Equivalent(self.expr.xreplace(dict(zip(vars1, vars12))),
                                      other.expr.xreplace(dict(zip(vars2, vars12)))))
         else:
-            raise ValueError("Unknown argument '%s'" % other)
+            other_ = as_abstract(other)
+            if isinstance(other_, AbstractSet):
+                return self.is_equivalent(other_)
+            else:
+                raise ValueError("Unknown argument '%s'" % other)
 
     def is_proper_subset(self, other):
         """
@@ -358,6 +395,34 @@ class AbstractSet(Set):
                 return AbstractSet(var, expr)
         return expand0(self.variable, to_nnf(self.expr), depth)
 
+    def __mul__(self, other):
+        prod = self._eval_product(other)
+        if prod is None:
+            return ProductSet(self, other)
+        else:
+            return prod
+
+    def _eval_product(self, other):
+        """
+        >>> from sympy import *
+        >>> x, y = symbols('x y')
+        >>> AbstractSet(x, abs(x)>1)._eval_product(AbstractSet(y, y<x))
+        AbstractSet((x, y), And(Abs(x) > 1, y < x))
+        >>> AbstractSet(x, abs(x)>1)._eval_product(AbstractSet((x,y), abs(x-y)>1))
+        AbstractSet((x, x_, y), And(Abs(x) > 1, Abs(x_ - y) > 1))
+        """
+        if isinstance(other, AbstractSet):
+            vars1 = self.variables
+            expr1 = self.expr
+            vars2 = other.variables
+            expr2 = other.expr
+            vars2_ = rename_variables_in(vars2, self.free_symbols|set(vars1))
+            expr2_ = expr2.xreplace(dict(zip(vars2, vars2_)))
+            return AbstractSet(tuple(vars1)+tuple(vars2_), And(expr1, expr2_))
+        else:
+            return None
+
+
 class SetBuilder:
     def __getitem__(self, asets):
         """
@@ -370,7 +435,7 @@ class SetBuilder:
         >>> St[x : x-y>1, x : x<1]
         AbstractSet(x, And(x - y > 1, x < 1))
         >>> St[S.Reals, x : x<1]
-        Intersection((-oo, oo), AbstractSet(x, x < 1))
+        AbstractSet(x, And(x < 1, x < oo, x > -oo))
         """
         asets = asets if isinstance(asets, tuple) else (asets,)
         sts = []
@@ -402,7 +467,7 @@ class SetBuilder:
         >>> St({x : x-y>1}, {x : x<1})
         AbstractSet(x, And(x - y > 1, x < 1))
         >>> St(S.Reals, {x : x<1})
-        Intersection((-oo, oo), AbstractSet(x, x < 1))
+        AbstractSet(x, And(x < 1, x < oo, x > -oo))
         """
         sts = []
         for aset in asets:
@@ -423,6 +488,22 @@ class SetBuilder:
             return Intersection(*sts, evaluate=evaluate)
 
 St = SetBuilder()
+
+
+def as_abstract(aset):
+    if isinstance(aset, ProductSet):
+        args = tuple(as_abstract(arg) for arg in aset.args)
+        if all(isinstance(arg, AbstractSet) for arg in args):
+            return reduce(operator.mul, args)
+        else:
+            return aset
+    else:
+        x = Symbol('x', real=True)
+        expr = aset.contains(x)
+        if expr.has(Contains):
+            return aset
+        else:
+            return AbstractSet(x, expr)
 
 
 class Topology(Basic):
