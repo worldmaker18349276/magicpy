@@ -7,7 +7,7 @@ from magicball.symplus.setplus import AbstractSet, Topology
 from magicball.symplus.strplus import mstr
 from magicball.symplus.path import PathMonoid, Path
 from magicball.engine.sample import SpaceSampleEngine, cube_engine
-from magicball.model.affine import SE3, SO3, T3
+from magicball.model.affine import SE3, SO3, T3, transform
 from magicball.model.euclid import complement
 
 
@@ -68,6 +68,9 @@ class RegionalMotion:
     def __init__(self, region, path):
         self.region = region
         self.path = path
+
+    def is_stable(self):
+        return is_invariant_to(self.region, self.path)
 
 class IllegalOperationError(Exception):
     pass
@@ -254,10 +257,11 @@ class PhysicalPuzzle(frozenset):
 
         elif isinstance(action, RegionalMotion):
             target, others = self.select_by(action.region)
-            for i in range(int(action.path.length)+1):
-                movedtarget = target.transform_by(action.path(i))
-                if not others.no_collision_with(movedtarget):
-                    raise IllegalOperationError
+            if action.is_stable() != True:
+                for i in range(int(action.path.length)+1):
+                    movedtarget = target.transform_by(action.path(i))
+                    if not others.no_collision_with(movedtarget):
+                        raise IllegalOperationError
             movedtarget = target.transform_by(action.path())
             return self.new(others | movedtarget)
 
