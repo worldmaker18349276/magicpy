@@ -1,6 +1,8 @@
 from itertools import combinations, product
-from sympy.core import S
+from sympy.core import S, Lambda
 from sympy.sets import Set, Intersection
+from sympy.simplify import simplify
+from sympy.matrices import MatrixBase
 from magicball.symplus.setplus import AbstractSet, Topology
 from magicball.symplus.strplus import mstr
 from magicball.symplus.path import PathMonoid, Path
@@ -15,30 +17,72 @@ translationSet = PathMonoid(T3)
 
 regionSet = Topology(S.Reals**3)
 
-def is_region(reg):
-    return isinstance(reg, Set) and regionSet.contains(reg) == True
+def is_region(aset):
+    return isinstance(aset, Set) and simplify(regionSet.contains(aset)) == True
 
-def is_motion(mot):
-    return isinstance(mot, Path) and motionSet.contains(mot) == True
+def is_motion(pth):
+    return isinstance(pth, Path) and simplify(motionSet.contains(pth)) == True
+
+
+def is_invariant_to(aset, trans):
+    """
+    >>> from sympy import *
+    >>> from magicball.symplus.matplus import *
+    >>> from magicball.model.euclid import *
+    >>> from magicball.model.affine import *
+    >>> is_invariant_to(sphere(), rotation(i*pi/3))
+    True
+    >>> is_invariant_to(cylinder(i+j), translation(i*3+j*3))
+    True
+    >>> is_invariant_to(sphere(), translation(i*3+k*4))
+    """
+    if isinstance(trans, MatrixBase):
+        res = simplify(transform(aset, trans)) == simplify(aset)
+        if res == True:
+            return True
+        else:
+            return None
+    elif isinstance(trans, Path):
+        if isinstance(trans.function, Lambda):
+            res = simplify(transform(aset, trans.function.expr)) == simplify(aset)
+            if res == True:
+                return True
+            else:
+                return None
+        else:
+            return None
+    else:
+        raise TypeError
+
+
+class Motion:
+    def __init__(self, path):
+        self.path = path
+
+class TargetedMotion:
+    def __init__(self, target, path):
+        self.target = target
+        self.path = path
 
 class RegionalMotion:
-    def __init__(self, region, motion):
-        # if is_region(region):
-        #     raise TypeError
-        # if is_motion(motion):
-        #     raise TypeError
+    def __init__(self, region, path):
         self.region = region
-        self.motion = motion
+        self.path = path
 
+class IllegalOperationError(Exception):
+    pass
+
+class IllegalStateError(Exception):
+    pass
 
 class PhysicalPuzzle(frozenset):
-    def __new__(cls, regions, engine=cube_engine()):
-        obj = frozenset.__new__(cls, regions)
+    def __new__(cls, elements, engine=cube_engine()):
+        obj = frozenset.__new__(cls, elements)
         obj.engine = engine
         return obj
 
-    def new(self, regions):
-        return PhysicalPuzzle(regions, engine=self.engine)
+    def new(self, elements):
+        return PhysicalPuzzle(elements, engine=self.engine)
 
     def __str__(self):
         return '%s({\n%s})'%(type(self).__name__, ',\n'.join(sorted(map(mstr, self))))
@@ -110,40 +154,40 @@ class PhysicalPuzzle(frozenset):
         {(x, y, z) : (x - 1 > 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y - 1 > 0)}})
         """
         simplified = set()
-        for aset in self:
-            aset = self.engine.simp(aset)
-            if aset != S.EmptySet:
-                simplified.add(aset)
+        for elem in self:
+            elem = self.engine.simp(elem)
+            if elem != S.EmptySet:
+                simplified.add(elem)
         return self.new(simplified)
 
     def no_collision(self):
-        for reg1, reg2 in combinations(self, 2):
-            if not self.engine.is_disjoint(reg1, reg2):
+        for elem1, elem2 in combinations(self, 2):
+            if not self.engine.is_disjoint(elem1, elem2):
                 return False
         return True
 
     def no_collision_with(self, other):
-        for reg1, reg2 in product(self, other):
-            if not self.engine.is_disjoint(reg1, reg2):
+        for elem1, elem2 in product(self, other):
+            if not self.engine.is_disjoint(elem1, elem2):
                 return False
         return True
 
     def select_by(self, region):
         selected = set()
         unselected = set()
-        for reg in self:
-            res1 = self.engine.is_subset(reg, region)
-            res2 = self.engine.is_disjoint(reg, region)
+        for elem in self:
+            res1 = self.engine.is_subset(elem, region)
+            res2 = self.engine.is_disjoint(elem, region)
             if res1:
-                selected.add(reg)
+                selected.add(elem)
             elif res2:
-                unselected.add(reg)
+                unselected.add(elem)
             else:
                 raise ValueError
         return self.new(selected), self.new(unselected)
 
     def transform_by(self, mat):
-        return self.new(map(lambda r: transform(r, mat), self))
+        return self.new(map(lambda e: transform(e, mat), self))
 
     def move_by(self, action):
         """
@@ -186,16 +230,34 @@ class PhysicalPuzzle(frozenset):
         {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z > 0) & (y - z < 0)},
         {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z > 0) & (y - z > 0)}})
         """
-        if isinstance(action, Path):
-            return self.transform_by(action())
+        if isinstance(action, Motion):
+            return self.transform_by(action.path())
+
+        elif isinstance(action, TargetedMotion):
+            if not action.target <= self:
+                raise IllegalOperationError
+            target = self.new(action.target)
+            others = self.new(self-target)
+            for i in range(int(action.path.length)+1):
+                movedtarget = target.transform_by(action.path(i))
+                if not others.no_collision_with(movedtarget):
+                    raise IllegalOperationError
+            movedtarget = target.transform_by(action.path())
+            return self.new(others | movedtarget)
+
         elif isinstance(action, RegionalMotion):
             target, others = self.select_by(action.region)
-            for i in range(int(action.motion.length)+1):
-                movedtarget = target.transform_by(action.motion(i))
+            for i in range(int(action.path.length)+1):
+                movedtarget = target.transform_by(action.path(i))
                 if not others.no_collision_with(movedtarget):
-                    raise ValueError
-            movedtarget = target.transform_by(action.motion())
+                    raise IllegalOperationError
+            movedtarget = target.transform_by(action.path())
             return self.new(others | movedtarget)
+
         else:
             raise TypeError
+
+    def validate(self):
+        if not self.no_collision():
+            raise IllegalStateError
 
