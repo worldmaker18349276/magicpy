@@ -17,57 +17,20 @@ translationSet = PathMonoid(T3)
 
 regionSet = Topology(S.Reals**3)
 
-def is_region(aset):
-    return isinstance(aset, Set) and simplify(regionSet.contains(aset)) == True
 
-def is_motion(pth):
-    return isinstance(pth, Path) and simplify(motionSet.contains(pth)) == True
+class TotalOperation:
+    def __init__(self, action):
+        self.action = action
 
-
-def is_invariant_to(aset, trans):
-    """
-    >>> from sympy import *
-    >>> from magicball.symplus.matplus import *
-    >>> from magicball.model.euclid import *
-    >>> from magicball.model.affine import *
-    >>> is_invariant_to(sphere(), rotation(i*pi/3))
-    True
-    >>> is_invariant_to(cylinder(i+j), translation(i*3+j*3))
-    True
-    >>> is_invariant_to(sphere(), translation(i*3+k*4))
-    """
-    if isinstance(trans, MatrixBase):
-        res = simplify(transform(aset, trans)) == simplify(aset)
-        if res == True:
-            return True
-        else:
-            return None
-    elif isinstance(trans, Path):
-        res = simplify(transform(aset, trans.function.expr)) == simplify(aset)
-        if res == True:
-            return True
-        else:
-            return None
-    else:
-        raise TypeError
-
-
-class Motion:
-    def __init__(self, path):
-        self.path = path
-
-class TargetedMotion:
-    def __init__(self, target, path):
+class TargetedOperation:
+    def __init__(self, target, action):
         self.target = target
-        self.path = path
+        self.action = action
 
-class RegionalMotion:
-    def __init__(self, region, path):
+class RegionalOperation:
+    def __init__(self, region, action):
         self.region = region
-        self.path = path
-
-    def is_stable(self):
-        return is_invariant_to(self.region, self.path)
+        self.action = action
 
 class IllegalOperationError(Exception):
     pass
@@ -76,16 +39,45 @@ class IllegalStateError(Exception):
     pass
 
 class PhysicalPuzzle(frozenset):
-    def __new__(cls, elements, engine=cube_engine()):
+    def __new__(cls, elements, engine=cube_engine(), actions=motionSet):
         obj = frozenset.__new__(cls, elements)
         obj.engine = engine
+        obj.actions = actions
         return obj
 
     def new(self, elements):
-        return PhysicalPuzzle(elements, engine=self.engine)
+        return PhysicalPuzzle(elements, engine=self.engine, actions=self.actions)
+
+    def is_valid_state(self):
+        if not all(simplify(regionSet.contains(elem)) == True for elem in self):
+            return False
+        if not self.no_collision():
+            return False
+
+    def is_valid_operation(self, operation):
+        if isinstance(operation, TotalOperation):
+            return simplify(self.actions.contains(operation.action)) == True
+        elif isinstance(operation, TargetedOperation):
+            return simplify(self.actions.contains(operation.action)) == True
+        elif isinstance(operation, RegionalOperation):
+            return (simplify(self.actions.contains(operation.action)) == True and
+                    simplify(regionSet.contains(operation.region)) == True)
+        else:
+            return False
 
     def __str__(self):
-        return '%s({\n%s})'%(type(self).__name__, ',\n'.join(sorted(map(mstr, self))))
+        if self.actions == motionSet:
+            actionstr = 'PathMonoid(SE3)'
+        elif self.actions == rotationSet:
+            actionstr = 'PathMonoid(SO3)'
+        elif self.actions == translationSet:
+            actionstr = 'PathMonoid(T3)'
+        else:
+            actionstr = mstr(self.actions)
+        return '%s(\n    {%s},\n    actions=%s)'%(
+            type(self).__name__,
+            ',\n     '.join(sorted(map(mstr, self))),
+            actionstr)
 
     def cut_by(self, *knives):
         """
@@ -97,15 +89,16 @@ class PhysicalPuzzle(frozenset):
         ...     (halfspace(-j), halfspace(j)),
         ...     (halfspace(-k), halfspace(k)))
         >>> print(str(cube2x2x2))
-        PhysicalPuzzle({
-        {(x, y, z) : (-x > 0) & (-y > 0) & (-z > 0) & (x**2 + y**2 + z**2 < 1)},
-        {(x, y, z) : (-x > 0) & (-y > 0) & (x**2 + y**2 + z**2 < 1) & (z > 0)},
-        {(x, y, z) : (-x > 0) & (-z > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0)},
-        {(x, y, z) : (-x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z > 0)},
-        {(x, y, z) : (-y > 0) & (-z > 0) & (x > 0) & (x**2 + y**2 + z**2 < 1)},
-        {(x, y, z) : (-y > 0) & (x > 0) & (x**2 + y**2 + z**2 < 1) & (z > 0)},
-        {(x, y, z) : (-z > 0) & (x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z > 0)}})
+        PhysicalPuzzle(
+            {{(x, y, z) : (-x > 0) & (-y > 0) & (-z > 0) & (x**2 + y**2 + z**2 < 1)},
+             {(x, y, z) : (-x > 0) & (-y > 0) & (x**2 + y**2 + z**2 < 1) & (z > 0)},
+             {(x, y, z) : (-x > 0) & (-z > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0)},
+             {(x, y, z) : (-x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z > 0)},
+             {(x, y, z) : (-y > 0) & (-z > 0) & (x > 0) & (x**2 + y**2 + z**2 < 1)},
+             {(x, y, z) : (-y > 0) & (x > 0) & (x**2 + y**2 + z**2 < 1) & (z > 0)},
+             {(x, y, z) : (-z > 0) & (x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0)},
+             {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 < 1) & (y > 0) & (z > 0)}},
+            actions=PathMonoid(SE3))
         """
         cutted = set()
         for sub in product(self, *knives):
@@ -114,7 +107,7 @@ class PhysicalPuzzle(frozenset):
 
     def combine(self, region=None):
         if region is None:
-            return self.new(self.engine.union(*self))
+            return self.new({self.engine.union(*self)})
         else:
             selected, others = self.select_by(region)
             return self.new(others | selected.combine())
@@ -130,35 +123,37 @@ class PhysicalPuzzle(frozenset):
         >>> floppy3x3x1 = PhysicalPuzzle({sphere(3)}, engine)
         >>> floppy3x3x1 = floppy3x3x1.cut_by(*map(with_complement, knives))
         >>> print(str(floppy3x3x1))
-        PhysicalPuzzle({
-        {(x, y, z) : (-x <= 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
-        {(x, y, z) : (-x <= 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
-        {(x, y, z) : (-x <= 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
-        {(x, y, z) : (-x <= 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
-        {(x, y, z) : (-x <= 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
-        {(x, y, z) : (-x <= 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
-        {(x, y, z) : (-x <= 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
-        {(x, y, z) : (-x <= 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
-        {(x, y, z) : (-x > 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
-        {(x, y, z) : (-x > 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
-        {(x, y, z) : (-x > 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
-        {(x, y, z) : (-x > 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
-        {(x, y, z) : (-x > 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
-        {(x, y, z) : (-x > 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
-        {(x, y, z) : (-x > 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
-        {(x, y, z) : (-x > 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)}})
+        PhysicalPuzzle(
+            {{(x, y, z) : (-x <= 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+             {(x, y, z) : (-x <= 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+             {(x, y, z) : (-x <= 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+             {(x, y, z) : (-x <= 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+             {(x, y, z) : (-x <= 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+             {(x, y, z) : (-x <= 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+             {(x, y, z) : (-x <= 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+             {(x, y, z) : (-x <= 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+             {(x, y, z) : (-x > 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+             {(x, y, z) : (-x > 1) & (-y <= 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+             {(x, y, z) : (-x > 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+             {(x, y, z) : (-x > 1) & (-y <= 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+             {(x, y, z) : (-x > 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+             {(x, y, z) : (-x > 1) & (-y > 1) & (x <= 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)},
+             {(x, y, z) : (-x > 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y <= 1)},
+             {(x, y, z) : (-x > 1) & (-y > 1) & (x > 1) & (x**2 + y**2 + z**2 < 9) & (y > 1)}},
+            actions=PathMonoid(SE3))
         >>> floppy3x3x1 = floppy3x3x1.simp()
         >>> print(str(floppy3x3x1))
-        PhysicalPuzzle({
-        {(x, y, z) : (x + 1 < 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 < 0)},
-        {(x, y, z) : (x + 1 < 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 >= 0) & (y - 1 <= 0)},
-        {(x, y, z) : (x + 1 < 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y - 1 > 0)},
-        {(x, y, z) : (x + 1 >= 0) & (x - 1 <= 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 < 0)},
-        {(x, y, z) : (x + 1 >= 0) & (x - 1 <= 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 >= 0) & (y - 1 <= 0)},
-        {(x, y, z) : (x + 1 >= 0) & (x - 1 <= 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y - 1 > 0)},
-        {(x, y, z) : (x - 1 > 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 < 0)},
-        {(x, y, z) : (x - 1 > 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 >= 0) & (y - 1 <= 0)},
-        {(x, y, z) : (x - 1 > 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y - 1 > 0)}})
+        PhysicalPuzzle(
+            {{(x, y, z) : (x + 1 < 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 < 0)},
+             {(x, y, z) : (x + 1 < 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 >= 0) & (y - 1 <= 0)},
+             {(x, y, z) : (x + 1 < 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y - 1 > 0)},
+             {(x, y, z) : (x + 1 >= 0) & (x - 1 <= 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 < 0)},
+             {(x, y, z) : (x + 1 >= 0) & (x - 1 <= 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 >= 0) & (y - 1 <= 0)},
+             {(x, y, z) : (x + 1 >= 0) & (x - 1 <= 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y - 1 > 0)},
+             {(x, y, z) : (x - 1 > 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 < 0)},
+             {(x, y, z) : (x - 1 > 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y + 1 >= 0) & (y - 1 <= 0)},
+             {(x, y, z) : (x - 1 > 0) & (x**2 + y**2 + z**2 - 9 < 0) & (y - 1 > 0)}},
+            actions=PathMonoid(SE3))
         """
         simplified = set()
         for elem in self:
@@ -196,7 +191,7 @@ class PhysicalPuzzle(frozenset):
                 return False
         return True
 
-    def apply(self, action):
+    def apply(self, operation):
         """
         >>> from sympy import *
         >>> from magicball.symplus.matplus import *
@@ -209,63 +204,102 @@ class PhysicalPuzzle(frozenset):
         ...     (halfspace(-k), halfspace(k)))
         >>> cube2x2x2 = cube2x2x2.simp()
         >>> print(str(cube2x2x2))
-        PhysicalPuzzle({
-        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z < 0)},
-        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z > 0)},
-        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z < 0)},
-        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z < 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z > 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z < 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)}})
+        PhysicalPuzzle(
+            {{(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z < 0)},
+             {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z > 0)},
+             {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z < 0)},
+             {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)},
+             {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z < 0)},
+             {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z > 0)},
+             {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z < 0)},
+             {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)}},
+            actions=PathMonoid(SE3))
         >>> rot = rotate(i*pi/4); rot
         Path(Lambda(t, Matrix([
         [1,            0,             0, 0],
         [0, cos(pi*t/20), -sin(pi*t/20), 0],
         [0, sin(pi*t/20),  cos(pi*t/20), 0],
         [0,            0,             0, 1]])), 5)
-        >>> cube2x2x2 = cube2x2x2.apply(RegionalMotion(halfspace(i), rot))
+        >>> cube2x2x2 = cube2x2x2.apply(RegionalOperation(halfspace(i), rot))
         >>> cube2x2x2 = cube2x2x2.simp()
         >>> print(str(cube2x2x2))
-        PhysicalPuzzle({
-        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z < 0)},
-        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z > 0)},
-        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z < 0)},
-        {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z < 0) & (y - z < 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z < 0) & (y - z > 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z > 0) & (y - z < 0)},
-        {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z > 0) & (y - z > 0)}})
+        PhysicalPuzzle(
+            {{(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z < 0)},
+             {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y < 0) & (z > 0)},
+             {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z < 0)},
+             {(x, y, z) : (x < 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y > 0) & (z > 0)},
+             {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z < 0) & (y - z < 0)},
+             {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z < 0) & (y - z > 0)},
+             {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z > 0) & (y - z < 0)},
+             {(x, y, z) : (x > 0) & (x**2 + y**2 + z**2 - 1 < 0) & (y + z > 0) & (y - z > 0)}},
+            actions=PathMonoid(SE3))
         """
-        if isinstance(action, Motion):
-            return self.transform_by(action.path())
+        if isinstance(operation, TotalOperation):
+            return self.transform_by(operation.action())
 
-        elif isinstance(action, TargetedMotion):
-            if not action.target <= self:
+        elif isinstance(operation, TargetedOperation):
+            if not operation.target <= self:
                 raise IllegalOperationError
-            target = self.new(action.target)
+            target = self.new(operation.target)
             others = self.new(self-target)
-            for i in range(int(action.path.length)+1):
-                movedtarget = target.transform_by(action.path(i))
+            for i in range(int(operation.action.length)+1):
+                movedtarget = target.transform_by(operation.action(i))
                 if not others.no_collision_with(movedtarget):
                     raise IllegalOperationError
-            movedtarget = target.transform_by(action.path())
+            movedtarget = target.transform_by(operation.action())
+            if not others.no_collision_with(movedtarget):
+                raise IllegalOperationError
             return self.new(others | movedtarget)
 
-        elif isinstance(action, RegionalMotion):
-            target, others = self.select_by(action.region)
-            if action.is_stable() != True:
-                for i in range(int(action.path.length)+1):
-                    movedtarget = target.transform_by(action.path(i))
+        elif isinstance(operation, RegionalOperation):
+            target, others = self.select_by(operation.region)
+            if self.is_stable_operation(operation) != True:
+                for i in range(int(operation.action.length)+1):
+                    movedtarget = target.transform_by(operation.action(i))
                     if not others.no_collision_with(movedtarget):
                         raise IllegalOperationError
-            movedtarget = target.transform_by(action.path())
+            movedtarget = target.transform_by(operation.action())
+            if not others.no_collision_with(movedtarget):
+                raise IllegalOperationError
             return self.new(others | movedtarget)
 
         else:
             raise TypeError
 
-    def validate(self):
-        if not self.no_collision():
-            raise IllegalStateError
+    def is_stable_operation(self, operation):
+        """
+        >>> from sympy import *
+        >>> from magicball.symplus.matplus import *
+        >>> from magicball.model.euclid import *
+        >>> from magicball.model.affine import *
+        >>> pz = PhysicalPuzzle({})
+        >>> pz.is_stable_operation(RegionalOperation(halfspace(), rotate(i*pi/4)))
+        True
+        >>> pz.is_stable_operation(RegionalOperation(cylinder(), shift(i*3)))
+        True
+        >>> pz.is_stable_operation(RegionalOperation(sphere(), rotate(i*pi/3))) # too weak
+        """
+        if isinstance(operation, TotalOperation):
+            return True
+
+        elif isinstance(operation, TargetedOperation):
+            return None
+
+        elif isinstance(operation, RegionalOperation):
+            extended = operation.action.function.expr
+            # too weak
+            if simplify(transform(operation.region, extended)) == simplify(operation.region):
+                return True
+
+            # # too unstable, expensive
+            # for i in range(int(operation.action.length)+1):
+            #     moved = self.engine.transform(operation.region, operation.action(i))
+            #     if not self.engine.equal(operation.region, moved):
+            #         return False
+            # return True
+
+            return None
+
+        else:
+            raise TypeError
 
