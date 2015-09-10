@@ -43,12 +43,9 @@ def is_invariant_to(aset, trans):
         else:
             return None
     elif isinstance(trans, Path):
-        if isinstance(trans.function, Lambda):
-            res = simplify(transform(aset, trans.function.expr)) == simplify(aset)
-            if res == True:
-                return True
-            else:
-                return None
+        res = simplify(transform(aset, trans.function.expr)) == simplify(aset)
+        if res == True:
+            return True
         else:
             return None
     else:
@@ -224,9 +221,9 @@ class PhysicalPuzzle(frozenset):
         >>> rot = rotate(i*pi/4); rot
         Path(Lambda(t, Matrix([
         [1,            0,             0, 0],
-        [0, cos(pi*t/40), -sin(pi*t/40), 0],
-        [0, sin(pi*t/40),  cos(pi*t/40), 0],
-        [0,            0,             0, 1]])), 10)
+        [0, cos(pi*t/20), -sin(pi*t/20), 0],
+        [0, sin(pi*t/20),  cos(pi*t/20), 0],
+        [0,            0,             0, 1]])), 5)
         >>> cube2x2x2 = cube2x2x2.apply(RegionalMotion(halfspace(i), rot))
         >>> cube2x2x2 = cube2x2x2.simp()
         >>> print(str(cube2x2x2))

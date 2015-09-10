@@ -1,4 +1,4 @@
-from sympy.core import Ne, Eq, Symbol, Lambda, Tuple
+from sympy.core import Ne, Eq, Symbol, Lambda, Tuple, pi
 from sympy.sets import Set, Intersection, Union, Complement, EmptySet
 from sympy.sets.sets import UniversalSet
 from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
@@ -211,15 +211,16 @@ def transform(st, mat):
 
 
 t = Symbol('t', positive=True)
-n = 10
 
-def rotate(rvec):
+def rotate(rvec, d=pi/20):
     if norm(rvec) == 0:
         return Path(eye4, 0)
+    n = int(norm(rvec)/d)
     return Path(rotation(t/n*rvec), n)
 
-def shift(sh):
+def shift(sh, d=0.1):
     if norm(sh) == 0:
         return Path(eye4, 0)
+    n = int(norm(sh)/d)
     return Path(translation(t/n*sh), n)
 
