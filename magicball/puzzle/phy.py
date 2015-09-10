@@ -1,13 +1,13 @@
 from itertools import combinations, product
 from sympy.core import S, Lambda
-from sympy.sets import Set, Intersection
+from sympy.sets import Set
 from sympy.simplify import simplify
 from sympy.matrices import MatrixBase
 from magicball.symplus.setplus import AbstractSet, Topology
 from magicball.symplus.strplus import mstr
 from magicball.symplus.path import PathMonoid, Path
 from magicball.engine.sample import SpaceSampleEngine, cube_engine
-from magicball.model.affine import SE3, SO3, T3, transform
+from magicball.model.affine import SE3, SO3, T3
 from magicball.model.euclid import complement
 
 
@@ -109,8 +109,15 @@ class PhysicalPuzzle(frozenset):
         """
         cutted = set()
         for sub in product(self, *knives):
-            cutted.add(Intersection(*sub))
+            cutted.add(self.engine.intersection(*sub))
         return self.new(cutted)
+
+    def combine(self, region=None):
+        if region is None:
+            return self.new(self.engine.union(*self))
+        else:
+            selected, others = self.select_by(region)
+            return self.new(others | selected.combine())
 
     def simp(self):
         """
@@ -160,18 +167,6 @@ class PhysicalPuzzle(frozenset):
                 simplified.add(elem)
         return self.new(simplified)
 
-    def no_collision(self):
-        for elem1, elem2 in combinations(self, 2):
-            if not self.engine.is_disjoint(elem1, elem2):
-                return False
-        return True
-
-    def no_collision_with(self, other):
-        for elem1, elem2 in product(self, other):
-            if not self.engine.is_disjoint(elem1, elem2):
-                return False
-        return True
-
     def select_by(self, region):
         selected = set()
         unselected = set()
@@ -187,9 +182,21 @@ class PhysicalPuzzle(frozenset):
         return self.new(selected), self.new(unselected)
 
     def transform_by(self, mat):
-        return self.new(map(lambda e: transform(e, mat), self))
+        return self.new(map(lambda e: self.engine.transform(e, mat), self))
 
-    def move_by(self, action):
+    def no_collision(self):
+        for elem1, elem2 in combinations(self, 2):
+            if not self.engine.is_disjoint(elem1, elem2):
+                return False
+        return True
+
+    def no_collision_with(self, other):
+        for elem1, elem2 in product(self, other):
+            if not self.engine.is_disjoint(elem1, elem2):
+                return False
+        return True
+
+    def apply(self, action):
         """
         >>> from sympy import *
         >>> from magicball.symplus.matplus import *
@@ -217,7 +224,7 @@ class PhysicalPuzzle(frozenset):
         [0, cos(pi*t/40), -sin(pi*t/40), 0],
         [0, sin(pi*t/40),  cos(pi*t/40), 0],
         [0,            0,             0, 1]])), 10)
-        >>> cube2x2x2 = cube2x2x2.move_by(RegionalMotion(halfspace(i), rot))
+        >>> cube2x2x2 = cube2x2x2.apply(RegionalMotion(halfspace(i), rot))
         >>> cube2x2x2 = cube2x2x2.simp()
         >>> print(str(cube2x2x2))
         PhysicalPuzzle({

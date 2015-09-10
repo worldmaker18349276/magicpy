@@ -22,6 +22,9 @@ doctest.testmod(strplus)
 import magicball.symplus.path as path
 doctest.testmod(path)
 
+import magicball.engine.basic as basic
+doctest.testmod(basic)
+
 import magicball.engine.sample as sample
 doctest.testmod(sample)
 

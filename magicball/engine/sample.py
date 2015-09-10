@@ -7,6 +7,7 @@ from sympy.logic.boolalg import true, false, Boolean, is_nnf
 from sympy.utilities import lambdify
 from magicball.symplus.relplus import logicrelsimp
 from magicball.symplus.setplus import AbstractSet
+from magicball.engine.basic import Engine
 
 
 def setbit1(bits, index):
@@ -168,7 +169,7 @@ def spfuncsimp(sample, var, expr, ran=None):
         return expr
 
 
-class SpaceSampleEngine:
+class SpaceSampleEngine(Engine):
     def __init__(self, sample):
         self.sample = sample
 
