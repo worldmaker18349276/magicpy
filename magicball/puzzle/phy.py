@@ -66,11 +66,11 @@ class PhysicalPuzzle(frozenset):
             return False
 
     def __str__(self):
-        if self.actions == motionSet:
+        if self.actions is motionSet:
             actionstr = 'PathMonoid(SE3)'
-        elif self.actions == rotationSet:
+        elif self.actions is rotationSet:
             actionstr = 'PathMonoid(SO3)'
-        elif self.actions == translationSet:
+        elif self.actions is translationSet:
             actionstr = 'PathMonoid(T3)'
         else:
             actionstr = mstr(self.actions)
