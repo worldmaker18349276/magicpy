@@ -2,6 +2,7 @@ from itertools import product
 from functools import lru_cache, reduce
 from operator import and_, or_, xor
 from sympy.core import S
+from sympy.sets import Set, Intersection, Union, Complement
 from sympy.logic import Not, And, Or, Xor, Implies, Equivalent
 from sympy.logic.boolalg import true, false, Boolean, is_nnf
 from sympy.utilities import lambdify
@@ -41,33 +42,43 @@ class SpaceSample:
         return self.length
 
     @lru_cache(maxsize=128)
-    def _get_bits(self, var, expr):
-        func = lambdify(var, expr)
-        if len(var) == 1:
-            return bitmap(func, self)
+    def _bits_of_set(self, aset):
+        if isinstance(aset, AbstractSet):
+            var = aset.variables
+            expr = aset.expr
+            func = lambdify(var, expr)
+            if len(var) == 1:
+                return bitmap(func, self)
+            else:
+                return bitmap(lambda v: func(*v), self)
         else:
-            return bitmap(lambda v: func(*v), self)
-
-    def get_bits(self, var, expr):
-        if isinstance(expr, And):
-            return reduce(and_, (self.get_bits(var, e) for e in expr.args))
-        elif isinstance(expr, Or):
-            return reduce(or_, (self.get_bits(var, e) for e in expr.args))
-        elif isinstance(expr, Not):
-            return self.ran &~self.get_bits(var, expr.args[0])
-        elif isinstance(expr, Xor):
-            return reduce(xor, (self.get_bits(var, e) for e in expr.args))
-        elif isinstance(expr, (Implies, Equivalent)):
-            return self.get_bits(var, expr.to_nnf(simplify=False))
-        elif isinstance(expr, Boolean):
-            return self._get_bits(var, expr)
-        else:
-            raise TypeError
+            return bitmap(aset.__contains__, self)
 
     def bits_of_set(self, aset):
-        if not isinstance(aset, AbstractSet):
-            raise TypeError
-        return self.get_bits(aset.variables, aset.expr)
+        if isinstance(aset, Intersection):
+            return reduce(and_, (self.bits_of_set(e) for e in aset.args))
+        elif isinstance(aset, Union):
+            return reduce(or_, (self.bits_of_set(e) for e in aset.args))
+        elif isinstance(aset, Complement):
+            return self.bits_of_set(aset.args[0]) &~self.bits_of_set(aset.args[1])
+        elif isinstance(aset, AbstractSet):
+            return self.bits_of_expr(aset.variables, aset.expr)
+        else:
+            return self._bits_of_set(aset)
+
+    def bits_of_expr(self, var, expr):
+        if isinstance(expr, And):
+            return reduce(and_, (self.bits_of_expr(var, e) for e in expr.args))
+        elif isinstance(expr, Or):
+            return reduce(or_, (self.bits_of_expr(var, e) for e in expr.args))
+        elif isinstance(expr, Not):
+            return self.ran &~self.bits_of_expr(var, expr.args[0])
+        elif isinstance(expr, Xor):
+            return reduce(xor, (self.bits_of_expr(var, e) for e in expr.args))
+        elif isinstance(expr, (Implies, Equivalent)):
+            return self.bits_of_expr(var, expr.to_nnf(simplify=False))
+        else:
+            return self._bits_of_set(AbstractSet(var, expr))
 
 def cube_sample(length=2, n=10):
     def sample_iter():
@@ -75,6 +86,22 @@ def cube_sample(length=2, n=10):
                    product(range(-length*n, length*n+1), repeat=3))
     return SpaceSample(sample_iter, (2*length*n+1)**3)
 
+
+def Intersection_(*args):
+    if len(args) > 1:
+        return Intersection(*args, evaluate=False)
+    elif len(args) == 1:
+        return args[0]
+    else:
+        return S.UniversalSet
+
+def Union_(*args):
+    if len(args) > 1:
+        return Union(*args, evaluate=False)
+    elif len(args) == 1:
+        return args[0]
+    else:
+        return S.EmptySet
 
 def And_(*args):
     if len(args) > 1:
@@ -86,11 +113,87 @@ def And_(*args):
 
 def Or_(*args):
     if len(args) > 1:
-        return V(*args, evaluate=False)
+        return Or(*args, evaluate=False)
     elif len(args) == 1:
         return args[0]
     else:
         return false
+
+def spsetsimp(sample, aset, ran=None):
+    """
+    >>> from sympy import *
+    >>> from magicball.symplus.setplus import *
+    >>> x, y, z = symbols('x y z', real=True)
+    >>> sample = cube_sample(2,10)
+    >>> s1 = AbstractSet((x,y,z), x*2+y-z>0)
+    >>> s2 = AbstractSet((x,y,z), x*2+y-z>1)
+    >>> s12 = Intersection_(s1, s2); s12
+    Intersection(AbstractSet((x, y, z), 2*x + y - z > 0), AbstractSet((x, y, z), 2*x + y - z > 1))
+    >>> spsetsimp(sample, s12)
+    AbstractSet((x, y, z), 2*x + y - z > 1)
+    >>> s3 = AbstractSet((x,y,z), x+2*y>0)
+    >>> s4 = AbstractSet((x,y,z), x-2*y>0)
+    >>> s5 = AbstractSet((x,y,z), 2*x+y>-1)
+    >>> s345 = Intersection_(s3, s4, s5)
+    >>> spsetsimp(sample, s345)
+    Intersection(AbstractSet((x, y, z), x - 2*y > 0), AbstractSet((x, y, z), x + 2*y > 0))
+    >>> s6 = AbstractSet((x,y,z), 2*x+y<-1)
+    >>> s346 = Intersection_(s3, s4, s6)
+    >>> spsetsimp(sample, s346)
+    EmptySet()
+    """
+    if not isinstance(aset, Set):
+        raise TypeError('aset is not Set: %r' % aset)
+
+    if aset in (S.EmptySet, S.UniversalSet):
+        return aset
+
+    if aset.has(Complement):
+        raise TypeError('aset is not nnf: %r' % aset)
+
+    if ran is None:
+        ran = sample.ran
+
+    bits = sample.bits_of_set(aset) & ran
+    if bits == 0:
+        return S.EmptySet
+    elif bits == ran:
+        return S.UniversalSet
+
+    if isinstance(aset, Intersection):
+        # select important arguments
+        args = []
+        for arg in aset.args:
+            args_ = set(aset.args) - {arg}
+            bits_ = sample.bits_of_set(Intersection_(*args_)) & ran
+            if bits_ != bits:
+                args.append(arg)
+
+        # simplify remaining arguments
+        for i in range(len(args)):
+            args_ = set(args) - {args[i]}
+            ran_ = ran & sample.bits_of_set(Intersection_(*args_))
+            args[i] = spsetsimp(sample, args[i], ran_)
+        return Intersection_(*args)
+
+    elif isinstance(aset, Union):
+        # select important arguments
+        args = []
+        for arg in aset.args:
+            args_ = set(aset.args) - {arg}
+            bits_ = sample.bits_of_set(Union_(*args_)) & ran
+            if bits_ != bits:
+                args.append(arg)
+
+        # simplify remaining arguments
+        for i in range(len(args)):
+            args_ = set(args) - {args[i]}
+            ran_ = ran &~sample.bits_of_set(Union_(*args_))
+            args[i] = spsetsimp(sample, args[i], ran_)
+        return Union_(*args)
+
+    else:
+        return aset
 
 def spfuncsimp(sample, var, expr, ran=None):
     """
@@ -127,7 +230,7 @@ def spfuncsimp(sample, var, expr, ran=None):
     if ran is None:
         ran = sample.ran
 
-    bits = sample.get_bits(var, expr) & ran
+    bits = sample.bits_of_expr(var, expr) & ran
     if bits == 0:
         return false
     elif bits == ran:
@@ -138,14 +241,14 @@ def spfuncsimp(sample, var, expr, ran=None):
         args = []
         for arg in expr.args:
             args_ = set(expr.args) - {arg}
-            bits_ = sample.get_bits(var, And_(*args_)) & ran
+            bits_ = sample.bits_of_expr(var, And_(*args_)) & ran
             if bits_ != bits:
                 args.append(arg)
 
         # simplify remaining arguments
         for i in range(len(args)):
             args_ = set(args) - {args[i]}
-            ran_ = ran & sample.get_bits(var, And_(*args_))
+            ran_ = ran & sample.bits_of_expr(var, And_(*args_))
             args[i] = spfuncsimp(sample, var, args[i], ran_)
         return And_(*args)
 
@@ -154,14 +257,14 @@ def spfuncsimp(sample, var, expr, ran=None):
         args = []
         for arg in expr.args:
             args_ = set(expr.args) - {arg}
-            bits_ = sample.get_bits(var, Or_(*args_)) & ran
+            bits_ = sample.bits_of_expr(var, Or_(*args_)) & ran
             if bits_ != bits:
                 args.append(arg)
 
         # simplify remaining arguments
         for i in range(len(args)):
             args_ = set(args) - {args[i]}
-            ran_ = ran &~sample.get_bits(Or_(*args_))
+            ran_ = ran &~sample.bits_of_expr(Or_(*args_))
             args[i] = spfuncsimp(sample, var, args[i], ran_)
         return Or_(*args)
 
