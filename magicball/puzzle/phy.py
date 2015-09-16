@@ -5,8 +5,8 @@ from sympy.simplify import simplify
 from sympy.matrices import MatrixBase
 from magicball.symplus.setplus import AbstractSet, Topology
 from magicball.symplus.strplus import mstr
-from magicball.symplus.path import PathMonoid, Path
 from magicball.engine.sample import SpaceSampleEngine, cube_engine
+from magicball.model.path import PathMonoid, Path
 from magicball.model.affine import SE3, SO3, T3, transform
 from magicball.model.euclid import complement
 

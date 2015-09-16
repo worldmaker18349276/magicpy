@@ -6,9 +6,9 @@ from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from sympy.functions import cos, sin, acos
 from magicball.symplus.util import is_Tuple, is_Matrix
-from magicball.symplus.path import Path
 from magicball.symplus.setplus import AbstractSet
 from magicball.symplus.matplus import *
+from magicball.model.path import Path
 
 
 m = MatrixSymbol('m', 4, 4)

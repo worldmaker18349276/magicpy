@@ -19,14 +19,14 @@ doctest.testmod(setplus)
 import magicball.symplus.strplus as strplus
 doctest.testmod(strplus)
 
-import magicball.symplus.path as path
-doctest.testmod(path)
-
 import magicball.engine.basic as basic
 doctest.testmod(basic)
 
 import magicball.engine.sample as sample
 doctest.testmod(sample)
+
+import magicball.model.path as path
+doctest.testmod(path)
 
 import magicball.model.affine as affine
 doctest.testmod(affine)
@@ -39,4 +39,7 @@ doctest.testmod(poly)
 
 import magicball.puzzle.phy as phy
 doctest.testmod(phy)
+
+import magicball.museum.RubiksCube as RubiksCube
+doctest.testmod(RubiksCube)
 
