@@ -1,11 +1,11 @@
 from sympy.core import Ne, Eq, Symbol, Lambda, Tuple, pi
-from sympy.sets import Set, Intersection, Union, Complement, EmptySet
+from sympy.sets import Set, Intersection, Union, Complement, EmptySet, ImageSet
 from sympy.sets.sets import UniversalSet
 from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
                             MatrixSymbol, Identity, ZeroMatrix)
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from sympy.functions import cos, sin, acos
-from magicball.symplus.util import is_Tuple, is_Matrix
+from magicball.symplus.util import is_Tuple, is_Matrix, rename_variables_in
 from magicball.symplus.setplus import AbstractSet
 from magicball.symplus.matplus import *
 from magicball.model.path import Path
@@ -189,23 +189,27 @@ def transform(st, mat):
     AbstractSet((x, y, z), (x - 2)**2 + (y - 3)**2 + (z - 5)**2 < 1)
     """
     if is_Tuple(st) and len(st) == 3:
-        vec = Mat(list(st)+[1])
-        vec = mat * vec
-        return Tuple(*vec[:3])
+        f = as_function(mat)
+        return f(*st)
+
     elif is_Matrix(st):
         return mat * st * mat.inv()
+
     elif isinstance(st, Set):
         if isinstance(st, (Intersection, Union, Complement)):
             return st.func(*[transform(arg, mat) for arg in st.args], evaluate=False)
+
         elif isinstance(st, (EmptySet, UniversalSet)):
             return st
+
         elif isinstance(st, AbstractSet) and len(st.variables) == 3:
-            from magicball.symplus.setplus import rename_variables_in
             f = as_function(mat.inv())
             var = rename_variables_in(f.variables, st.free_symbols)
             return AbstractSet(var, st.contains(f(*var)))
+
         else:
-            raise ValueError
+            return ImageSet(as_function(mat), st)
+
     else:
         raise ValueError
 
