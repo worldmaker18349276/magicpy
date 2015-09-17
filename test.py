@@ -16,6 +16,9 @@ doctest.testmod(relplus)
 import magicball.symplus.setplus as setplus
 doctest.testmod(setplus)
 
+import magicball.symplus.funcplus as funcplus
+doctest.testmod(funcplus)
+
 import magicball.symplus.strplus as strplus
 doctest.testmod(strplus)
 
