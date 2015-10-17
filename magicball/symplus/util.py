@@ -23,10 +23,11 @@ def is_Boolean(b):
 
 def rename_variables_in(variables, varspace):
     names = [v.name for v in variables]
-    namespace = [v.name for v in varspace]
+    namespace = {v.name for v in varspace}
     for i in range(len(names)):
-        while names[i] in namespace or names[i] in names[:i]:
+        while names[i] in namespace:
             names[i] += '_'
+        namespace.add(names[i])
     return list(Symbol(n, **v.assumptions0)
                 if isinstance(v, Symbol) else MatrixSymbol(n, v.rows, v.cols)
                 for n, v in zip(names, variables))

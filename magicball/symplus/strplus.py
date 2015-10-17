@@ -48,7 +48,7 @@ class SymplusPrinter(StrPrinter):
             argstr1 = self._print(expr.args[1])
         else:
             argstr1 = '(%s)'%self._print(expr.args[1])
-        return '{0} => {1}'.format(argstr0, argstr1)
+        return '%s => %s'%(argstr0, argstr1)
 
     def _print_Equivalent(self, expr):
         argstr = []
@@ -71,7 +71,7 @@ class SymplusPrinter(StrPrinter):
             argstr1 = self._print(expr.args[1])
         else:
             argstr1 = '(%s)'%self._print(expr.args[1])
-        return '{0} \ {1}'.format(argstr0, argstr1)
+        return '%s \ %s'%(argstr0, argstr1)
 
     def _print_Intersection(self, expr):
         argstr = []
@@ -98,7 +98,7 @@ class SymplusPrinter(StrPrinter):
         if isinstance(expr.args[1], AbstractSet):
             varstr = self._print(expr.args[0](*expr.args[1].variables))
             exprstr = self._print(expr.args[1].expr)
-            return '{{{0} : {1}}}'.format(varstr, exprstr)
+            return '{%s : %s}'%(varstr, exprstr)
         else:
             if len(expr.args[0].variables) == 1:
                 varstr = self._print(expr.args[0].variables[0])
@@ -106,10 +106,10 @@ class SymplusPrinter(StrPrinter):
                 varstr = self._print(expr.args[0].variables)
             elemstr = self._print(expr.args[0].expr)
             setstr = self._print(expr.args[1])
-            return '{{{0} : {1} in {2}}}'.format(elemstr, varstr, setstr)
+            return '{%s : %s in %s}'%(elemstr, varstr, setstr)
 
     def _print_Contains(self, expr):
-        return '{0} in {1}'.format(*[self._print(arg) for arg in expr.args])
+        return '%s in %s'%(expr.args[0], expr.args[1])
 
     def _print_EmptySet(self, expr):
         return '{}'
@@ -118,12 +118,13 @@ class SymplusPrinter(StrPrinter):
         return 'V'
 
     def _print_Lambda(self, obj):
-        args, expr = obj.args
+        args = obj.variables
+        expr = obj.expr
         if len(args) == 1:
-            return '({0} |-> {1})'.format(*[self._print(arg) for arg in expr.args])
+            return '(%s |-> %s)'%(args[0], expr)
         else:
             arg_string = ', '.join(self._print(arg) for arg in args)
-            return '({0} |-> {1})' % (arg_string, expr)
+            return '(%s |-> %s)'%(arg_string, expr)
 
     def _print_MatrixBase(self, expr):
         if expr.rows == 0 or expr.cols == 0:
