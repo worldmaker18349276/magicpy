@@ -3,6 +3,7 @@ from sympy.core import Atom
 from sympy.logic import Not, And, Xor, Or, Implies, Equivalent
 from sympy.sets import Complement, Intersection, Union, Contains, Interval
 from magicball.symplus.setplus import AbstractSet
+from magicball.symplus.funcplus import Apply, Image
 
 
 class SymplusPrinter(StrPrinter):
@@ -126,6 +127,32 @@ class SymplusPrinter(StrPrinter):
             arg_string = ', '.join(self._print(arg) for arg in args)
             return '(%s |-> %s)'%(arg_string, expr)
 
+    def _print_Apply(self, expr):
+        funcstr = self._print(expr.function)
+        if len(expr.arguments) == 1:
+            varstr = '(%s)' % self._print(expr.arguments[0])
+        else:
+                varstr = self._print(expr.arguments)
+        return '%s%s'%(funcstr, varstr)
+
+    def _print_Image(self, expr):
+        if isinstance(expr.set, AbstractSet):
+            funcstr = self._print(expr.function)
+            if len(expr.set.variables) == 1:
+                varstr = '(%s)' % self._print(expr.set.variables[0])
+            else:
+                varstr = self._print(expr.set.variables)
+            exprstr = self._print(expr.set.expr)
+            return '{%s%s : %s}'%(funcstr, varstr, exprstr)
+        else:
+            if len(expr.function.variables) == 1:
+                varstr = self._print(expr.function.variables[0])
+            else:
+                varstr = self._print(expr.function.variables)
+            elemstr = self._print(expr.function.expr)
+            setstr = self._print(expr.set)
+            return '{%s : %s in %s}'%(elemstr, varstr, setstr)
+
     def _print_MatrixBase(self, expr):
         if expr.rows == 0 or expr.cols == 0:
             return '[]'
@@ -175,6 +202,11 @@ def mprint(expr):
     {x**2 : x > y}
     >>> mprint(imageset(Lambda(x, x*y), S.Naturals))
     {x*y : x in Naturals()}
+    >>> from magicball.symplus.funcplus import *
+    >>> mprint(Image(FunctionCompose(exp, sin), St({x : x>y})))
+    {(exp o sin)(x) : x > y}
+    >>> mprint(Apply(Lambda(x, x*y), 3))
+    (x |-> x*y)(3)
     """
     print(pr.doprint(expr))
 
