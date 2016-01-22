@@ -5,7 +5,7 @@ from sympy.simplify import simplify
 from sympy.matrices import MatrixBase
 from magicball.symplus.setplus import AbstractSet, Topology
 from magicball.symplus.strplus import mstr
-from magicball.engine.sample import SpaceSampleEngine, cube_engine
+from magicball.engine.marching import cube_engine
 from magicball.model.path import PathMonoid, Path
 from magicball.model.affine import SE3, SO3, T3, transform
 from magicball.model.euclid import complement
@@ -117,7 +117,7 @@ class PhysicalPuzzle(frozenset):
         >>> from sympy import *
         >>> from magicball.symplus.matplus import *
         >>> from magicball.model.euclid import *
-        >>> from magicball.engine.sample import *
+        >>> from magicball.engine.marching import *
         >>> engine = cube_engine(4, 5)
         >>> knives = halfspace(i, 1), halfspace(j, 1), halfspace(-i, 1), halfspace(-j, 1)
         >>> floppy3x3x1 = PhysicalPuzzle({sphere(3)}, engine)

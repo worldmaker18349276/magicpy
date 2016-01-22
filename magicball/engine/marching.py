@@ -20,18 +20,18 @@ def setbit0(bits, index):
 def getbit(bits, index):
     return bits&(1<<index) != 0
 
-def bitmap(func, sample):
+def bitmap(func, voxels):
     bits = 0
     t = 1
-    for elem in sample:
+    for elem in voxels:
         if func(elem):
             bits |= t
         t <<= 1
     return bits
 
-class SpaceSample:
-    def __init__(self, iter_getter, length):
-        self._getter = iter_getter
+class Voxels:
+    def __init__(self, voxels_iter_getter, length):
+        self._getter = voxels_iter_getter
         self.length = length
         self.ran = ~((~1)<<length)
 
@@ -80,11 +80,11 @@ class SpaceSample:
         else:
             return self._bits_of_set(AbstractSet(var, expr))
 
-def cube_sample(length=2, n=10):
-    def sample_iter():
+def cube_voxels(length=2, n=10):
+    def voxels_iter_getter():
         return map(lambda v: (v[0]/n, v[1]/n, v[2]/n),
                    product(range(-length*n, length*n+1), repeat=3))
-    return SpaceSample(sample_iter, (2*length*n+1)**3)
+    return Voxels(voxels_iter_getter, (2*length*n+1)**3)
 
 
 def Intersection_(*args):
@@ -119,27 +119,27 @@ def Or_(*args):
     else:
         return false
 
-def spsetsimp(sample, aset, ran=None):
+def marchingsetsimp(voxels, aset, ran=None):
     """
     >>> from sympy import *
     >>> from magicball.symplus.setplus import *
     >>> x, y, z = symbols('x y z', real=True)
-    >>> sample = cube_sample(2,10)
+    >>> voxels = cube_voxels(2,10)
     >>> s1 = AbstractSet((x,y,z), x*2+y-z>0)
     >>> s2 = AbstractSet((x,y,z), x*2+y-z>1)
     >>> s12 = Intersection_(s1, s2); s12
     Intersection(AbstractSet((x, y, z), 2*x + y - z > 0), AbstractSet((x, y, z), 2*x + y - z > 1))
-    >>> spsetsimp(sample, s12)
+    >>> marchingsetsimp(voxels, s12)
     AbstractSet((x, y, z), 2*x + y - z > 1)
     >>> s3 = AbstractSet((x,y,z), x+2*y>0)
     >>> s4 = AbstractSet((x,y,z), x-2*y>0)
     >>> s5 = AbstractSet((x,y,z), 2*x+y>-1)
     >>> s345 = Intersection_(s3, s4, s5)
-    >>> spsetsimp(sample, s345)
+    >>> marchingsetsimp(voxels, s345)
     Intersection(AbstractSet((x, y, z), x - 2*y > 0), AbstractSet((x, y, z), x + 2*y > 0))
     >>> s6 = AbstractSet((x,y,z), 2*x+y<-1)
     >>> s346 = Intersection_(s3, s4, s6)
-    >>> spsetsimp(sample, s346)
+    >>> marchingsetsimp(voxels, s346)
     EmptySet()
     """
     if not isinstance(aset, Set):
@@ -152,9 +152,9 @@ def spsetsimp(sample, aset, ran=None):
         raise TypeError('aset is not nnf: %r' % aset)
 
     if ran is None:
-        ran = sample.ran
+        ran = voxels.ran
 
-    bits = sample.bits_of_set(aset) & ran
+    bits = voxels.bits_of_set(aset) & ran
     if bits == 0:
         return S.EmptySet
     elif bits == ran:
@@ -165,15 +165,15 @@ def spsetsimp(sample, aset, ran=None):
         args = []
         for arg in aset.args:
             args_ = set(aset.args) - {arg}
-            bits_ = sample.bits_of_set(Intersection_(*args_)) & ran
+            bits_ = voxels.bits_of_set(Intersection_(*args_)) & ran
             if bits_ != bits:
                 args.append(arg)
 
         # simplify remaining arguments
         for i in range(len(args)):
             args_ = set(args) - {args[i]}
-            ran_ = ran & sample.bits_of_set(Intersection_(*args_))
-            args[i] = spsetsimp(sample, args[i], ran_)
+            ran_ = ran & voxels.bits_of_set(Intersection_(*args_))
+            args[i] = marchingsetsimp(voxels, args[i], ran_)
         return Intersection_(*args)
 
     elif isinstance(aset, Union):
@@ -181,41 +181,41 @@ def spsetsimp(sample, aset, ran=None):
         args = []
         for arg in aset.args:
             args_ = set(aset.args) - {arg}
-            bits_ = sample.bits_of_set(Union_(*args_)) & ran
+            bits_ = voxels.bits_of_set(Union_(*args_)) & ran
             if bits_ != bits:
                 args.append(arg)
 
         # simplify remaining arguments
         for i in range(len(args)):
             args_ = set(args) - {args[i]}
-            ran_ = ran &~sample.bits_of_set(Union_(*args_))
-            args[i] = spsetsimp(sample, args[i], ran_)
+            ran_ = ran &~voxels.bits_of_set(Union_(*args_))
+            args[i] = marchingsetsimp(voxels, args[i], ran_)
         return Union_(*args)
 
     else:
         return aset
 
-def spfuncsimp(sample, var, expr, ran=None):
+def marchingfuncsimp(voxels, var, expr, ran=None):
     """
     >>> from sympy import *
     >>> from magicball.symplus.setplus import *
     >>> x, y, z = symbols('x y z', real=True)
-    >>> sample = cube_sample(2,10)
+    >>> voxels = cube_voxels(2,10)
     >>> s1 = x*2+y-z>0
     >>> s2 = x*2+y-z>1
     >>> s12 = s1 & s2; s12
     And(2*x + y - z > 0, 2*x + y - z > 1)
-    >>> spfuncsimp(sample, (x,y,z), s12)
+    >>> marchingfuncsimp(voxels, (x,y,z), s12)
     2*x + y - z > 1
     >>> s3 = x+2*y>0
     >>> s4 = x-2*y>0
     >>> s5 = 2*x+y>-1
     >>> s345 = s3 & s4 & s5
-    >>> spfuncsimp(sample, (x,y,z), s345)
+    >>> marchingfuncsimp(voxels, (x,y,z), s345)
     And(x + 2*y > 0, x - 2*y > 0)
     >>> s6 = 2*x+y<-1
     >>> s346 = s3 & s4 & s6
-    >>> spfuncsimp(sample, (x,y,z), s346)
+    >>> marchingfuncsimp(voxels, (x,y,z), s346)
     False
     """
     if not isinstance(expr, Boolean):
@@ -228,9 +228,9 @@ def spfuncsimp(sample, var, expr, ran=None):
         raise TypeError('expr is not nnf: %r' % expr)
 
     if ran is None:
-        ran = sample.ran
+        ran = voxels.ran
 
-    bits = sample.bits_of_expr(var, expr) & ran
+    bits = voxels.bits_of_expr(var, expr) & ran
     if bits == 0:
         return false
     elif bits == ran:
@@ -241,15 +241,15 @@ def spfuncsimp(sample, var, expr, ran=None):
         args = []
         for arg in expr.args:
             args_ = set(expr.args) - {arg}
-            bits_ = sample.bits_of_expr(var, And_(*args_)) & ran
+            bits_ = voxels.bits_of_expr(var, And_(*args_)) & ran
             if bits_ != bits:
                 args.append(arg)
 
         # simplify remaining arguments
         for i in range(len(args)):
             args_ = set(args) - {args[i]}
-            ran_ = ran & sample.bits_of_expr(var, And_(*args_))
-            args[i] = spfuncsimp(sample, var, args[i], ran_)
+            ran_ = ran & voxels.bits_of_expr(var, And_(*args_))
+            args[i] = marchingfuncsimp(voxels, var, args[i], ran_)
         return And_(*args)
 
     elif isinstance(expr, Or):
@@ -257,39 +257,39 @@ def spfuncsimp(sample, var, expr, ran=None):
         args = []
         for arg in expr.args:
             args_ = set(expr.args) - {arg}
-            bits_ = sample.bits_of_expr(var, Or_(*args_)) & ran
+            bits_ = voxels.bits_of_expr(var, Or_(*args_)) & ran
             if bits_ != bits:
                 args.append(arg)
 
         # simplify remaining arguments
         for i in range(len(args)):
             args_ = set(args) - {args[i]}
-            ran_ = ran &~sample.bits_of_expr(Or_(*args_))
-            args[i] = spfuncsimp(sample, var, args[i], ran_)
+            ran_ = ran &~voxels.bits_of_expr(Or_(*args_))
+            args[i] = marchingfuncsimp(voxels, var, args[i], ran_)
         return Or_(*args)
 
     else:
         return expr
 
 
-class SpaceSampleEngine(Engine):
-    def __init__(self, sample):
-        self.sample = sample
+class MarchingCubesEngine(Engine):
+    def __init__(self, voxels):
+        self.voxels = voxels
 
     def is_disjoint(self, aset1, aset2):
-        return self.sample.bits_of_set(aset1) & self.sample.bits_of_set(aset2) == 0
+        return self.voxels.bits_of_set(aset1) & self.voxels.bits_of_set(aset2) == 0
 
     def is_subset(self, aset1, aset2):
-        return self.sample.bits_of_set(aset1) &~self.sample.bits_of_set(aset2) == 0
+        return self.voxels.bits_of_set(aset1) &~self.voxels.bits_of_set(aset2) == 0
 
     def equal(self, aset1, aset2):
-        return self.sample.bits_of_set(aset1) == self.sample.bits_of_set(aset2)
+        return self.voxels.bits_of_set(aset1) == self.voxels.bits_of_set(aset2)
 
     def simp(self, aset):
         aset = aset.doit()
         if isinstance(aset, AbstractSet):
             expr = logicrelsimp(aset.expr)
-            expr = spfuncsimp(self.sample, aset.variables, expr)
+            expr = marchingfuncsimp(self.voxels, aset.variables, expr)
             if expr == true:
                 return S.UniversalSet
             elif expr == false:
@@ -300,5 +300,5 @@ class SpaceSampleEngine(Engine):
             return aset
 
 def cube_engine(length=2, n=10):
-    return SpaceSampleEngine(cube_sample(length, n))
+    return MarchingCubesEngine(cube_voxels(length, n))
 

@@ -79,7 +79,7 @@ def deep_iter(sequence, depth=-1, types=(list, tuple), iter=iter):
     if not isinstance(sequence, types) or depth == 0:
         return sequence
     for elem in iter(sequence):
-        for e in deep_enum(elem, depth-1, types, iter):
+        for e in deep_iter(elem, depth-1, types, iter):
             yield e
 
 def deep_enum(sequence, depth=-1, types=(list, tuple), iter=iter):

@@ -131,6 +131,8 @@ class SymplusPrinter(StrPrinter):
             return '[]'
         elif expr.rows == 1:
             return expr.table(self)
+        elif expr.cols == 1:
+            return expr.T.table(self)+'\''
         else:
             return '\n'+expr.table(self)
     _print_SparseMatrix = \
@@ -166,7 +168,7 @@ def mprint(expr):
     >>> mprint(St({x : x<1}, {x : x>0}, evaluate=False) | S.Reals)
     (-oo, oo) u {x : x < 1} n {x : x > 0}
     >>> mprint(St({x : x>0}) | Interval(-1,1))
-    [-1, 1] u {x : x > 0}
+    {x : (x <= 1) & (x >= -1) | (x > 0)}
     >>> mprint(St({x : x<1}) - S.Reals)
     {x : x < 1} \ (-oo, oo)
     >>> mprint(imageset(Lambda(x, x**2), St({x : x>y})))

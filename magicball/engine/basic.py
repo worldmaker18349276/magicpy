@@ -3,9 +3,6 @@ from magicball.model.affine import transform
 
 
 class Engine:
-    def __init__(self, sample):
-        self.sample = sample
-
     def intersection(self, *asets):
         return Intersection(*asets)
 

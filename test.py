@@ -25,8 +25,8 @@ doctest.testmod(strplus)
 import magicball.engine.basic as basic
 doctest.testmod(basic)
 
-import magicball.engine.sample as sample
-doctest.testmod(sample)
+import magicball.engine.marching as marching
+doctest.testmod(marching)
 
 import magicball.model.path as path
 doctest.testmod(path)
