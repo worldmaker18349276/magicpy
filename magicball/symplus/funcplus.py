@@ -1,5 +1,5 @@
 from functools import reduce
-from sympy.core import FunctionClass, Function, Lambda, Tuple, symbols, cacheit
+from sympy.core import FunctionClass, Function, Expr, Basic, Lambda, Tuple, symbols, cacheit
 from sympy.core.evaluate import global_evaluate
 from sympy.solvers import solve
 from sympy.functions import Id
@@ -26,16 +26,6 @@ def narg(func):
     else:
         raise TypeError
 
-def as_lambda(func):
-    if isinstance(func, Lambda):
-        return func
-    elif hasattr(func, 'as_lambda'):
-        return func.as_lambda()
-    else:
-        var = symbols('a:%s'%narg(func))
-        var = rename_variables_in(var, free_symbols(func))
-        return Lambda(var, func(*var))
-
 def nres(func):
     if isinstance(func, Lambda):
         if is_Tuple(func.expr):
@@ -47,11 +37,28 @@ def nres(func):
     else:
         raise TypeError
 
+def as_lambda(func):
+    """
+    >>> from sympy import *
+    >>> as_lambda(exp)
+    Lambda(a0, exp(a0))
+    >>> as_lambda(FunctionCompose(exp, sin))
+    Lambda(a0, exp(sin(a0)))
+    """
+    if isinstance(func, Lambda):
+        return func
+    elif hasattr(func, 'as_lambda'):
+        return func.as_lambda()
+    else:
+        var = symbols('a:%s'%narg(func))
+        var = rename_variables_in(var, free_symbols(func))
+        return Lambda(var, func(*var))
+
 
 class VariableFunctionClass(FunctionClass):
-    def __new__(mcl, name, nargs, nres, fields):
+    def __new__(mcl, name, narg, nres, fields):
         fields['__new__'] = lambda cls, *args: cls.call(*args)
-        fields['nargs'] = (narg,)
+        fields['_nargs'] = (narg,)
         fields['nres'] = nres
         return FunctionClass.__new__(mcl, name, (Function,), fields)
 
@@ -70,14 +77,25 @@ class FunctionCompose(VariableFunctionClass):
     >>> from sympy import *
     >>> FunctionCompose(exp, sin)
     (exp o sin)
+    >>> x, y = symbols('x y')
+    >>> FunctionCompose(exp, Lambda(x, x+1))
+    (exp o Lambda(x, x + 1))
+    >>> FunctionCompose(exp, Id)
+    exp
+    >>> FunctionCompose(exp, FunctionInverse(exp))
+    Lambda(_x, _x)
+    >>> FunctionCompose(exp, FunctionCompose(sin, log))
+    (exp o sin o log)
     >>> FunctionCompose(exp, sin)(pi/3)
     exp(sqrt(3)/2)
+    >>> FunctionCompose(Lambda((x,y), x+y), Lambda(x, (x, x-2)))(3)
+    4
     """
     def __new__(mcl, *functions, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         for function in functions:
-            if not isinstance(function, (FunctionClass, Lambda)):
+            if not is_function(function):
                 raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
 
         if evaluate:
@@ -103,31 +121,26 @@ class FunctionCompose(VariableFunctionClass):
 
     @staticmethod
     def reduce(funcs):
-        funcs = list(funcs)
+        funcs = funcs
         i = 0
-        while i < len(funcs)-1:
+        while i < len(funcs):
             if funcs[i] == Id:
                 funcs = funcs[:i] + funcs[i+1:]
-                i = max(i-1, 0)
-            elif funcs[i+1] == Id:
-                funcs = funcs[:i+1] + funcs[i+2:]
-            elif (isinstance(funcs[i+1], FunctionInverse) and
-                  funcs[i] == funcs[i+1].function or
-                  isinstance(funcs[i], FunctionInverse) and
-                  funcs[i+1] == funcs[i].function):
-                funcs = funcs[:i] + funcs[i+2:]
-                i = max(i-1, 0)
             elif isinstance(funcs[i], FunctionCompose):
                 funcs = funcs[:i] + funcs[i].functions + funcs[i+1:]
-                i = max(i-1, 0)
-            elif hasattr(funcs[i], '_compose'):
-                comp_funcs = funcs[i]._compose(funcs[i+1])
-                if comp_funcs is not None:
-                    funcs = funcs[:i] + [comp_funcs] + funcs[i+2:]
-                i = max(i-1, 0)
-            else:
-                i = i + 1
-
+            elif i-1 >= 0:
+                if isinstance(funcs[i-1], FunctionInverse) and funcs[i-1].function == funcs[i]:
+                    funcs = funcs[:i-1] + funcs[i+1:]
+                    i = i - 2
+                elif isinstance(funcs[i], FunctionInverse) and funcs[i].function == funcs[i-1]:
+                    funcs = funcs[:i-1] + funcs[i+1:]
+                    i = i - 2
+                elif hasattr(funcs[i-1], '_compose'):
+                    comp_funcs = funcs[i-1]._compose(funcs[i])
+                    if comp_funcs is not None:
+                        funcs = funcs[:i-1] + [comp_funcs] + funcs[i+1:]
+                    i = i - 1
+            i = i + 1
         return funcs
 
     def call(cls, *args):
@@ -137,7 +150,7 @@ class FunctionCompose(VariableFunctionClass):
 
     @property
     def func_free_symbols(cls):
-        return {sym for sym in func.func_free_symbols for func in cls.functions}
+        return {sym for func in cls.functions for sym in free_symbols(func)}
 
     def __eq__(self, other):
         return (isinstance(self, FunctionCompose) and
@@ -162,8 +175,8 @@ class FunctionInverse(FunctionClass):
     def __new__(mcl, function, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
-        if not isinstance(function, (FunctionClass, Lambda)):
-            raise TypeError('function is not a FunctionClass or: %s'%function)
+        if not is_function(function):
+            raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
 
         if evaluate:
             eval_func = FunctionInverse.eval(function)
@@ -210,13 +223,16 @@ class FunctionInverse(FunctionClass):
             raise ValueError
         solns = solve([expr - val for val, expr in zip(args, exprs)], vars)
         if isinstance(solns, dict):
-            return tuple(soln[var] for var, soln in zip(vars, solns))
+            if len(vars) == 1:
+                return solns[vars[0]]
+            else:
+                return tuple(solns[var] for var in vars)
         else:
             raise ValueError
 
     @property
     def func_free_symbols(cls):
-        return cls.function.func_free_symbols
+        return free_symbols(cls.function)
 
     def __eq__(self, other):
         return (isinstance(self, FunctionInverse) and
@@ -227,44 +243,76 @@ class FunctionInverse(FunctionClass):
         return hash((type(self).__name__, self.function))
 
 class Apply(Function):
-    def __new__(cls, function, arguments, **kwargs):
+    """
+    >>> from sympy import *
+    >>> Apply(sin, pi)
+    Apply(sin, pi)
+    >>> Apply(exp, Apply(sin, pi))
+    Apply((exp o sin), pi)
+    >>> Apply(FunctionInverse(sin), Apply(sin, pi))
+    pi
+    >>> Apply(sin, pi).doit()
+    0
+    >>> x, y = symbols('x y')
+    >>> Apply(Lambda((x,y), x+y), (1,2))
+    Apply(Lambda((x, y), x + y), (1, 2))
+    >>> _.doit()
+    3
+    """
+    def __new__(cls, function, argument, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
-        if not isinstance(function, (FunctionClass, Lambda)):
+        if not is_function(function):
             raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
 
         if evaluate:
-            function, arguments = Apply.reduce(function, arguments)
+            function, argument = Apply.reduce(function, argument)
 
         if function == Id:
-            return arguments
+            return argument
         else:
-            return Expr.__new__(cls, function, arguments, **kwargs)
+            return Expr.__new__(cls, function, argument, **kwargs)
 
     @classmethod
-    def reduce(cls, func, args):
-        if isinstance(args, Apply):
-            return cls.reduce(FunctionCompose(func, args.function), args.arguments)
+    def reduce(cls, func, arg):
+        if isinstance(arg, Apply):
+            return cls.reduce(FunctionCompose(func, arg.function), arg.argument)
         else:
-            return func, args
+            return func, arg
 
     @property
     def function(self):
         return self._args[0]
 
     @property
-    def arguments(self):
+    def argument(self):
         return self._args[1]
+
+    @property
+    def arguments(self):
+        return self._args[1] if is_Tuple(self._args[1]) else (self._args[1],)
 
     def doit(self, **hints):
         self = Basic.doit(self, **hints)
         return self.function(*self.arguments)
 
 class Image(Set):
+    """
+    >>> from sympy import *
+    >>> Image(sin, Interval(0, pi/2))
+    Image(sin, [0, pi/2])
+    >>> Image(exp, Image(sin, Interval(0, pi/2)))
+    Image((exp o sin), [0, pi/2])
+    >>> Image(FunctionInverse(sin), Image(sin, Interval(0, pi/2)))
+    [0, pi/2]
+    >>> x = symbols('x')
+    >>> Image(Lambda(x, x+1), Interval(-1, 1)).contains(1)
+    True
+    """
     def __new__(cls, function, set, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
-        if not isinstance(function, (FunctionClass, Lambda)):
+        if not is_function(function):
             raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
         if not isinstance(set, Set):
             raise TypeError('set is not a Set: %s'%set)
