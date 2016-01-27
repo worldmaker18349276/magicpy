@@ -138,8 +138,8 @@ class FunctionCompose(VariableFunctionClass):
                 elif hasattr(funcs[i-1], '_compose'):
                     comp_funcs = funcs[i-1]._compose(funcs[i])
                     if comp_funcs is not None:
-                        funcs = funcs[:i-1] + [comp_funcs] + funcs[i+1:]
-                    i = i - 1
+                        funcs = funcs[:i-1] + (comp_funcs,) + funcs[i+1:]
+                        i = i - 1
             i = i + 1
         return funcs
 
