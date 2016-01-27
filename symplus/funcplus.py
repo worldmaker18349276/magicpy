@@ -1,14 +1,11 @@
 from functools import reduce
-from sympy.core import FunctionClass, Function, Expr, Basic, Lambda, Tuple, symbols, cacheit
+from sympy.core import S, FunctionClass, Function, Expr, Basic, Lambda, Tuple, symbols, cacheit
 from sympy.core.evaluate import global_evaluate
 from sympy.solvers import solve
 from sympy.functions import Id
-from sympy.sets import Set
-from magicball.symplus.util import is_Tuple, rename_variables_in
+from sympy.sets import Set, Intersection, Union, Complement
+from symplus.util import *
 
-
-def is_function(func):
-    return isinstance(func, (FunctionClass, Lambda))
 
 def free_symbols(func):
     if isinstance(func, Lambda):
@@ -95,7 +92,7 @@ class FunctionCompose(VariableFunctionClass):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         for function in functions:
-            if not is_function(function):
+            if not is_Function(function):
                 raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
 
         if evaluate:
@@ -175,7 +172,7 @@ class FunctionInverse(FunctionClass):
     def __new__(mcl, function, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
-        if not is_function(function):
+        if not is_Function(function):
             raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
 
         if evaluate:
@@ -262,7 +259,7 @@ class Apply(Function):
     def __new__(cls, function, argument, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
-        if not is_function(function):
+        if not is_Function(function):
             raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
 
         if evaluate:
@@ -312,7 +309,7 @@ class Image(Set):
     def __new__(cls, function, set, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
-        if not is_function(function):
+        if not is_Function(function):
             raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
         if not isinstance(set, Set):
             raise TypeError('set is not a Set: %s'%set)
@@ -329,6 +326,13 @@ class Image(Set):
     def reduce(cls, func, set):
         if isinstance(set, Image):
             return cls.reduce(FunctionCompose(func, set.function), set.set)
+
+        elif set in (S.EmptySet, S.UniversalSet):
+            return set
+
+        elif isinstance(set, (Intersection, Union, Complement)):
+            return set.func(*[Image(func, arg) for arg in set.args], evaluate=False)
+
         else:
             return func, set
 
@@ -343,4 +347,7 @@ class Image(Set):
     def _contains(self, mem):
         mem = mem if is_Tuple(mem) else (mem,)
         return self.set._contains(FunctionInverse(self.function)(*mem))
+
+compose = FunctionCompose
+inverse = FunctionInverse
 

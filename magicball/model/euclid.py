@@ -2,8 +2,8 @@ from sympy.core import Basic, S
 from sympy.logic import true
 from sympy.sets import Set
 from sympy.matrices.immutable import ImmutableMatrix as Mat
-from magicball.symplus.setplus import AbstractSet
-from magicball.symplus.matplus import norm, normalize, dot, cross, project, x, y, z, r
+from symplus.setplus import AbstractSet
+from symplus.matplus import norm, normalize, dot, cross, project, x, y, z, r
 
 
 RR3 = AbstractSet((x, y, z), true)

@@ -2,8 +2,8 @@ from sympy.printing.str import StrPrinter
 from sympy.core import Atom
 from sympy.logic import Not, And, Xor, Or, Implies, Equivalent
 from sympy.sets import Complement, Intersection, Union, Contains, Interval
-from magicball.symplus.setplus import AbstractSet
-from magicball.symplus.funcplus import Apply, Image
+from symplus.setplus import AbstractSet
+from symplus.funcplus import Apply, Image
 
 
 class SymplusPrinter(StrPrinter):
@@ -185,7 +185,7 @@ def mprint(expr):
     (x > 0) & y => z
     >>> mprint((x>0) & y >> z)
     (x > 0) & (y => z)
-    >>> from magicball.symplus.setplus import *
+    >>> from symplus.setplus import *
     >>> mprint(St({x : x>y}))
     {x : x > y}
     >>> mprint(St({(x,y) : (x<1)&(y>0)}))
@@ -202,7 +202,7 @@ def mprint(expr):
     {x**2 : x > y}
     >>> mprint(imageset(Lambda(x, x*y), S.Naturals))
     {x*y : x in Naturals()}
-    >>> from magicball.symplus.funcplus import *
+    >>> from symplus.funcplus import *
     >>> mprint(Image(FunctionCompose(exp, sin), St({x : x>y})))
     {(exp o sin)(x) : x > y}
     >>> mprint(Apply(Lambda(x, x*y), 3))

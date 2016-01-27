@@ -1,7 +1,7 @@
 from sympy.core import Basic, Lambda, Tuple, sympify
 from sympy.functions import Piecewise
 from sympy.sets import Set, FiniteSet, ProductSet, Interval
-from magicball.symplus.util import *
+from symplus.util import *
 
 
 class FreeMonoid(Set):

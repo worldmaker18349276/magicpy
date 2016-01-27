@@ -10,10 +10,9 @@ from sympy.solvers import solve_linear_system
 from sympy.matrices import Matrix
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from magicball.model.euclid import halfspace
-from magicball.symplus.matplus import x, y, z, dot, cross
-from magicball.symplus.relplus import is_polynomial
-from magicball.symplus.setplus import AbstractSet
-from magicball.symplus.util import simplify_with_sqrt
+from symplus.matplus import x, y, z, dot, cross
+from symplus.setplus import AbstractSet
+from symplus.simplus import is_polynomial, simplify_with_sqrt
 
 
 phi = (sqrt(5)+1)/2

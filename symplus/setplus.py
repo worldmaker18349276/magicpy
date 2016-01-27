@@ -1,11 +1,10 @@
 import operator
-from sympy.core import S, Tuple, Rel, Basic
+from sympy.core import S, Tuple, Basic
 from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent, to_nnf
 from sympy.sets import Set, Intersection, Union, ProductSet, Contains
-from magicball.symplus.util import *
-from magicball.symplus.matplus import matsimp, with_matsym
-from magicball.symplus.logicplus import Forall, Exist
-from magicball.symplus.relplus import polyrelsimp, logicrelsimp
+from symplus.util import *
+from symplus.logicplus import Forall, Exist
+from symplus.funcplus import Image
 
 
 class AbstractSet(Set):
@@ -498,7 +497,8 @@ def as_abstract(aset):
         else:
             return aset
     else:
-        x = Symbol('x', real=True)
+        narg = len(aset.variables) if isinstance(aset, (AbstractSet, Image)) else 1
+        x = Symbol('x:%d'%narg, real=True)
         expr = aset.contains(x)
         if expr.has(Contains):
             return aset
@@ -524,33 +524,4 @@ class Topology(Basic):
         if symb not in (true, false):
             raise TypeError('contains did not evaluate to a bool: %r' % symb)
         return bool(symb)
-
-
-def setsimp(aset):
-    """
-    >>> from sympy import *
-    >>> x, y = symbols('x y')
-    >>> setsimp(AbstractSet((x,y), x**2>y**2))
-    AbstractSet((x, y), Or(And(x + y < 0, x - y < 0), And(x + y > 0, x - y > 0)))
-    >>> A = MatrixSymbol('A', 2, 2)
-    >>> setsimp(AbstractSet(A, Eq(A.T, A)))
-    AbstractSet(A, A[0, 1] - A[1, 0] == 0)
-    """
-    var = aset.variables
-    expr = aset.expr
-
-    expr = with_matsym(matsimp, polyrelsimp, logicrelsimp)(expr)
-
-    if expr == false or Exist(var, expr) == false:
-        return S.EmptySet
-    if expr == true or Forall(var, expr) == true:
-        if all(isinstance(v, Symbol) for v in var):
-            return S.UniversalSet**len(var)
-        else:
-            return AbstractSet(var, true)
-
-    if expr != aset.expr:
-        return AbstractSet(var, expr)
-    else:
-        return aset
 

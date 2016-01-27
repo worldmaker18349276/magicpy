@@ -1,25 +1,25 @@
 import doctest
 
 
-import magicball.symplus.util as util
+import symplus.util as util
 doctest.testmod(util)
 
-import magicball.symplus.matplus as matplus
+import symplus.matplus as matplus
 doctest.testmod(matplus)
 
-import magicball.symplus.logicplus as logicplus
+import symplus.logicplus as logicplus
 doctest.testmod(logicplus)
 
-import magicball.symplus.relplus as relplus
-doctest.testmod(relplus)
+import symplus.simplus as simplus
+doctest.testmod(simplus)
 
-import magicball.symplus.setplus as setplus
+import symplus.setplus as setplus
 doctest.testmod(setplus)
 
-import magicball.symplus.funcplus as funcplus
+import symplus.funcplus as funcplus
 doctest.testmod(funcplus)
 
-import magicball.symplus.strplus as strplus
+import symplus.strplus as strplus
 doctest.testmod(strplus)
 
 import magicball.engine.basic as basic

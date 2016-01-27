@@ -6,8 +6,8 @@ from sympy.sets import Set, Intersection, Union, Complement
 from sympy.logic import Not, And, Or, Xor, Implies, Equivalent
 from sympy.logic.boolalg import true, false, Boolean, is_nnf
 from sympy.utilities import lambdify
-from magicball.symplus.relplus import logicrelsimp
-from magicball.symplus.setplus import AbstractSet
+from symplus.simplus import logicrelsimp
+from symplus.setplus import AbstractSet
 from magicball.engine.basic import Engine
 
 
@@ -122,7 +122,7 @@ def Or_(*args):
 def marchingsetsimp(voxels, aset, ran=None):
     """
     >>> from sympy import *
-    >>> from magicball.symplus.setplus import *
+    >>> from symplus.setplus import *
     >>> x, y, z = symbols('x y z', real=True)
     >>> voxels = cube_voxels(2,10)
     >>> s1 = AbstractSet((x,y,z), x*2+y-z>0)
@@ -198,7 +198,7 @@ def marchingsetsimp(voxels, aset, ran=None):
 def marchingfuncsimp(voxels, var, expr, ran=None):
     """
     >>> from sympy import *
-    >>> from magicball.symplus.setplus import *
+    >>> from symplus.setplus import *
     >>> x, y, z = symbols('x y z', real=True)
     >>> voxels = cube_voxels(2,10)
     >>> s1 = x*2+y-z>0

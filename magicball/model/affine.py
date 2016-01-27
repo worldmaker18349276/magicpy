@@ -5,11 +5,11 @@ from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
                             MatrixSymbol, Identity, ZeroMatrix)
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from sympy.functions import cos, sin, acos, sign
-from magicball.symplus.util import is_Tuple, is_Matrix, rename_variables_in, simplify_with_sqrt
-from magicball.symplus.setplus import AbstractSet
-from magicball.symplus.funcplus import (VariableFunctionClass, FunctionCompose,
-                                        FunctionInverse, Image, is_function)
-from magicball.symplus.matplus import *
+from symplus.util import is_Tuple, is_Matrix, rename_variables_in, simplify_with_sqrt
+from symplus.setplus import AbstractSet
+from symplus.funcplus import (VariableFunctionClass, compose,
+                                        inverse, Image, is_function)
+from symplus.matplus import *
 from magicball.model.path import Path
 
 
@@ -413,7 +413,7 @@ def transform(trans, st):
     [        1, 0, 0],
     [2*sqrt(3), 1, 0],
     [        0, 0, 1]]), [0, -4*sqrt(3), 0])
-    >>> import magicball.symplus.setplus
+    >>> import symplus.setplus
     >>> x, y, z = symbols('x,y,z')
     >>> transform(m, AbstractSet((x,y,z), x**2+y**2+z**2<1))
     Image(E([2, 3, 5], [1, 0, 0, 0], 1), AbstractSet((x, y, z), x**2 + y**2 + z**2 < 1))
@@ -422,21 +422,10 @@ def transform(trans, st):
         return trans(*st)
 
     elif is_function(st):
-        return FunctionCompose(trans, st, FunctionInverse(trans))
+        return compose(trans, st, inverse(trans))
 
     elif isinstance(st, Set):
-        # move to funcplus.Image.reduce?
-        if isinstance(st, (Intersection, Union, Complement)):
-            return st.func(*[transform(trans, arg) for arg in st.args], evaluate=False)
-
-        elif isinstance(st, (EmptySet, UniversalSet)):
-            return st
-
-        elif isinstance(st, AbstractSet) and len(st.variables) == 3:
-            return Image(trans, st)
-
-        else:
-            return Image(trans, st)
+        return Image(trans, st)
 
     else:
         raise ValueError

@@ -1,7 +1,7 @@
 from sympy.logic import true, false
 from sympy.logic.boolalg import BooleanFunction
 from sympy.logic.inference import valid, satisfiable
-from magicball.symplus.util import *
+from symplus.util import *
 
 
 class Forall(BooleanFunction):

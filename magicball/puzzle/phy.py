@@ -3,8 +3,8 @@ from sympy.core import S, Lambda
 from sympy.sets import Set
 from sympy.simplify import simplify
 from sympy.matrices import MatrixBase
-from magicball.symplus.setplus import AbstractSet, Topology
-from magicball.symplus.strplus import mstr
+from symplus.setplus import AbstractSet, Topology
+from symplus.strplus import mstr
 from magicball.engine.marching import cube_engine
 from magicball.model.path import PathMonoid, Path
 from magicball.model.affine import SE3, SO3, T3, transform
@@ -81,7 +81,7 @@ class PhysicalPuzzle(frozenset):
 
     def cut_by(self, *knives):
         """
-        >>> from magicball.symplus.matplus import *
+        >>> from symplus.matplus import *
         >>> from magicball.model.euclid import *
         >>> cube2x2x2 = PhysicalPuzzle({sphere()})
         >>> cube2x2x2 = cube2x2x2.cut_by(
@@ -115,7 +115,7 @@ class PhysicalPuzzle(frozenset):
     def simp(self):
         """
         >>> from sympy import *
-        >>> from magicball.symplus.matplus import *
+        >>> from symplus.matplus import *
         >>> from magicball.model.euclid import *
         >>> from magicball.engine.marching import *
         >>> engine = cube_engine(4, 5)
@@ -194,7 +194,7 @@ class PhysicalPuzzle(frozenset):
     def apply(self, operation):
         """
         >>> from sympy import *
-        >>> from magicball.symplus.matplus import *
+        >>> from symplus.matplus import *
         >>> from magicball.model.euclid import *
         >>> from magicball.model.affine import *
         >>> cube2x2x2 = PhysicalPuzzle({sphere()})
@@ -269,7 +269,7 @@ class PhysicalPuzzle(frozenset):
     def is_stable_operation(self, operation):
         """
         >>> from sympy import *
-        >>> from magicball.symplus.matplus import *
+        >>> from symplus.matplus import *
         >>> from magicball.model.euclid import *
         >>> from magicball.model.affine import *
         >>> pz = PhysicalPuzzle({})
