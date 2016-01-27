@@ -1,7 +1,5 @@
-from sympy.core import Symbol, Tuple, Wild, FunctionClass, Lambda
-from sympy.functions import sqrt, sign
+from sympy.core import Symbol, Tuple, FunctionClass, Lambda
 from sympy.matrices import MatrixSymbol
-from sympy.simplify import simplify
 from sympy.logic import true, false
 
 

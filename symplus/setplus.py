@@ -42,7 +42,7 @@ class AbstractSet(Set):
         for v in variable if is_Tuple(variable) else (variable,):
             if not is_Symbol(v):
                 raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
-        if not is_Boolean(expr):
+        if not is_Boolean(expr) and not is_Symbol(expr):
             raise TypeError('expression is not boolean or relational: %r' % expr)
 
         if is_Tuple(variable):

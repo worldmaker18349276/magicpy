@@ -7,12 +7,13 @@ from sympy.sets import Intersection
 from sympy.utilities import lambdify
 from sympy.polys import Poly
 from sympy.solvers import solve_linear_system
+from sympy.simplify import simplify
 from sympy.matrices import Matrix
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from magicball.model.euclid import halfspace
 from symplus.matplus import x, y, z, dot, cross
 from symplus.setplus import AbstractSet
-from symplus.simplus import is_polynomial, simplify_with_sqrt
+from symplus.simplus import is_polynomial, with_sqrtsimp
 
 
 phi = (sqrt(5)+1)/2
@@ -111,7 +112,7 @@ def _solve_linsys(mat):
     except ZeroDivisionError:
         return None
     else:
-        vertex = tuple(simplify_with_sqrt(v) for v in vertex)
+        vertex = tuple(with_sqrtsimp(simplify)(v) for v in vertex)
         if any(v.has(nan, oo, zoo) for v in vertex):
             return None
         return vertex

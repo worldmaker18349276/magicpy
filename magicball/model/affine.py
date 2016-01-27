@@ -5,7 +5,7 @@ from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
                             MatrixSymbol, Identity, ZeroMatrix)
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from sympy.functions import cos, sin, acos, sign
-from symplus.util import is_Tuple, is_Matrix, rename_variables_in, simplify_with_sqrt
+from symplus.util import is_Tuple, is_Matrix, rename_variables_in
 from symplus.setplus import AbstractSet
 from symplus.funcplus import (VariableFunctionClass, compose,
                                         inverse, Image, is_function)

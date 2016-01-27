@@ -1,18 +1,29 @@
 from itertools import *
-from sympy.core import S, Pow, Mul, Rel, Eq, Ne, Gt, Lt, Ge, Le, Symbol, Dummy
+from sympy.core import S, Symbol, Dummy
 from sympy.logic import true, false, And, Or, Not
 from sympy.logic.boolalg import BooleanFunction
-from sympy.polys import factor, LC, Poly, PolynomialError
-from sympy.assumptions import Q, ask
+from sympy.simplify import simplify
 from symplus.util import *
-from symplus.setplus import AbstractSet
-from symplus.logicplus import Exist, Forall
 
 
 # sqrt
+# Ref: http://mathforum.org/library/drmath/view/65302.html
 
 def sqrtsimp(expr):
-    # Ref: http://mathforum.org/library/drmath/view/65302.html
+    """
+    >>> from sympy import *
+    >>> expand((2+sqrt(3))**2)
+    4*sqrt(3) + 7
+    >>> sqrtsimp(sqrt(_))
+    sqrt(3) + 2
+    >>> expand((6+sqrt(17))**(-2))
+    1/(12*sqrt(17) + 53)
+    >>> sqrtsimp(sqrt(_))
+    1/(sqrt(17) + 6)
+    """
+    from sympy.functions import sqrt, sign
+    from sympy.core import Wild
+
     def sqrtofsqrtsimp(a=0, b=0, c=0): # sqrt(a + b*sqrt(c))
         q = sqrt(a**2 - b**2*c)
         if not q.is_Rational:
@@ -30,16 +41,23 @@ def sqrtsimp(expr):
     expr = expr.replace(1/sqrt(a + b*sqrt(c)), sqrtofsqrtsimp_, exact=True)
     return expr
 
-def simplify_with_sqrt(expr):
-    while True:
-        expr = simplify(expr)
-        expr_ = sqrtsimp(expr)
-        if expr_ == expr:
-            return expr
-        expr = expr_
+def with_sqrtsimp(*simplifies):
+    def simplify_with_sqrtsimp(expr, *args, **kwargs):
+        while True:
+            for simp in simplifies:
+                expr = simp(expr, *args, **kwargs)
+            expr_ = sqrtsimp(expr)
+            if expr_ == expr:
+                return expr
+            expr = expr_
+
+    return simplify_with_sqrtsimp
 
 
 # relational
+from sympy.assumptions import Q, ask
+from sympy.core import Pow, Mul, Rel, Eq, Ne, Gt, Lt, Ge, Le
+from sympy.polys import factor, LC, Poly, PolynomialError
 
 def ask_is_positive(term):
     return ask(Q.positive(term), And(*map(Q.real, term.free_symbols)))
@@ -133,40 +151,6 @@ def is_simplerel(expr):
 
 
 def expand_polyeq(eq):
-    """expand (polynomial) equation/inequation and canonicalize it
-    >>> from sympy import *
-    >>> x, y, z = symbols('x, y, z')
-    >>> Eq(x**2+y, 2*y-1)
-    x**2 + y == 2*y - 1
-    >>> expand_polyeq(_)
-    x**2 - y + 1 == 0
-    >>> -x**2+x+1 > 0
-    -x**2 + x + 1 > 0
-    >>> expand_polyeq(_)
-    x**2 - x - 1 < 0
-    >>> 2*x**2+6*y**2-4 > 0
-    2*x**2 + 6*y**2 - 4 > 0
-    >>> expand_polyeq(_)
-    x**2 + 3*y**2 - 2 > 0
-    >>> 2*x**2+6*y**2+4 > 0
-    2*x**2 + 6*y**2 + 4 > 0
-    >>> expand_polyeq(_)
-    True
-    >>> x**4+3*x**2*y**3 > 0
-    x**4 + 3*x**2*y**3 > 0
-    >>> expand_polyeq(_)
-    And(x != 0, x**2 + 3*y**3 > 0)
-    >>> (x**2+1)*(2*x-y) > 0
-    (2*x - y)*(x**2 + 1) > 0
-    >>> expand_polyeq(_)
-    x - y/2 > 0
-    >>> eq = Gt((x**2+y**2)*(2*x-y), 0); eq
-    (2*x - y)*(x**2 + y**2) > 0
-    >>> expand_polyeq(eq)
-    And(x != 0, x - y/2 > 0, y != 0)
-    >>> expand_polyeq(Gt(1,1, evaluate=False))
-    False
-    """
     if not isinstance(eq, Rel):
         return eq
     rel = eq.func
@@ -294,11 +278,46 @@ def canonicalize_polyeq(eq):
     return rel(expr, 0)
 
 def polyrelsimp(expr):
+    """expand (polynomial) equation/inequation and canonicalize it
+    >>> from sympy import *
+    >>> x, y, z = symbols('x, y, z')
+    >>> Eq(x**2+y, 2*y-1)
+    x**2 + y == 2*y - 1
+    >>> polyrelsimp(_)
+    x**2 - y + 1 == 0
+    >>> -x**2+x+1 > 0
+    -x**2 + x + 1 > 0
+    >>> polyrelsimp(_)
+    x**2 - x - 1 < 0
+    >>> 2*x**2+6*y**2-4 > 0
+    2*x**2 + 6*y**2 - 4 > 0
+    >>> polyrelsimp(_)
+    x**2 + 3*y**2 - 2 > 0
+    >>> 2*x**2+6*y**2+4 > 0
+    2*x**2 + 6*y**2 + 4 > 0
+    >>> polyrelsimp(_)
+    True
+    >>> x**4+3*x**2*y**3 > 0
+    x**4 + 3*x**2*y**3 > 0
+    >>> polyrelsimp(_)
+    And(x != 0, x**2 + 3*y**3 > 0)
+    >>> (x**2+1)*(2*x-y) > 0
+    (2*x - y)*(x**2 + 1) > 0
+    >>> polyrelsimp(_)
+    x - y/2 > 0
+    >>> eq = Gt((x**2+y**2)*(2*x-y), 0); eq
+    (2*x - y)*(x**2 + y**2) > 0
+    >>> polyrelsimp(eq)
+    And(x != 0, x - y/2 > 0, y != 0)
+    >>> polyrelsimp(Gt(1,1, evaluate=False))
+    False
+    """
     return expr.replace(lambda rel: isinstance(rel, Rel),
                         lambda rel: expand_polyeq(rel))
 
+# WARNING: it is unstable
 def logicrelsimp(expr, form='dnf', deep=True):
-    """logic simplify for relation
+    """ logically simplify relations using totality (WARNING: it is unstable)
     >>> from sympy import *
     >>> x, y, z = symbols('x y z')
     >>> logicrelsimp((x>0) >> ((x<=0)&(y<0)))
@@ -314,9 +333,8 @@ def logicrelsimp(expr, form='dnf', deep=True):
     """
     from sympy.core.symbol import Wild
     from sympy.core import sympify
-    from sympy.simplify import simplify
     from sympy.logic.boolalg import (SOPform, POSform, to_nnf,
-        _find_predicates, simplify_logic)
+                                     _find_predicates, simplify_logic)
     Nt = lambda x: Not(x, evaluate=False)
 
     if form not in ('cnf', 'dnf'):
@@ -388,7 +406,7 @@ def do_indexing(expr):
     return expr.replace(MatrixElement, lambda parent, i, j: parent[i,j])
 
 def matsimp(expr):
-    """
+    """do indexing, Trace, Determinant and expand matrix equation
     >>> from sympy import *
     >>> A = ImmutableMatrix(2, 2, symbols('A(:2)(:2)'))
     >>> B = ImmutableMatrix(2, 2, symbols('B(:2)(:2)'))
@@ -446,7 +464,7 @@ def matsimp(expr):
     return expr
 
 def with_matsym(*simplifies):
-    """
+    """expand MatrixSymbol as MatrixElement and simplify it
     >>> from sympy import *
     >>> A = MatrixSymbol('A', 2, 2)
     >>> Eq(det(A), 0)
@@ -456,13 +474,18 @@ def with_matsym(*simplifies):
     >>> Eq(A.T*A, Identity(2))
     A'*A == I
     >>> with_matsym(matsimp)(_)
-    And(A[0, 0]**2 + A[1, 0]**2 == 1, A[0, 0]*A[0, 1] + \
-A[1, 0]*A[1, 1] == 0, A[0, 1]**2 + A[1, 1]**2 == 1)
+    And(A[0, 0]**2 + A[1, 0]**2 == 1, A[0, 0]*A[0, 1] + A[1, 0]*A[1, 1] == 0, A[0, 1]**2 + A[1, 1]**2 == 1)
     """
+    from symplus.setplus import AbstractSet
     def simplify_with_matsym(expr, *args, **kwargs):
         # expand MatrixSymbol as Matrix: A -> [ A[0,0] ,..]
-        mats = expr.atoms(MatrixSymbol)
+        mats = list(expr.atoms(MatrixSymbol))
+        agents = list(Dummy(str(mat)) for mat in mats)
+        def protect_var(var, expr):
+            return AbstractSet(var.xreplace(dict(zip(mats, agents))), expr)
+        expr = expr.replace(AbstractSet, protect_var)
         expr = expr.xreplace(dict((mat, mat.as_explicit()) for mat in mats))
+        expr = expr.xreplace(dict(zip(agents, mats)))
 
         # replace MatrixElement as Symbol: A[i,j] -> Aij
         elems = tuple(elem for mat in mats for elem in mat)
@@ -480,34 +503,5 @@ A[1, 0]*A[1, 1] == 0, A[0, 1]**2 + A[1, 1]**2 == 1)
     return simplify_with_matsym
 
 
-# set
-
-def setsimp(aset):
-    """
-    >>> from sympy import *
-    >>> from symplus.setplus import AbstractSet
-    >>> x, y = symbols('x y')
-    >>> setsimp(AbstractSet((x,y), x**2>y**2))
-    AbstractSet((x, y), Or(And(x + y < 0, x - y < 0), And(x + y > 0, x - y > 0)))
-    >>> A = MatrixSymbol('A', 2, 2)
-    >>> setsimp(AbstractSet(A, Eq(A.T, A)))
-    AbstractSet(A, A[0, 1] - A[1, 0] == 0)
-    """
-    var = aset.variables
-    expr = aset.expr
-
-    expr = with_matsym(matsimp, polyrelsimp, logicrelsimp)(expr)
-
-    if expr == false or Exist(var, expr) == false:
-        return S.EmptySet
-    if expr == true or Forall(var, expr) == true:
-        if all(isinstance(v, Symbol) for v in var):
-            return S.UniversalSet**len(var)
-        else:
-            return AbstractSet(var, true)
-
-    if expr != aset.expr:
-        return AbstractSet(var, expr)
-    else:
-        return aset
+simplify_all = with_matsym(matsimp, with_sqrtsimp(simplify, polyrelsimp, logicrelsimp))
 
