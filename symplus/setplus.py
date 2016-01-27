@@ -1,10 +1,9 @@
 import operator
-from sympy.core import S, Tuple, Basic
+from sympy.core import S, Tuple, Basic, sympify
 from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent, to_nnf
 from sympy.sets import Set, Intersection, Union, ProductSet, Contains
 from symplus.util import *
 from symplus.logicplus import Forall, Exist
-from symplus.funcplus import Image
 
 
 class AbstractSet(Set):
@@ -39,17 +38,12 @@ class AbstractSet(Set):
             ...
         TypeError: expression is not boolean or relational: x + y
         """
-        for v in variable if is_Tuple(variable) else (variable,):
+        variable = sympify(unpack_if_can(variable))
+        for v in tuple_if_not(variable):
             if not is_Symbol(v):
                 raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
         if not is_Boolean(expr) and not is_Symbol(expr):
             raise TypeError('expression is not boolean or relational: %r' % expr)
-
-        if is_Tuple(variable):
-            if len(variable) > 1:
-                variable = Tuple(*variable)
-            else:
-                variable = variable[0]
 
         return Set.__new__(cls, variable, expr, **kwargs)
 
@@ -85,7 +79,7 @@ class AbstractSet(Set):
         >>> AbstractSet(x, x>y).variables
         (x,)
         """
-        return self._args[0] if is_Tuple(self._args[0]) else Tuple(self._args[0])
+        return tuple_if_not(self._args[0])
 
     @property
     def expr(self):
@@ -255,7 +249,7 @@ class AbstractSet(Set):
         False
         """
         var = self.variables
-        val = other if is_Tuple(other) else Tuple(other)
+        val = tuple_if_not(other)
         if not var_type_match(var, val):
             return false
         return self.expr.xreplace(dict(zip(var, val)))
@@ -490,20 +484,19 @@ St = SetBuilder()
 
 
 def as_abstract(aset):
-    if isinstance(aset, ProductSet):
+    if hasattr(aset, 'as_abstract'):
+        return aset.as_abstract()
+
+    elif isinstance(aset, ProductSet):
         args = tuple(as_abstract(arg) for arg in aset.args)
         if all(isinstance(arg, AbstractSet) for arg in args):
             return reduce(operator.mul, args)
         else:
             return aset
     else:
-        narg = len(aset.variables) if isinstance(aset, (AbstractSet, Image)) else 1
-        x = Symbol('x:%d'%narg, real=True)
+        x = Symbol('x', real=True)
         expr = aset.contains(x)
-        if expr.has(Contains):
-            return aset
-        else:
-            return AbstractSet(x, expr)
+        return AbstractSet(x, expr)
 
 
 class Topology(Basic):

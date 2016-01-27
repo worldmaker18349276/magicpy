@@ -1,3 +1,4 @@
+from sympy.core import sympify
 from sympy.logic import true, false
 from sympy.logic.boolalg import BooleanFunction
 from sympy.logic.inference import valid, satisfiable
@@ -6,17 +7,13 @@ from symplus.util import *
 
 class Forall(BooleanFunction):
     def __new__(cls, variable, expr, **kwargs):
-        for v in variable if is_Tuple(variable) else (variable,):
+        variable = sympify(unpack_if_can(variable))
+
+        for v in tuple_if_not(variable):
             if not is_Symbol(v):
                 raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
         if not is_Boolean(expr):
             raise TypeError('expression is not boolean or relational: %r' % expr)
-
-        if is_Tuple(variable):
-            if len(variable) > 1:
-                variable = Tuple(*variable)
-            else:
-                variable = variable[0]
 
         return BooleanFunction.__new__(cls, variable, expr, **kwargs)
 
@@ -32,7 +29,7 @@ class Forall(BooleanFunction):
 
     @property
     def variables(self):
-        return self._args[0] if is_Tuple(self._args[0]) else Tuple(self._args[0])
+        return tuple_if_not(self._args[0])
 
     @property
     def expr(self):
@@ -47,17 +44,13 @@ class Forall(BooleanFunction):
 
 class Exist(BooleanFunction):
     def __new__(cls, variable, expr, **kwargs):
-        for v in variable if is_Tuple(variable) else (variable,):
+        variable = sympify(unpack_if_can(variable))
+
+        for v in tuple_if_not(variable):
             if not is_Symbol(v):
                 raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
         if not is_Boolean(expr):
             raise TypeError('expression is not boolean or relational: %r' % expr)
-
-        if is_Tuple(variable):
-            if len(variable) > 1:
-                variable = Tuple(*variable)
-            else:
-                variable = variable[0]
 
         return BooleanFunction.__new__(cls, variable, expr, **kwargs)
 
@@ -73,7 +66,7 @@ class Exist(BooleanFunction):
 
     @property
     def variables(self):
-        return self._args[0] if is_Tuple(self._args[0]) else Tuple(self._args[0])
+        return tuple_if_not(self._args[0])
 
     @property
     def expr(self):

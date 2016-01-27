@@ -23,6 +23,12 @@ def is_Boolean(b):
 def is_Function(func):
     return isinstance(func, (FunctionClass, Lambda))
 
+def tuple_if_not(a):
+    return a if is_Tuple(a) else Tuple(a)
+
+def unpack_if_can(a):
+    return a if not is_Tuple(a) or len(a) > 1 else a[0]
+
 
 # variable
 
