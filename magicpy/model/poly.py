@@ -10,7 +10,7 @@ from sympy.solvers import solve_linear_system
 from sympy.simplify import simplify
 from sympy.matrices import Matrix
 from sympy.matrices.immutable import ImmutableMatrix as Mat
-from magicball.model.euclid import halfspace
+from magicpy.model.euclid import halfspace
 from symplus.matplus import x, y, z, dot, cross
 from symplus.setplus import AbstractSet
 from symplus.simplus import is_polynomial, with_sqrtsimp
@@ -142,7 +142,7 @@ class ConvexPolyhedron:
     def from_hrepr(cls, hrepr):
         """
         >>> from sympy import *
-        >>> from magicball.model.euclid import *
+        >>> from magicpy.model.euclid import *
         >>> p1 = halfspace([-1,-1, 0],-1, closed=True)
         >>> p2 = halfspace([-1, 0,-1],-1, closed=True)
         >>> p3 = halfspace([ 0,-1,-1],-1, closed=True)

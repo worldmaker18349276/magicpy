@@ -1,5 +1,5 @@
 from sympy.sets import Intersection, Union
-from magicball.model.affine import transform
+from magicpy.model.affine import transform
 
 
 class Engine:

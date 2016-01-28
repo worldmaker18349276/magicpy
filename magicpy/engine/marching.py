@@ -8,7 +8,7 @@ from sympy.logic.boolalg import true, false, Boolean, is_nnf
 from sympy.utilities import lambdify
 from symplus.simplus import logicrelsimp
 from symplus.setplus import AbstractSet
-from magicball.engine.basic import Engine
+from magicpy.engine.basic import Engine
 
 
 def setbit1(bits, index):

@@ -10,7 +10,7 @@ from symplus.setplus import AbstractSet
 from symplus.funcplus import (VariableFunctionClass, compose,
                                         inverse, Image, is_function)
 from symplus.matplus import *
-from magicball.model.path import Path
+from magicpy.model.path import Path
 
 
 eye3 = eye(3)

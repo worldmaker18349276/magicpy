@@ -22,27 +22,27 @@ doctest.testmod(funcplus)
 import symplus.strplus as strplus
 doctest.testmod(strplus)
 
-import magicball.engine.basic as basic
+import magicpy.engine.basic as basic
 doctest.testmod(basic)
 
-import magicball.engine.marching as marching
+import magicpy.engine.marching as marching
 doctest.testmod(marching)
 
-import magicball.model.path as path
+import magicpy.model.path as path
 doctest.testmod(path)
 
-import magicball.model.affine as affine
+import magicpy.model.affine as affine
 doctest.testmod(affine)
 
-import magicball.model.euclid as euclid
+import magicpy.model.euclid as euclid
 doctest.testmod(euclid)
 
-import magicball.model.poly as poly
+import magicpy.model.poly as poly
 doctest.testmod(poly)
 
-import magicball.puzzle.phy as phy
+import magicpy.puzzle.phy as phy
 doctest.testmod(phy)
 
-import magicball.museum.RubiksCube as RubiksCube
+import magicpy.museum.RubiksCube as RubiksCube
 doctest.testmod(RubiksCube)
 

@@ -5,10 +5,10 @@ from sympy.simplify import simplify
 from sympy.matrices import MatrixBase
 from symplus.setplus import AbstractSet, Topology
 from symplus.strplus import mstr
-from magicball.engine.marching import cube_engine
-from magicball.model.path import PathMonoid, Path
-from magicball.model.affine import SE3, SO3, T3, transform
-from magicball.model.euclid import complement
+from magicpy.engine.marching import cube_engine
+from magicpy.model.path import PathMonoid, Path
+from magicpy.model.affine import SE3, SO3, T3, transform
+from magicpy.model.euclid import complement
 
 
 motionSet = PathMonoid(SE3)
@@ -82,7 +82,7 @@ class PhysicalPuzzle(frozenset):
     def cut_by(self, *knives):
         """
         >>> from symplus.matplus import *
-        >>> from magicball.model.euclid import *
+        >>> from magicpy.model.euclid import *
         >>> cube2x2x2 = PhysicalPuzzle({sphere()})
         >>> cube2x2x2 = cube2x2x2.cut_by(
         ...     (halfspace(-i), halfspace(i)),
@@ -116,8 +116,8 @@ class PhysicalPuzzle(frozenset):
         """
         >>> from sympy import *
         >>> from symplus.matplus import *
-        >>> from magicball.model.euclid import *
-        >>> from magicball.engine.marching import *
+        >>> from magicpy.model.euclid import *
+        >>> from magicpy.engine.marching import *
         >>> engine = cube_engine(4, 5)
         >>> knives = halfspace(i, 1), halfspace(j, 1), halfspace(-i, 1), halfspace(-j, 1)
         >>> floppy3x3x1 = PhysicalPuzzle({sphere(3)}, engine)
@@ -195,8 +195,8 @@ class PhysicalPuzzle(frozenset):
         """
         >>> from sympy import *
         >>> from symplus.matplus import *
-        >>> from magicball.model.euclid import *
-        >>> from magicball.model.affine import *
+        >>> from magicpy.model.euclid import *
+        >>> from magicpy.model.affine import *
         >>> cube2x2x2 = PhysicalPuzzle({sphere()})
         >>> cube2x2x2 = cube2x2x2.cut_by(
         ...     (halfspace(-i), halfspace(i)),
@@ -270,8 +270,8 @@ class PhysicalPuzzle(frozenset):
         """
         >>> from sympy import *
         >>> from symplus.matplus import *
-        >>> from magicball.model.euclid import *
-        >>> from magicball.model.affine import *
+        >>> from magicpy.model.euclid import *
+        >>> from magicpy.model.affine import *
         >>> pz = PhysicalPuzzle({})
         >>> pz.is_stable_operation(RegionalOperation(halfspace(), rotate(i*pi/4)))
         True
