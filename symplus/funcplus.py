@@ -75,6 +75,9 @@ class VariableFunctionClass(FunctionClass):
     def call(cls, *args):
         return None
 
+    def _image(cls, set):
+        return None
+
     @property
     def func_free_symbols(cls):
         return set()
@@ -183,8 +186,8 @@ class FunctionInverse(VariableFunctionClass):
     Lambda(x, x + 1)
     >>> FunctionCompose(FunctionInverse(Lambda(x, x+1)), Lambda(x, x+1))
     Lambda(_x, _x)
-    >>> FunctionInverse(Lambda(x, exp(x)+sin(x)))(3)
-    Apply(Lambda(x, exp(x) + sin(x)).inv, 3)
+    >>> FunctionInverse(Lambda(x, x+sin(x)))(3)
+    Apply(Lambda(x, x + sin(x)).inv, 3)
     """
     def __new__(mcl, function, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
@@ -242,6 +245,9 @@ class FunctionInverse(VariableFunctionClass):
 
         try:
             solns = solve([expr - val for val, expr in zip(args, exprs)], vars)
+            if isinstance(solns, list):
+                solns = dict(zip(vars, solns[0]))
+
             if len(vars) == 1:
                 return solns[vars[0]]
             else:
@@ -326,13 +332,28 @@ class Image(Set):
     Image((exp o sin), [0, pi/2])
     >>> Image(FunctionInverse(sin), Image(sin, Interval(0, pi/2)))
     [0, pi/2]
-    >>> x = symbols('x')
+    >>> Image(cos, S.EmptySet)
+    EmptySet()
+    >>> x, y = symbols('x y')
+    >>> Image(cos, Intersection(AbstractSet(x, x > 0), AbstractSet(x, x < 0), evaluate=False))
+    Intersection(Image(cos, AbstractSet(x, x > 0)), Image(cos, AbstractSet(x, x < 0)))
     >>> Image(Lambda(x, x+1), Interval(-1, 1)).contains(1)
     True
-    >>> Image(Lambda(x, sin(x)+exp(x)), Interval(-1, 1)).contains(1)
-    And(Apply(Lambda(x, exp(x) + sin(x)).inv, 1) <= 1, Apply(Lambda(x, exp(x) + sin(x)).inv, 1) >= -1)
+    >>> Image(Lambda(x, sin(x)+x), Interval(-1, 1)).contains(1)
+    And(Apply(Lambda(x, x + sin(x)).inv, 1) <= 1, Apply(Lambda(x, x + sin(x)).inv, 1) >= -1)
+    >>> f = Lambda((x, y), (x*cos(y), x*sin(y)))
+    >>> f_inv = FunctionInverse(f)
+    >>> f_inv(*f(1, pi/4))
+    (-1, -3*pi/4)
+    >>> Image(f, ProductSet(Interval(0,1), Interval(-pi,pi))).contains(f(1, pi/4))
+    False
     >>> Image(Lambda(x, x+1), Interval(-1, 1)).as_abstract()
     AbstractSet(x0, And(x0 - 1 <= 1, x0 - 1 >= -1))
+    >>> g = Lambda((x, y), (x+exp(y), x+sin(y)))
+    >>> Image(g, ProductSet(Interval(-1,1), Interval(-1,1))).contains(g(1,2))
+    False
+    >>> Image(g, AbstractSet((x,y), x<y)).contains(g(1,2))
+    False
     """
     def __new__(cls, function, set, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
@@ -352,17 +373,47 @@ class Image(Set):
 
     @classmethod
     def reduce(cls, func, set):
-        if isinstance(set, Image):
-            return cls.reduce(FunctionCompose(func, set.function), set.set)
+        def pre_reduce(func, set):
+            while isinstance(set, Image):
+                func = FunctionCompose(func, set.function, evaluate=True)
+                set = set.set
 
-        elif set in (S.EmptySet, S.UniversalSet):
-            return set
+            if isinstance(set, (Intersection, Union, Complement)):
+                args = [Image(func, arg, evaluate=True) for arg in set.args]
+                return Id, set.func(*args, evaluate=False)
 
-        elif isinstance(set, (Intersection, Union, Complement)):
-            return set.func(*[Image(func, arg) for arg in set.args], evaluate=False)
+            if set == S.EmptySet:
+                return Id, set
 
-        else:
             return func, set
+
+        def post_reduce(func, set):
+            if isinstance(func, FunctionCompose):
+                funcs = func.functions
+                while True:
+                    func_, set_ = post_reduce(funcs[-1], set)
+                    if (func_, set_) == (funcs[-1], set):
+                        break
+                    elif func_ != Id:
+                        funcs = funcs[:-1] + (func_,)
+                        set = set_
+                        break
+                    else:
+                        funcs = funcs[:-1]
+                        set = set_
+                return FunctionCompose(*funcs, evaluate=False), set
+
+            if hasattr(func, '_image'):
+                res = func._image(set)
+                if res is not None:
+                    if isinstance(res, Image):
+                        return res.function, res.set
+                    else:
+                        return Id, res
+
+            return func, set
+
+        return post_reduce(*pre_reduce(func, set))
 
     @property
     def function(self):

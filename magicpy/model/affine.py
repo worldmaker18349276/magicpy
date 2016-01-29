@@ -5,10 +5,9 @@ from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
                             MatrixSymbol, Identity, ZeroMatrix)
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from sympy.functions import cos, sin, acos, sign
-from symplus.util import is_Tuple, is_Matrix, rename_variables_in
+from symplus.util import *
 from symplus.setplus import AbstractSet
-from symplus.funcplus import (VariableFunctionClass, compose,
-                                        inverse, Image, is_function)
+from symplus.funcplus import VariableFunctionClass, compose, inverse, Image
 from symplus.matplus import *
 from magicpy.model.path import Path
 
@@ -421,7 +420,7 @@ def transform(trans, st):
     if is_Tuple(st) and len(st) == 3:
         return trans(*st)
 
-    elif is_function(st):
+    elif is_Function(st):
         return compose(trans, st, inverse(trans))
 
     elif isinstance(st, Set):
