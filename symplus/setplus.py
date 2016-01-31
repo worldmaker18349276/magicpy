@@ -199,37 +199,37 @@ class AbstractSet(Set):
 
         >>> from sympy import *
         >>> x, y = symbols('x y')
-        >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(y, abs(y)<=3))
-        AbstractSet(x, And(Abs(x) > 1, Abs(x) > 3))
-        >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet((x,y), abs(x-y)>1))
-        EmptySet()
-        >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(y, y<=x))
-        AbstractSet(x_, And(Abs(x_) > 1, x_ > x))
+        >>> AbstractSet(y, abs(y)<=3)._complement(AbstractSet(x, abs(x)>1))
+        AbstractSet(y, And(Abs(y) > 1, Abs(y) > 3))
+        >>> AbstractSet((x,y), abs(x-y)>1)._complement(AbstractSet(x, abs(x)>1))
+        AbstractSet(x, Abs(x) > 1)
+        >>> AbstractSet(y, y<=x)._complement(AbstractSet(x, abs(x)>1))
+        AbstractSet(y, And(Abs(y) > 1, y > x))
         >>> x2 = symbols('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(x2, x2<=y))
-        AbstractSet(x, And(Abs(x) > 1, x > y))
+        AbstractSet(x, And(Abs(x) <= 1, x <= y))
         >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
-        >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._complement(AbstractSet(n, Eq(det(n),0)))
-        AbstractSet(m, And(Determinant(m) != 0, m[0, 0] + m[1, 1] == 0))
-        >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._complement(AbstractSet(x, abs(x)>1))
-        EmptySet()
+        >>> AbstractSet(n, Eq(det(n),0))._complement(AbstractSet(m, Eq(m[0,0]+m[1,1],0)))
+        AbstractSet(n, And(Determinant(n) != 0, n[0, 0] + n[1, 1] == 0))
+        >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(m, Eq(m[0,0]+m[1,1],0)))
+        AbstractSet(m, m[0, 0] + m[1, 1] == 0)
         >>> AbstractSet(x, abs(x)>1)._complement(Interval(1,2))
-        AbstractSet(x, Or(Abs(x) > 1, And(x <= 2, x >= 1)))
+        AbstractSet(x, And(Abs(x) <= 1, x <= 2, x >= 1))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
             vars2 = other.variables
             if not type_match(vars1, vars2):
-                return S.EmptySet
+                return other
 
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
-            expr12 = And(self.expr.xreplace(dict(zip(vars1, vars12))),
-                         Not(other.expr.xreplace(dict(zip(vars2, vars12)))))
+            expr12 = And(other.expr.xreplace(dict(zip(vars2, vars12))),
+                         Not(self.expr.xreplace(dict(zip(vars1, vars12)))))
             return AbstractSet(vars12, expr12)
         else:
             other_ = as_abstract(other)
             if isinstance(other_, AbstractSet):
-                return self._union(other_)
+                return self._complement(other_)
             else:
                 return None
 
