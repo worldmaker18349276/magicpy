@@ -18,22 +18,6 @@ def func_free_symbols(func):
     else:
         raise TypeError
 
-def narg(func):
-    if isinstance(func, Lambda):
-        return len(func.variables)
-    elif isinstance(func, FunctionClass):
-        return next(iter(func.nargs))
-    else:
-        raise TypeError
-
-def nres(func):
-    if isinstance(func, Lambda):
-        return len(tuple_if_not(func.expr))
-    elif isinstance(func, FunctionClass):
-        return getattr(func, 'nres', 1)
-    else:
-        raise TypeError
-
 inv_table = {
     exp: log,
     cos: acos,
@@ -150,14 +134,14 @@ class FunctionCompose(VariableFunctionClass):
                         funcs = funcs[:i-1] + (comp_funcs,) + funcs[i+1:]
                         i = i - 1
                 elif isinstance(funcs[i-1], Lambda) and isinstance(funcs[i], Lambda):
-                    comp_funcs = Lambda(funcs[i].variables, funcs[i-1](*tuple_if_not(funcs[i].expr)))
+                    comp_funcs = Lambda(funcs[i].variables, funcs[i-1](*pack_if_not(funcs[i].expr)))
                     funcs = funcs[:i-1] + (comp_funcs,) + funcs[i+1:]
                     i = i - 1
             i = i + 1
         return funcs
 
     def call(cls, *args):
-        apply_multivar = lambda a, f: f(*tuple_if_not(a))
+        apply_multivar = lambda a, f: f(*pack_if_not(a))
         return reduce(apply_multivar, cls.functions[::-1], args)
 
     @property
@@ -238,7 +222,7 @@ class FunctionInverse(VariableFunctionClass):
     def call(cls, *args):
         vars = symbols('a:%s'%narg(cls.function))
         vars = rename_variables_in(vars, func_free_symbols(cls.function))
-        exprs = tuple_if_not(cls.function(*vars))
+        exprs = pack_if_not(cls.function(*vars))
 
         if len(args) != len(exprs):
             raise ValueError
@@ -287,7 +271,7 @@ class Apply(Function):
     """
     def __new__(cls, function, argument, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
-        argument = sympify(unpack_if_can(argument))
+        argument = repack_if_can(sympify(unpack_if_can(argument)))
 
         if not is_Function(function):
             raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
@@ -317,7 +301,7 @@ class Apply(Function):
 
     @property
     def arguments(self):
-        return tuple_if_not(self._args[1])
+        return pack_if_not(self._args[1])
 
     def doit(self, **hints):
         self = Basic.doit(self, **hints)
@@ -424,7 +408,7 @@ class Image(Set):
         return self._args[1]
 
     def _contains(self, mem):
-        mem = tuple_if_not(mem)
+        mem = pack_if_not(mem)
         inv_func = FunctionInverse(self.function)
         mem_ = unpack_if_can(inv_func(*mem))
         return self.set._contains(mem_)

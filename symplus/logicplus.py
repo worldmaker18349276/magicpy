@@ -7,9 +7,9 @@ from symplus.util import *
 
 class Forall(BooleanFunction):
     def __new__(cls, variable, expr, **kwargs):
-        variable = sympify(unpack_if_can(variable))
+        variable = repack_if_can(sympify(unpack_if_can(variable)))
 
-        for v in tuple_if_not(variable):
+        for v in pack_if_not(variable):
             if not is_Symbol(v):
                 raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
         if not is_Boolean(expr):
@@ -29,7 +29,7 @@ class Forall(BooleanFunction):
 
     @property
     def variables(self):
-        return tuple_if_not(self._args[0])
+        return pack_if_not(self._args[0])
 
     @property
     def expr(self):
@@ -44,9 +44,9 @@ class Forall(BooleanFunction):
 
 class Exist(BooleanFunction):
     def __new__(cls, variable, expr, **kwargs):
-        variable = sympify(unpack_if_can(variable))
+        variable = repack_if_can(sympify(unpack_if_can(variable)))
 
-        for v in tuple_if_not(variable):
+        for v in pack_if_not(variable):
             if not is_Symbol(v):
                 raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
         if not is_Boolean(expr):
@@ -66,7 +66,7 @@ class Exist(BooleanFunction):
 
     @property
     def variables(self):
-        return tuple_if_not(self._args[0])
+        return pack_if_not(self._args[0])
 
     @property
     def expr(self):

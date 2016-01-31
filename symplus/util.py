@@ -1,33 +1,80 @@
-from sympy.core import Symbol, Tuple, FunctionClass, Lambda
+from sympy.core import Symbol, Tuple, FunctionClass, Lambda, Expr
 from sympy.matrices import MatrixSymbol
 from sympy.logic import true, false
 
 
 # type
 
-def is_Tuple(t):
-    return isinstance(t, (list, tuple, Tuple))
+def is_Tuple(obj):
+    return (isinstance(obj, Tuple) or
+            isinstance(obj, (list, tuple)))
 
-def is_Matrix(m):
-    return getattr(m, 'is_Matrix', False)
+def is_Symbol(obj):
+    return isinstance(obj, (Symbol, MatrixSymbol))
 
-def is_Symbol(s):
-    return isinstance(s, (Symbol, MatrixSymbol))
+def is_Number(obj):
+    return (getattr(obj, 'is_number', False) or
+            getattr(obj, 'is_Number', False) or
+            isinstance(obj, Expr) or
+            isinstance(obj, (int, float, complex)))
 
-def is_Boolean(b):
-    return (getattr(b, 'is_Boolean', False) or
-            getattr(b, 'is_Relational', False) or
-            b is true or
-            b is false)
+def is_Boolean(obj):
+    return (getattr(obj, 'is_Boolean', False) or
+            getattr(obj, 'is_Relational', False) or
+            obj in (true, false) or
+            isinstance(obj, Symbol) or
+            isinstance(obj, bool))
 
-def is_Function(func):
-    return isinstance(func, (FunctionClass, Lambda))
+def is_Matrix(obj):
+    return getattr(obj, 'is_Matrix', False)
 
-def tuple_if_not(a):
-    return a if is_Tuple(a) else Tuple(a)
+def is_Function(obj):
+    return isinstance(obj, (FunctionClass, Lambda))
+
+def narg(func):
+    if isinstance(func, Lambda):
+        return len(func.variables)
+    elif isinstance(func, FunctionClass):
+        return next(iter(func.nargs))
+    else:
+        raise TypeError
+
+def nres(func):
+    if isinstance(func, Lambda):
+        return len(pack_if_not(func.expr))
+    elif isinstance(func, FunctionClass):
+        return getattr(func, 'nres', 1)
+    else:
+        raise TypeError
+
+def type_match(obj1, obj2):
+    if is_Tuple(obj1):
+        if not is_Tuple(obj2):       return false
+        if len(obj1) != len(obj2):   return false
+        return all(map(type_match, obj1, obj2))
+    elif is_Matrix(obj1):
+        if not is_Matrix(obj2):      return false
+        if obj1.shape != obj2.shape: return false
+    elif is_Function(obj1):
+        if not is_Function(obj2):    return false
+        if narg(obj1) != narg(obj2): return false
+        if nres(obj1) != nres(obj2): return false
+    elif is_Number(obj1):
+        if not is_Number(obj2):      return false
+    elif is_Boolean(obj1):
+        if not is_Boolean(obj2):     return false
+    else:                            return false
+    return true
+
+
+def pack_if_not(a):
+    return Tuple(a) if not is_Tuple(a) else a
 
 def unpack_if_can(a):
-    return a if not is_Tuple(a) or len(a) > 1 else a[0]
+    return a[0] if is_Tuple(a) and len(a) == 1 else a
+
+def repack_if_can(a):
+    return Tuple(*a) if is_Tuple(a) else a
 
 
 # variable
@@ -42,18 +89,4 @@ def rename_variables_in(variables, varspace):
     return list(Symbol(n, **v.assumptions0)
                 if isinstance(v, Symbol) else MatrixSymbol(n, v.rows, v.cols)
                 for n, v in zip(names, variables))
-
-def var_type_match(vars1, vars2):
-    if len(vars1) != len(vars2):
-        return false
-    for v1, v2 in zip(vars1, vars2):
-        if isinstance(v1, Symbol):
-            if is_Matrix(v2): # TODO: real/complex test
-                return false
-        elif isinstance(v1, MatrixSymbol):
-            if not is_Matrix(v2) or v1.shape != v2.shape:
-                return false
-        else:
-            raise TypeError('variable is not a symbol or matrix symbol: %s' % v1)
-    return true
 

@@ -38,11 +38,11 @@ class AbstractSet(Set):
             ...
         TypeError: expression is not boolean or relational: x + y
         """
-        variable = sympify(unpack_if_can(variable))
-        for v in tuple_if_not(variable):
+        variable = repack_if_can(sympify(unpack_if_can(variable)))
+        for v in pack_if_not(variable):
             if not is_Symbol(v):
                 raise TypeError('variable is not a symbol or matrix symbol: %s' % v)
-        if not is_Boolean(expr) and not is_Symbol(expr):
+        if not is_Boolean(expr):
             raise TypeError('expression is not boolean or relational: %r' % expr)
 
         return Set.__new__(cls, variable, expr, **kwargs)
@@ -79,7 +79,7 @@ class AbstractSet(Set):
         >>> AbstractSet(x, x>y).variables
         (x,)
         """
-        return tuple_if_not(self._args[0])
+        return pack_if_not(self._args[0])
 
     @property
     def expr(self):
@@ -143,7 +143,7 @@ class AbstractSet(Set):
         if isinstance(other, AbstractSet):
             vars1 = self.variables
             vars2 = other.variables
-            if not var_type_match(vars1, vars2):
+            if not type_match(vars1, vars2):
                 return S.EmptySet
 
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
@@ -180,7 +180,7 @@ class AbstractSet(Set):
         if isinstance(other, AbstractSet):
             vars1 = self.variables
             vars2 = other.variables
-            if not var_type_match(vars1, vars2):
+            if not type_match(vars1, vars2):
                 return None
 
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
@@ -219,7 +219,7 @@ class AbstractSet(Set):
         if isinstance(other, AbstractSet):
             vars1 = self.variables
             vars2 = other.variables
-            if not var_type_match(vars1, vars2):
+            if not type_match(vars1, vars2):
                 return S.EmptySet
 
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
@@ -249,8 +249,8 @@ class AbstractSet(Set):
         False
         """
         var = self.variables
-        val = tuple_if_not(other)
-        if not var_type_match(var, val):
+        val = pack_if_not(other)
+        if not type_match(var, val):
             return false
         return self.expr.xreplace(dict(zip(var, val)))
     
@@ -268,7 +268,7 @@ class AbstractSet(Set):
         if isinstance(other, AbstractSet):
             vars1 = self.variables
             vars2 = other.variables
-            if not var_type_match(vars1, vars2):
+            if not type_match(vars1, vars2):
                 return false
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
             return Forall(vars12,
@@ -295,7 +295,7 @@ class AbstractSet(Set):
         if isinstance(other, AbstractSet):
             vars1 = self.variables
             vars2 = other.variables
-            if not var_type_match(vars1, vars2):
+            if not type_match(vars1, vars2):
                 return true
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
             return Forall(vars12,
@@ -322,7 +322,7 @@ class AbstractSet(Set):
         if isinstance(other, AbstractSet):
             vars1 = self.variables
             vars2 = other.variables
-            if not var_type_match(vars1, vars2):
+            if not type_match(vars1, vars2):
                 return false
             vars12 = rename_variables_in(vars1, self.free_symbols | other.free_symbols)
             return Forall(vars12,
