@@ -138,7 +138,6 @@ class AbstractSet(Set):
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._intersect(AbstractSet(x, abs(x)>1))
         EmptySet()
         >>> AbstractSet(x, abs(x)>1)._intersect(Interval(1,2))
-        AbstractSet(x, And(Abs(x) > 1, x <= 2, x >= 1))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -150,12 +149,6 @@ class AbstractSet(Set):
             expr12 = And(self.expr.xreplace(dict(zip(vars1, vars12))),
                          other.expr.xreplace(dict(zip(vars2, vars12))))
             return AbstractSet(vars12, expr12)
-        else:
-            other_ = as_abstract(other)
-            if isinstance(other_, AbstractSet):
-                return self._intersect(other_)
-            else:
-                return None
 
     def _union(self, other):
         """union two set builder
@@ -175,7 +168,6 @@ class AbstractSet(Set):
         AbstractSet(m, Or(Determinant(m) == 0, m[0, 0] + m[1, 1] == 0))
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._union(AbstractSet(x, abs(x)>1))
         >>> AbstractSet(x, abs(x)>1)._union(Interval(1,2))
-        AbstractSet(x, Or(Abs(x) > 1, And(x <= 2, x >= 1)))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -187,12 +179,6 @@ class AbstractSet(Set):
             expr12 = Or(self.expr.xreplace(dict(zip(vars1, vars12))),
                         other.expr.xreplace(dict(zip(vars2, vars12))))
             return AbstractSet(vars12, expr12)
-        else:
-            other_ = as_abstract(other)
-            if isinstance(other_, AbstractSet):
-                return self._union(other_)
-            else:
-                return None
 
     def _complement(self, other):
         """complement two set builder
@@ -214,7 +200,6 @@ class AbstractSet(Set):
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(m, Eq(m[0,0]+m[1,1],0)))
         AbstractSet(m, m[0, 0] + m[1, 1] == 0)
         >>> AbstractSet(x, abs(x)>1)._complement(Interval(1,2))
-        AbstractSet(x, And(Abs(x) <= 1, x <= 2, x >= 1))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -226,12 +211,6 @@ class AbstractSet(Set):
             expr12 = And(other.expr.xreplace(dict(zip(vars2, vars12))),
                          Not(self.expr.xreplace(dict(zip(vars1, vars12)))))
             return AbstractSet(vars12, expr12)
-        else:
-            other_ = as_abstract(other)
-            if isinstance(other_, AbstractSet):
-                return self._complement(other_)
-            else:
-                return None
 
     def _contains(self, other):
         """
@@ -428,7 +407,7 @@ class SetBuilder:
         >>> St[x : x-y>1, x : x<1]
         AbstractSet(x, And(x - y > 1, x < 1))
         >>> St[S.Reals, x : x<1]
-        AbstractSet(x, And(x < 1, x < oo, x > -oo))
+        Intersection((-oo, oo), AbstractSet(x, x < 1))
         """
         asets = asets if isinstance(asets, tuple) else (asets,)
         sts = []
@@ -460,7 +439,7 @@ class SetBuilder:
         >>> St({x : x-y>1}, {x : x<1})
         AbstractSet(x, And(x - y > 1, x < 1))
         >>> St(S.Reals, {x : x<1})
-        AbstractSet(x, And(x < 1, x < oo, x > -oo))
+        Intersection((-oo, oo), AbstractSet(x, x < 1))
         """
         sts = []
         for aset in asets:
