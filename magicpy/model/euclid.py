@@ -1,5 +1,6 @@
 from sympy.core import Basic, S, sympify
 from sympy.core.singleton import Singleton
+from sympy.simplify import simplify
 from sympy.logic import true
 from sympy.sets import Set, Intersection, Union, Complement
 from sympy.matrices.immutable import ImmutableMatrix as Mat
@@ -46,7 +47,7 @@ def complement(aset):
 
 
 class Halfspace(EuclideanSpace):
-    def __new__(cls, direction=[1,0,0], offset=0, closed=False):
+    def __new__(cls, direction=[1,0,0], offset=0, closed=False, normalization=True):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
@@ -60,9 +61,10 @@ class Halfspace(EuclideanSpace):
         False
         """
         direction = Mat(direction)
-        if norm(direction) == 0:
-            raise ValueError
-        direction = normalize(direction)
+        if normalization:
+            if norm(direction) == 0:
+                raise ValueError
+            direction = simplify(normalize(direction))
         offset = sympify(offset)
         closed = sympify(bool(closed))
         return Basic.__new__(cls, direction, offset, closed)
@@ -121,7 +123,7 @@ class Halfspace(EuclideanSpace):
 
 
 class Sphere(EuclideanSpace):
-    def __new__(cls, radius=1, center=[0,0,0], closed=False):
+    def __new__(cls, radius=1, center=[0,0,0], closed=False, normalization=True):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
@@ -206,7 +208,7 @@ class Sphere(EuclideanSpace):
 
 
 class Cylinder(EuclideanSpace):
-    def __new__(cls, direction=[1,0,0], radius=1, center=[0,0,0], closed=False):
+    def __new__(cls, direction=[1,0,0], radius=1, center=[0,0,0], closed=False, normalization=True):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
@@ -220,13 +222,15 @@ class Cylinder(EuclideanSpace):
         True
         """
         direction = Mat(direction)
-        if norm(direction) == 0:
-            raise ValueError
-        direction = normalize(direction)
+        if normalization:
+            if norm(direction) == 0:
+                raise ValueError
+            direction = simplify(normalize(direction))
         direction = max(direction, -direction, key=tuple)
         radius = sympify(radius)
         center = Mat(center)
-        center = center - project(center, direction)
+        if normalization:
+            center = simplify(center - project(center, direction))
         closed = sympify(bool(closed))
         return Basic.__new__(cls, direction, radius, center, closed)
 
@@ -303,7 +307,7 @@ class Cylinder(EuclideanSpace):
 
 
 class Cone(EuclideanSpace):
-    def __new__(cls, direction=[1,0,0], slope=1, center=[0,0,0], closed=False):
+    def __new__(cls, direction=[1,0,0], slope=1, center=[0,0,0], closed=False, normalization=True):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
@@ -317,9 +321,10 @@ class Cone(EuclideanSpace):
         True
         """
         direction = Mat(direction)
-        if norm(direction) == 0:
-            raise ValueError
-        direction = normalize(direction)
+        if normalization:
+            if norm(direction) == 0:
+                raise ValueError
+            direction = simplify(normalize(direction))
         direction = max(direction, -direction, key=tuple)
         slope = sympify(slope)
         center = Mat(center)
@@ -399,7 +404,7 @@ class Cone(EuclideanSpace):
 
 
 class Revolution(EuclideanSpace):
-    def __new__(cls, func, direction=[1,0,0], center=[0,0,0]):
+    def __new__(cls, func, direction=[1,0,0], center=[0,0,0], normalization=True):
         direction = Mat(direction)
         if norm(direction) == 0:
             raise ValueError

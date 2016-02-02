@@ -1,4 +1,5 @@
 from sympy.core import Ne, Eq, Symbol, Lambda, Tuple, pi, Dummy
+from sympy.simplify import simplify
 from sympy.sets import Set, Intersection, Union, Complement, EmptySet, ImageSet
 from sympy.sets.sets import UniversalSet
 from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
@@ -9,7 +10,7 @@ from symplus.util import *
 from symplus.setplus import AbstractSet
 from symplus.funcplus import VariableFunctionClass, compose, inverse, Image
 from symplus.matplus import *
-from magicpy.model.path import Path
+from magicpy.model.euclid import WholeSpace, Halfspace, Sphere, Cylinder, Cone, Revolution
 
 
 eye3 = eye(3)
@@ -382,6 +383,80 @@ class EuclideanTransformation(AffineTransformation):
         rquat = qinv(trans.rquat)
         parity = trans.parity
         return EuclideanTransformation(tvec, rquat, parity)
+
+    def _image(self, set):
+        """
+        >>> from sympy import *
+        >>> t = EuclideanTransformation([0,1,-1], rquat(pi/3, [1,0,1]))
+        >>> t._image(WholeSpace())
+        WholeSpace()
+        >>> t._image(Halfspace([2,1,4], 2))
+        Halfspace(Matrix([
+        [-sqrt(14)/28 + 5*sqrt(21)/42],
+        [  -sqrt(14)/14 + sqrt(21)/42],
+        [    sqrt(14)/28 + sqrt(21)/6]]), -sqrt(21)/7 - 3*sqrt(14)/28 + 2, False)
+        >>> t._image(Sphere(3, [2,0,1]))
+        Sphere(3, Matrix([
+        [          7/4],
+        [sqrt(6)/4 + 1],
+        [          1/4]]), False)
+        >>> t._image(Cylinder([0,1,4], 3, [1,1,0]))
+        Cylinder(Matrix([
+        [ -sqrt(102)/68 + sqrt(17)/17],
+        [ -sqrt(102)/17 + sqrt(17)/34],
+        [sqrt(102)/68 + 3*sqrt(17)/17]]), 3, Matrix([
+        [-27*sqrt(6)/136 + 99/136],
+        [  27*sqrt(6)/136 + 75/68],
+        [   -3/8 + 67*sqrt(6)/136]]), False)
+        >>> t._image(Cone([2,3,1], 1, [2,1,0]))
+        Cone(Matrix([
+        [   -sqrt(14)/8 + 3*sqrt(21)/28],
+        [  -3*sqrt(14)/28 - sqrt(21)/28],
+        [-3*sqrt(21)/28 - 5*sqrt(14)/56]]), 1, Matrix([
+        [-sqrt(6)/4 + 3/2],
+        [ sqrt(6)/2 + 3/2],
+        [-1/2 + sqrt(6)/4]]), False)
+        """
+        if isinstance(set, WholeSpace):
+            return set
+
+        elif isinstance(set, Halfspace):
+            direction = simplify(qrotate(self.rquat, self.parity*set.direction))
+            offset = simplify(set.offset + dot(self.tvec, direction))
+            closed = set.closed
+            return Halfspace(direction=direction, offset=offset, closed=closed,
+                             normalization=False)
+
+        elif isinstance(set, Sphere):
+            radius = set.radius
+            center = self.call(*set.center)
+            closed = set.closed
+            return Sphere(radius=radius, center=center, closed=closed,
+                          normalization=False)
+
+        elif isinstance(set, Cylinder):
+            direction = simplify(qrotate(self.rquat, self.parity*set.direction))
+            radius = set.radius
+            center = simplify(qrotate(self.rquat, self.parity*set.center))
+            center = simplify(center + self.tvec - project(self.tvec, direction))
+            closed = set.closed
+            return Cylinder(direction=direction, radius=radius, center=center, closed=closed,
+                            normalization=False)
+
+        elif isinstance(set, Cone):
+            direction = simplify(qrotate(self.rquat, self.parity*set.direction))
+            slope = set.slope
+            center = self.call(*set.center)
+            closed = set.closed
+            return Cone(direction=direction, slope=slope, center=center, closed=closed,
+                        normalization=False)
+
+        elif isinstance(set, Revolution):
+            func = set.func
+            direction = simplify(qrotate(self.rquat, self.parity*set.direction))
+            center = self.call(*set.center)
+            return Revolution(func=func, direction=direction, center=center,
+                              normalization=False)
 
 def translation(tvec):
     return EuclideanTransformation(tvec=tvec)
