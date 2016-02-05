@@ -1,6 +1,34 @@
-from sympy.core import Symbol, Tuple, FunctionClass, Lambda, Expr
+from sympy.core import Symbol, Tuple, FunctionClass, Lambda, Expr, Basic
 from sympy.matrices import MatrixSymbol
 from sympy.logic import true, false
+
+
+class Functor(Basic):
+    def __call__(self, *args):
+        return self.call(*args)
+
+    # def call(self, *args):
+    #     return None
+
+    # @property
+    # def narg(self):
+    #     return 1
+
+    # @property
+    # def nres(self):
+    #     return 1
+
+    # def _compose(self, other):
+    #     return None
+
+    # def _inv(self):
+    #     return None
+
+    # def _image(self, set):
+    #     return None
+
+    # def as_lambda(self):
+    #     ...
 
 
 # type
@@ -29,11 +57,13 @@ def is_Matrix(obj):
     return getattr(obj, 'is_Matrix', False)
 
 def is_Function(obj):
-    return isinstance(obj, (FunctionClass, Lambda))
+    return isinstance(obj, (FunctionClass, Functor, Lambda))
 
 def narg(func):
     if isinstance(func, Lambda):
         return len(func.variables)
+    elif isinstance(func, Functor):
+        return func.narg
     elif isinstance(func, FunctionClass):
         return next(iter(func.nargs))
     else:
@@ -42,8 +72,10 @@ def narg(func):
 def nres(func):
     if isinstance(func, Lambda):
         return len(pack_if_not(func.expr))
+    elif isinstance(func, Functor):
+        return func.nres
     elif isinstance(func, FunctionClass):
-        return getattr(func, 'nres', 1)
+        return 1
     else:
         raise TypeError
 

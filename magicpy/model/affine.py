@@ -8,7 +8,7 @@ from sympy.matrices.immutable import ImmutableMatrix as Mat
 from sympy.functions import cos, sin, acos, sign
 from symplus.util import *
 from symplus.setplus import AbstractSet
-from symplus.funcplus import VariableFunctionClass, compose, inverse, Image
+from symplus.funcplus import Functor, compose, inverse, Image
 from symplus.matplus import *
 from magicpy.model.euclid import WholeSpace, Halfspace, Sphere, Cylinder, Cone, Revolution
 
@@ -275,56 +275,65 @@ def zvec2zmat(zvec):
     return eye3 + nvec*nvec.T*(zfac-1)
 
 
-class Transformation(VariableFunctionClass):
-    def __new__(mcl, variables, expr):
+class Transformation(Functor):
+    def __new__(cls, variables, expr):
         if not is_Tuple(variables) or len(variables) != 3:
             raise TypeError('variables is not a 3-Tuple: %s'%variables)
         if not is_Tuple(expr) or len(expr) != 3:
             raise TypeError('expr is not a 3-Tuple: %s'%expr)
 
-        name = '(%s |-> %s)' % (variables, expr)
-        fields = {}
-        fields['lambda_form'] = Lambda(variables, expr)
-        return VariableFunctionClass.__new__(mcl, name, 3, 3, fields)
-
-    @classmethod
-    def from_lambda(mcl, func):
-        return mcl(func.variables, func.expr)
-
-    def as_lambda(cls):
-        return cls.lambda_form
-
-    def call(cls, *args):
-        return cls.as_lambda()(*args)
+        return Functor.__new__(cls, variables, expr)
 
     @property
-    def func_free_symbols(cls):
-        return cls.as_lambda().free_symbols
+    def variables(self):
+        return self.args[0]
+
+    @property
+    def expr(self):
+        return self.args[1]
+
+    narg = 3
+    nres = 3
+
+    def as_lambda(cls):
+        return Lambda(variables, expr)
+
+    def call(self, *args):
+        return self.as_lambda()(*args)
+
+    @property
+    def free_symbols(self):
+        return self.as_lambda().free_symbols
 
 class AffineTransformation(Transformation):
-    def __new__(mcl, matrix=eye(4), vector=zeros3):
+    def __new__(cls, matrix=eye(4), vector=zeros3):
         vector = Mat(vector)
-        name = 'Aff(%s, %s)' % (matrix, list(vector))
-        fields = {}
-        fields['matrix'] = matrix
-        fields['vector'] = vector
-        return VariableFunctionClass.__new__(mcl, name, 3, 3, fields)
+        return Functor.__new__(cls, matrix, vector)
 
+    @property
+    def matrix(self):
+        return self.args[0]
+
+    @property
+    def vector(self):
+        return self.args[1]
+
+    @classmethod
     def from_augmented_matrix(cls, augmat):
         return cls(augmat[:-1,:-1], augmat[-1,:-1])
 
-    def as_lambda(cls):
+    def as_lambda(self):
         pos = Mat([Dummy('x'), Dummy('y'), Dummy('z')])
-        res = cls.matrix * pos + cls.vector
+        res = self.matrix * pos + self.vector
         return Lambda(Tuple(*pos), Tuple(*res))
 
-    def call(cls, *args):
+    def call(self, *args):
         pos = Mat(args)
-        res = cls.matrix * pos + cls.vector
+        res = self.matrix * pos + self.vector
         return Tuple(*res)
 
     @property
-    def func_free_symbols(cls):
+    def free_symbols(cls):
         return cls.matrix.free_symbols + cls.vector.free_symbols
 
     def _compose(trans1, trans2):
@@ -339,31 +348,40 @@ class AffineTransformation(Transformation):
         return AffineTransformation(matrix, vector)
 
 class EuclideanTransformation(AffineTransformation):
-    def __new__(mcl, tvec=zeros3, rquat=Mat([1,0,0,0]), parity=1):
+    def __new__(cls, tvec=zeros3, rquat=Mat([1,0,0,0]), parity=1):
         tvec = Mat(tvec)
         rquat = Mat(rquat)
         parity = sign(parity)
-        name = 'E(%s, %s, %s)' % (list(tvec), list(rquat), parity)
-        fields = {}
-        fields['tvec'] = tvec
-        fields['rquat'] = rquat
-        fields['parity'] = parity
-        return VariableFunctionClass.__new__(mcl, name, 3, 3, fields)
-
-    def as_lambda(cls):
-        return Lambda((x,y,z), cls(x,y,z))
+        return Functor.__new__(cls, tvec, rquat, parity)
 
     @property
-    def matrix(cls):
-        return rquat2rmat(cls.rquat) * cls.parity
+    def tvec(self):
+        return self.args[0]
 
     @property
-    def vector(cls):
-        return cls.tvec
+    def rquat(self):
+        return self.args[1]
 
-    def call(cls, *args):
+    @property
+    def parity(self):
+        return self.args[2]
+
+    @property
+    def matrix(self):
+        return rquat2rmat(self.rquat) * self.parity
+
+    @property
+    def vector(self):
+        return self.tvec
+
+    def as_lambda(self):
+        vec = Mat([Dummy('x'), Dummy('y'), Dummy('z')])
+        res = simplify(qrotate(self.rquat, self.parity*vec) + self.tvec)
+        return Tuple(*res)
+
+    def call(self, *args):
         vec = Mat(args)
-        res = simplify(qrotate(cls.rquat, cls.parity*vec) + cls.tvec)
+        res = simplify(qrotate(self.rquat, self.parity*vec) + self.tvec)
         return Tuple(*res)
 
     def _compose(trans1, trans2):
@@ -483,14 +501,24 @@ def transform(trans, st):
     (3, 5, 8)
     >>> s = shearing(2*j,sqrt(3)*i)
     >>> transform(m, s)
-    Aff(Matrix([
+    AffineTransformation(Matrix([
     [        1, 0, 0],
     [2*sqrt(3), 1, 0],
-    [        0, 0, 1]]), [0, -4*sqrt(3), 0])
+    [        0, 0, 1]]), Matrix([
+    [         0],
+    [-4*sqrt(3)],
+    [         0]]))
     >>> import symplus.setplus
     >>> x, y, z = symbols('x,y,z')
     >>> transform(m, AbstractSet((x,y,z), x**2+y**2+z**2<1))
-    Image(E([2, 3, 5], [1, 0, 0, 0], 1), AbstractSet((x, y, z), x**2 + y**2 + z**2 < 1))
+    Image(EuclideanTransformation(Matrix([
+    [2],
+    [3],
+    [5]]), Matrix([
+    [1],
+    [0],
+    [0],
+    [0]]), 1), AbstractSet((x, y, z), x**2 + y**2 + z**2 < 1))
     """
     if is_Tuple(st) and len(st) == 3:
         return trans(*st)

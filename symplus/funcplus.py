@@ -11,10 +11,10 @@ from symplus.setplus import AbstractSet
 
 
 def func_free_symbols(func):
-    if isinstance(func, Lambda):
+    if isinstance(func, (Lambda, Functor)):
         return func.free_symbols
     elif isinstance(func, FunctionClass):
-        return getattr(func, 'func_free_symbols', set())
+        return set()
     else:
         raise TypeError
 
@@ -46,34 +46,14 @@ def is_inverse_of(func1, func2):
         return False
 
 
-class VariableFunctionClass(FunctionClass):
-    def __new__(mcl, name, narg, nres, fields):
-        fields['__new__'] = lambda cls, *args: cls.call(*args)
-        fields['_nargs'] = (narg,)
-        fields['nres'] = nres
-        return FunctionClass.__new__(mcl, name, (Function,), fields)
-
-    def __init__(cls, *args, **kwargs):
-        pass
-
-    def call(cls, *args):
-        return None
-
-    def _image(cls, set):
-        return None
-
-    @property
-    def func_free_symbols(cls):
-        return set()
-
-class FunctionCompose(VariableFunctionClass):
+class FunctionCompose(Functor):
     """
     >>> from sympy import *
     >>> FunctionCompose(exp, sin)
-    (exp o sin)
+    FunctionCompose(exp, sin)
     >>> x, y = symbols('x y')
     >>> FunctionCompose(exp, Lambda(x, x+1))
-    (exp o Lambda(x, x + 1))
+    FunctionCompose(exp, Lambda(x, x + 1))
     >>> FunctionCompose(Lambda(x, x/2), Lambda(x, x+1))
     Lambda(x, x/2 + 1/2)
     >>> FunctionCompose(exp, Id)
@@ -81,18 +61,18 @@ class FunctionCompose(VariableFunctionClass):
     >>> FunctionCompose(exp, FunctionInverse(exp))
     Lambda(_x, _x)
     >>> FunctionCompose(exp, FunctionCompose(sin, log))
-    (exp o sin o log)
+    FunctionCompose(exp, sin, log)
     >>> FunctionCompose(exp, sin)(pi/3)
     exp(sqrt(3)/2)
     >>> FunctionCompose(Lambda((x,y), x+y), Lambda(x, (x, x-2)))(3)
     4
     """
-    def __new__(mcl, *functions, **kwargs):
+    def __new__(cls, *functions, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         for function in functions:
             if not is_Function(function):
-                raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
+                raise TypeError('function is not a FunctionClass, Functor or Lambda: %s'%function)
 
         if evaluate:
             functions = FunctionCompose.reduce(functions)
@@ -102,22 +82,10 @@ class FunctionCompose(VariableFunctionClass):
         elif len(functions) == 1:
             return functions[0]
         else:
-            return FunctionCompose.new_cached(mcl, tuple(functions))
-
-    def __init__(cls, *args, **kwargs):
-        pass
-
-    @staticmethod
-    @cacheit
-    def new_cached(mcl, functions):
-        name = '(' + ' o '.join(map(str, functions)) + ')'
-        fnarg, fnres = narg(functions[-1]), nres(functions[0])
-        fields = {'functions': functions}
-        return VariableFunctionClass.__new__(mcl, name, fnarg, fnres, fields)
+            return Functor.__new__(cls, *functions)
 
     @staticmethod
     def reduce(funcs):
-        funcs = funcs
         i = 0
         while i < len(funcs):
             if funcs[i] == Id:
@@ -140,62 +108,55 @@ class FunctionCompose(VariableFunctionClass):
             i = i + 1
         return funcs
 
-    def call(cls, *args):
-        apply_multivar = lambda a, f: f(*pack_if_not(a))
-        return reduce(apply_multivar, cls.functions[::-1], args)
+    @property
+    def functions(self):
+        return self.args
 
     @property
-    def func_free_symbols(cls):
-        return {sym for func in cls.functions for sym in func_free_symbols(func)}
+    def narg(self):
+        return narg(self.functions[-1])
 
-    def __eq__(self, other):
-        return (isinstance(self, FunctionCompose) and
-                isinstance(other, FunctionCompose) and
-                self.functions == other.functions)
+    @property
+    def nres(self):
+        return nres(self.functions[0])
 
-    def __hash__(self):
-        return hash((type(self).__name__,) + self.functions)
+    def call(self, *args):
+        apply_multivar = lambda a, f: f(*pack_if_not(a))
+        return reduce(apply_multivar, self.functions[::-1], args)
 
-class FunctionInverse(VariableFunctionClass):
+    @property
+    def free_symbols(self):
+        return {sym for func in self.functions for sym in func_free_symbols(func)}
+
+class FunctionInverse(Functor):
     """
     >>> from sympy import *
     >>> x = symbols('x')
     >>> FunctionInverse(Lambda(x, x+1))
-    Lambda(x, x + 1).inv
+    FunctionInverse(Lambda(x, x + 1))
     >>> FunctionInverse(sin)
     asin
     >>> FunctionInverse(FunctionCompose(exp, Lambda(x, x+1)))
-    (Lambda(x, x + 1).inv o log)
+    FunctionCompose(FunctionInverse(Lambda(x, x + 1)), log)
     >>> FunctionInverse(FunctionInverse(Lambda(x, x+1)))
     Lambda(x, x + 1)
     >>> FunctionCompose(FunctionInverse(Lambda(x, x+1)), Lambda(x, x+1))
     Lambda(_x, _x)
     >>> FunctionInverse(Lambda(x, x+sin(x)))(3)
-    Apply(Lambda(x, x + sin(x)).inv, 3)
+    Apply(FunctionInverse(Lambda(x, x + sin(x))), 3)
     """
-    def __new__(mcl, function, **kwargs):
+    def __new__(cls, function, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         if not is_Function(function):
-            raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
+            raise TypeError('function is not a FunctionClass, Functor or Lambda: %s'%function)
 
         if evaluate:
             eval_func = FunctionInverse.eval(function)
             if eval_func is not None:
                 return eval_func
 
-        return FunctionInverse.new_cached(mcl, function)
-
-    def __init__(cls, *args, **kwargs):
-        pass
-
-    @staticmethod
-    @cacheit
-    def new_cached(mcl, function):
-        name = '%s.inv'%(str(function),)
-        fnarg, fnres = nres(function), narg(function)
-        fields = {'function': function}
-        return VariableFunctionClass.__new__(mcl, name, fnarg, fnres, fields)
+        return Functor.__new__(cls, function)
 
     @staticmethod
     def eval(func):
@@ -219,10 +180,22 @@ class FunctionInverse(VariableFunctionClass):
 
         return None
 
-    def call(cls, *args):
-        vars = symbols('a:%s'%narg(cls.function))
-        vars = rename_variables_in(vars, func_free_symbols(cls.function))
-        exprs = pack_if_not(cls.function(*vars))
+    @property
+    def function(self):
+        return self.args[0]
+
+    @property
+    def narg(self):
+        return nres(self.function)
+
+    @property
+    def nres(self):
+        return narg(self.function)
+
+    def call(self, *args):
+        vars = symbols('a:%s'%narg(self.function))
+        vars = rename_variables_in(vars, func_free_symbols(self.function))
+        exprs = pack_if_not(self.function(*vars))
 
         if len(args) != len(exprs):
             raise ValueError
@@ -238,19 +211,11 @@ class FunctionInverse(VariableFunctionClass):
                 return tuple(solns[var] for var in vars)
 
         except NotImplementedError:
-            return Apply(cls, args)
+            return Apply(self, args)
 
     @property
-    def func_free_symbols(cls):
-        return func_free_symbols(cls.function)
-
-    def __eq__(self, other):
-        return (isinstance(self, FunctionInverse) and
-                isinstance(other, FunctionInverse) and
-                self.function == other.function)
-
-    def __hash__(self):
-        return hash((type(self).__name__, self.function))
+    def free_symbols(self):
+        return func_free_symbols(self.function)
 
 class Apply(Function):
     """
@@ -258,7 +223,7 @@ class Apply(Function):
     >>> Apply(sin, pi)
     Apply(sin, pi)
     >>> Apply(exp, Apply(sin, pi))
-    Apply((exp o sin), pi)
+    Apply(FunctionCompose(exp, sin), pi)
     >>> Apply(FunctionInverse(sin), Apply(sin, pi))
     pi
     >>> Apply(sin, pi).doit()
@@ -274,7 +239,7 @@ class Apply(Function):
         argument = repack_if_can(sympify(unpack_if_can(argument)))
 
         if not is_Function(function):
-            raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
+            raise TypeError('function is not a FunctionClass, Functor or Lambda: %s'%function)
 
         if evaluate:
             function, argument = Apply.reduce(function, argument)
@@ -313,7 +278,7 @@ class Image(Set):
     >>> Image(sin, Interval(0, pi/2))
     Image(sin, [0, pi/2])
     >>> Image(exp, Image(sin, Interval(0, pi/2)))
-    Image((exp o sin), [0, pi/2])
+    Image(FunctionCompose(exp, sin), [0, pi/2])
     >>> Image(FunctionInverse(sin), Image(sin, Interval(0, pi/2)))
     [0, pi/2]
     >>> Image(cos, S.EmptySet)
@@ -324,7 +289,7 @@ class Image(Set):
     >>> Image(Lambda(x, x+1), Interval(-1, 1)).contains(1)
     True
     >>> Image(Lambda(x, sin(x)+x), Interval(-1, 1)).contains(1)
-    And(Apply(Lambda(x, x + sin(x)).inv, 1) <= 1, Apply(Lambda(x, x + sin(x)).inv, 1) >= -1)
+    And(Apply(FunctionInverse(Lambda(x, x + sin(x))), 1) <= 1, Apply(FunctionInverse(Lambda(x, x + sin(x))), 1) >= -1)
     >>> f = Lambda((x, y), (x*cos(y), x*sin(y)))
     >>> f_inv = FunctionInverse(f)
     >>> f_inv(*f(1, pi/4))
@@ -343,7 +308,7 @@ class Image(Set):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         if not is_Function(function):
-            raise TypeError('function is not a FunctionClass or Lambda: %s'%function)
+            raise TypeError('function is not a FunctionClass, Functor or Lambda: %s'%function)
         if not isinstance(set, Set):
             raise TypeError('set is not a Set: %s'%set)
 
@@ -355,8 +320,8 @@ class Image(Set):
         else:
             return Set.__new__(cls, function, set, **kwargs)
 
-    @classmethod
-    def reduce(cls, func, set):
+    @staticmethod
+    def reduce(func, set):
         def pre_reduce(func, set):
             while isinstance(set, Image):
                 func = FunctionCompose(func, set.function, evaluate=True)
@@ -432,7 +397,7 @@ def as_lambda(func):
     Lambda(a0, exp(sin(a0)))
     >>> x = symbols('x')
     >>> as_lambda(FunctionInverse(Lambda(x, sin(x)+exp(x))))
-    Lambda(a0, Apply(Lambda(x, exp(x) + sin(x)).inv, a0))
+    Lambda(a0, Apply(FunctionInverse(Lambda(x, exp(x) + sin(x))), a0))
     """
     if isinstance(func, Lambda):
         return func
