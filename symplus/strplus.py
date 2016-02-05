@@ -127,6 +127,12 @@ class SymplusPrinter(StrPrinter):
             arg_string = ', '.join(self._print(arg) for arg in args)
             return '(%s |-> %s)'%(arg_string, expr)
 
+    def _print_FunctionCompose(self, expr):
+        return '(' + ' o '.join(map(self._print, expr.functions)) + ')'
+
+    def _print_FunctionInverse(self, expr):
+        return '%s.inv'%(self._print(expr.function),)
+
     def _print_Apply(self, expr):
         funcstr = self._print(expr.function)
         if len(expr.arguments) == 1:
@@ -195,7 +201,7 @@ def mprint(expr):
     >>> mprint(St({x : x<1}, {x : x>0}, evaluate=False) | S.Reals)
     (-oo, oo) u {x : x < 1} n {x : x > 0}
     >>> mprint(St({x : x>0}) | Interval(-1,1))
-    {x : (x <= 1) & (x >= -1) | (x > 0)}
+    [-1, 1] u {x : x > 0}
     >>> mprint(St({x : x<1}) - S.Reals)
     {x : x < 1} \ (-oo, oo)
     >>> mprint(imageset(Lambda(x, x**2), St({x : x>y})))
@@ -203,6 +209,8 @@ def mprint(expr):
     >>> mprint(imageset(Lambda(x, x*y), S.Naturals))
     {x*y : x in Naturals()}
     >>> from symplus.funcplus import *
+    >>> mprint(FunctionCompose(exp, sin))
+    (exp o sin)
     >>> mprint(Image(FunctionCompose(exp, sin), St({x : x>y})))
     {(exp o sin)(x) : x > y}
     >>> mprint(Apply(Lambda(x, x*y), 3))
