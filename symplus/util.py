@@ -1,4 +1,5 @@
 from sympy.core import Symbol, Tuple, FunctionClass, Lambda, Expr, Basic
+from sympy.core.core import BasicMeta
 from sympy.matrices import MatrixSymbol
 from sympy.logic import true, false
 
@@ -110,6 +111,14 @@ def repack_if_can(a):
 
 
 # variable
+
+def free_symbols(func):
+    if isinstance(func, BasicMeta):
+        return set()
+    elif isinstance(func, Basic):
+        return func.free_symbols
+    else:
+        return set()
 
 def rename_variables_in(variables, varspace):
     names = [v.name for v in variables]

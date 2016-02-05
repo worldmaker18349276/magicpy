@@ -10,14 +10,6 @@ from symplus.util import *
 from symplus.setplus import AbstractSet
 
 
-def func_free_symbols(func):
-    if isinstance(func, (Lambda, Functor)):
-        return func.free_symbols
-    elif isinstance(func, FunctionClass):
-        return set()
-    else:
-        raise TypeError
-
 inv_table = {
     exp: log,
     cos: acos,
@@ -126,7 +118,7 @@ class FunctionCompose(Functor):
 
     @property
     def free_symbols(self):
-        return {sym for func in self.functions for sym in func_free_symbols(func)}
+        return {sym for func in self.functions for sym in free_symbols(func)}
 
 class FunctionInverse(Functor):
     """
@@ -194,7 +186,7 @@ class FunctionInverse(Functor):
 
     def call(self, *args):
         vars = symbols('a:%s'%narg(self.function))
-        vars = rename_variables_in(vars, func_free_symbols(self.function))
+        vars = rename_variables_in(vars, free_symbols(self.function))
         exprs = pack_if_not(self.function(*vars))
 
         if len(args) != len(exprs):
@@ -215,7 +207,7 @@ class FunctionInverse(Functor):
 
     @property
     def free_symbols(self):
-        return func_free_symbols(self.function)
+        return free_symbols(self.function)
 
 class Apply(Function):
     """
@@ -405,6 +397,6 @@ def as_lambda(func):
         return func.as_lambda()
     else:
         var = symbols('a:%s'%narg(func))
-        var = rename_variables_in(var, func_free_symbols(func))
+        var = rename_variables_in(var, free_symbols(func))
         return Lambda(var, func(*var))
 
