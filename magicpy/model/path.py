@@ -2,7 +2,7 @@ from sympy.core import Basic, Lambda, Tuple, sympify, Dummy
 from sympy.functions import Piecewise
 from sympy.sets import Set, FiniteSet, ProductSet, Interval
 from symplus.util import *
-from symplus.funcplus import Functor
+from symplus.funcplus import Functor, compose, inverse
 
 
 class Word(Tuple):
@@ -36,7 +36,13 @@ class Word(Tuple):
         else:
             return NotImplemented
 
-    __rmul__ = __mul__
+    def __rmul__(self, other):
+        if isinstance(other, Tuple):
+            return self.func(*zip(other.args, self.args))
+        elif isinstance(other, tuple):
+            return self.func(*zip(other, self.args))
+        else:
+            return NotImplemented
 
 class FreeMonoid(Set):
     """
@@ -145,7 +151,7 @@ class TensorPath(Path):
                             for pth1, pth2 in zip(self.paths, other.paths)])
 
     def slice(self, start, stop):
-        return TensorPath(*[pth.slice(start, stop) for pth in self.args])
+        return TensorPath(*[pth.slice(start, stop) for pth in self.paths])
 
 class LambdaPath(Path):
     def __new__(cls, flen, variable, expr):
@@ -232,6 +238,77 @@ class MultiplicativePath(LambdaPath):
             return self * other.inv()
         else:
             return self / other
+
+class AdditivePath(LambdaPath):
+    """
+    >>> from sympy import *
+    >>> t = Symbol('t', positive=True)
+    >>> pth1 = AdditivePath(10, t, t**2+1); pth1
+    AdditivePath(10, t, t**2 + 1)
+    >>> pth2 = AdditivePath(10, t, exp(t)); pth2
+    AdditivePath(10, t, exp(t))
+    >>> pth1(2)
+    5
+    >>> len(pth1)
+    10
+    >>> pth1+pth2
+    AdditivePath(20, t, Piecewise((t**2 + 1, t <= 10), (exp(t - 10) + 101, True)))
+    >>> pth2[2:5]
+    AdditivePath(3, t, exp(t + 2) - exp(2))
+    >>> pth12 = pth1 * pth2; pth12
+    TensorPath(AdditivePath(10, t, t**2 + 1), AdditivePath(10, t, exp(t)))
+    >>> pth12.as_lambda()
+    Lambda(_t, (_t**2 + 1, exp(_t)))
+    >>> pth12.length
+    10
+    >>> (pth12 + pth12).as_lambda().expr
+    (Piecewise((_t**2 + 1, _t <= 10), ((_t - 10)**2 + 102, True)), Piecewise((exp(_t), _t <= 10), (exp(_t - 10) + exp(10), True)))
+    >>> pth12[2:7]
+    TensorPath(AdditivePath(5, t, (t + 2)**2 - 4), AdditivePath(5, t, exp(t + 2) - exp(2)))
+    """
+    @staticmethod
+    def base_compose(self, other):
+        return self + other
+
+    @staticmethod
+    def base_decompose(self, other):
+        return self - other
+
+class TransformationPath(LambdaPath):
+    """
+    >>> from sympy import *
+    >>> t = Symbol('t', positive=True)
+    >>> x = Symbol('x')
+    >>> pth1 = TransformationPath(10, t, Lambda(x, t*x)); pth1
+    TransformationPath(10, t, Lambda(x, t*x))
+    >>> pth2 = TransformationPath(10, t, Lambda(x, t+x)); pth2
+    TransformationPath(10, t, Lambda(x, t + x))
+    >>> pth1(2)
+    Lambda(x, 2*x)
+    >>> len(pth1)
+    10
+    >>> pth1+pth2
+    TransformationPath(20, t, Piecewise((Lambda(x, t*x), t <= 10), (Lambda(x, t + 10*x - 10), True)))
+    >>> pth2[2:5]
+    TransformationPath(3, t, FunctionCompose(Lambda(x, t + x + 2), FunctionInverse(Lambda(x, x + 2))))
+    >>> pth12 = pth1 * pth2; pth12
+    TensorPath(TransformationPath(10, t, Lambda(x, t*x)), TransformationPath(10, t, Lambda(x, t + x)))
+    >>> pth12.as_lambda()
+    Lambda(_t, (Lambda(x, _t*x), Lambda(x, _t + x)))
+    >>> pth12.length
+    10
+    >>> (pth12 + pth12).as_lambda().expr
+    (Piecewise((Lambda(x, _t*x), _t <= 10), (Lambda(x, 10*x*(_t - 10)), True)), Lambda(x, _t + x))
+    >>> pth12[2:7]
+    TensorPath(TransformationPath(5, t, FunctionCompose(Lambda(x, x*(t + 2)), FunctionInverse(Lambda(x, 2*x)))), TransformationPath(5, t, FunctionCompose(Lambda(x, t + x + 2), FunctionInverse(Lambda(x, x + 2)))))
+    """
+    @staticmethod
+    def base_compose(self, other):
+        return compose(self, other)
+
+    @staticmethod
+    def base_decompose(self, other):
+        return compose(self, inverse(other))
 
 # class PathMonoid(Set):
 #     """
