@@ -94,7 +94,9 @@ class FunctionCompose(Functor):
                         funcs = funcs[:i-1] + (comp_funcs,) + funcs[i+1:]
                         i = i - 1
                 elif isinstance(funcs[i-1], Lambda) and isinstance(funcs[i], Lambda):
-                    comp_funcs = Lambda(funcs[i].variables, funcs[i-1](*pack_if_not(funcs[i].expr)))
+                    variables = rename_variables_in(funcs[i].variables, funcs[i-1].free_symbols)
+                    expr = funcs[i].expr
+                    comp_funcs = Lambda(variables, funcs[i-1](*pack_if_not(expr)))
                     funcs = funcs[:i-1] + (comp_funcs,) + funcs[i+1:]
                     i = i - 1
             i = i + 1
@@ -125,13 +127,13 @@ class FunctionInverse(Functor):
     >>> from sympy import *
     >>> x = symbols('x')
     >>> FunctionInverse(Lambda(x, x+1))
-    FunctionInverse(Lambda(x, x + 1))
+    Lambda(a0, a0 - 1)
     >>> FunctionInverse(sin)
     asin
     >>> FunctionInverse(FunctionCompose(exp, Lambda(x, x+1)))
-    FunctionCompose(FunctionInverse(Lambda(x, x + 1)), log)
-    >>> FunctionInverse(FunctionInverse(Lambda(x, x+1)))
-    Lambda(x, x + 1)
+    FunctionCompose(Lambda(a0, a0 - 1), log)
+    >>> FunctionInverse(FunctionInverse(Lambda(x, exp(x)+sin(x))))
+    Lambda(x, exp(x) + sin(x))
     >>> FunctionCompose(FunctionInverse(Lambda(x, x+1)), Lambda(x, x+1))
     Lambda(_x, _x)
     >>> FunctionInverse(Lambda(x, x+sin(x)))(3)
@@ -167,7 +169,14 @@ class FunctionInverse(Functor):
             if inv_func is not None:
                 return inv_func
 
-        if func in inv_table:
+        elif isinstance(func, Lambda):
+            var = symbols('a:%s'%nres(func))
+            var = rename_variables_in(var, free_symbols(func))
+            res = solve_inv(func, *var)
+            if res is not None:
+                return Lambda(var, res)
+
+        elif func in inv_table:
             return inv_table[func]
 
         return None
@@ -185,25 +194,11 @@ class FunctionInverse(Functor):
         return narg(self.function)
 
     def call(self, *args):
-        vars = symbols('a:%s'%narg(self.function))
-        vars = rename_variables_in(vars, free_symbols(self.function))
-        exprs = pack_if_not(self.function(*vars))
-
-        if len(args) != len(exprs):
-            raise ValueError
-
-        try:
-            solns = solve([expr - val for val, expr in zip(args, exprs)], vars)
-            if isinstance(solns, list):
-                solns = dict(zip(vars, solns[0]))
-
-            if len(vars) == 1:
-                return solns[vars[0]]
-            else:
-                return tuple(solns[var] for var in vars)
-
-        except NotImplementedError:
+        res = solve_inv(self.function, *args)
+        if res is None:
             return Apply(self, args)
+        else:
+            return res
 
     @property
     def free_symbols(self):
@@ -283,11 +278,11 @@ class Image(Set):
     >>> Image(Lambda(x, sin(x)+x), Interval(-1, 1)).contains(1)
     And(Apply(FunctionInverse(Lambda(x, x + sin(x))), 1) <= 1, Apply(FunctionInverse(Lambda(x, x + sin(x))), 1) >= -1)
     >>> f = Lambda((x, y), (x*cos(y), x*sin(y)))
-    >>> f_inv = FunctionInverse(f)
+    >>> f_inv = FunctionInverse(f, evaluate=False)
     >>> f_inv(*f(1, pi/4))
     (-1, -3*pi/4)
     >>> Image(f, ProductSet(Interval(0,1), Interval(-pi,pi))).contains(f(1, pi/4))
-    False
+    True
     >>> Image(Lambda(x, x+1), Interval(-1, 1)).as_abstract()
     AbstractSet(x0, And(x0 - 1 <= 1, x0 - 1 >= -1))
     >>> g = Lambda((x, y), (x+exp(y), x+sin(y)))
@@ -379,6 +374,27 @@ class Image(Set):
 compose = FunctionCompose
 inverse = FunctionInverse
 
+
+def solve_inv(func, *args):
+    vars = symbols('a:%s'%narg(func))
+    vars = rename_variables_in(vars, free_symbols(func) | free_symbols(Tuple(*args)))
+    exprs = pack_if_not(func(*vars))
+
+    if len(args) != len(exprs):
+        raise ValueError
+
+    try:
+        solns = solve([expr - val for val, expr in zip(args, exprs)], vars)
+        if isinstance(solns, list):
+            solns = dict(zip(vars, solns[0]))
+
+        if len(vars) == 1:
+            return solns[vars[0]]
+        else:
+            return tuple(solns[var] for var in vars)
+
+    except NotImplementedError:
+        return None
 
 def as_lambda(func):
     """

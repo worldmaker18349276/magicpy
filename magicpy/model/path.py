@@ -290,7 +290,7 @@ class TransformationPath(LambdaPath):
     >>> pth1+pth2
     TransformationPath(20, t, Piecewise((Lambda(x, t*x), t <= 10), (Lambda(x, t + 10*x - 10), True)))
     >>> pth2[2:5]
-    TransformationPath(3, t, FunctionCompose(Lambda(x, t + x + 2), FunctionInverse(Lambda(x, x + 2))))
+    TransformationPath(3, t, Lambda(a0, a0 + t))
     >>> pth12 = pth1 * pth2; pth12
     TensorPath(TransformationPath(10, t, Lambda(x, t*x)), TransformationPath(10, t, Lambda(x, t + x)))
     >>> pth12.as_lambda()
@@ -300,7 +300,7 @@ class TransformationPath(LambdaPath):
     >>> (pth12 + pth12).as_lambda().expr
     (Piecewise((Lambda(x, _t*x), _t <= 10), (Lambda(x, 10*x*(_t - 10)), True)), Lambda(x, _t + x))
     >>> pth12[2:7]
-    TensorPath(TransformationPath(5, t, FunctionCompose(Lambda(x, x*(t + 2)), FunctionInverse(Lambda(x, 2*x)))), TransformationPath(5, t, FunctionCompose(Lambda(x, t + x + 2), FunctionInverse(Lambda(x, x + 2)))))
+    TensorPath(TransformationPath(5, t, Lambda(a0, a0*(t + 2)/2)), TransformationPath(5, t, Lambda(a0, a0 + t)))
     """
     @staticmethod
     def base_compose(self, other):
