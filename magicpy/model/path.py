@@ -310,50 +310,55 @@ class TransformationPath(LambdaPath):
     def base_decompose(self, other):
         return compose(self, inverse(other))
 
-# class PathMonoid(Set):
-#     """
-#     >>> from sympy import *
-#     >>> t = Symbol('t', positive=True)
-#     >>> pmnd1 = PathMonoid(S.Reals); pmnd1
-#     PathMonoid((-oo, oo))
-#     >>> Path(t**2+1, 10) in pmnd1
-#     True
-#     >>> Path(t*I+1, 10) in pmnd1
-#     False
-#     >>> Path(exp(t), 4.3) in PathMonoid(Interval(0, 100))
-#     True
-#     >>> pmnd2 = pmnd1**2; pmnd2
-#     PathMonoid((-oo, oo) x (-oo, oo))
-#     >>> Path(t**2+1, 10)*Path(exp(t), 10) in pmnd2
-#     True
-#     """
-#     def __new__(cls, base):
-#         if not isinstance(base, Set):
-#             raise TypeError('base is not a Set: %r' % base)
-#         return Set.__new__(cls, base)
+class PathMonoid(Set):
+    """
+    >>> from sympy import *
+    >>> t = Symbol('t', positive=True)
+    >>> pmnd1 = PathMonoid(S.Reals); pmnd1
+    PathMonoid((-oo, oo))
+    >>> LambdaPath(10, t, t**2+1) in pmnd1
+    True
+    >>> LambdaPath(10, t, t*I+1) in pmnd1
+    False
+    >>> pmnd2 = pmnd1**2; pmnd2
+    PathMonoid((-oo, oo) x (-oo, oo))
+    >>> LambdaPath(10, t, t**2+1)*LambdaPath(10, t, exp(t)) in pmnd2
+    True
+    """
+    def __new__(cls, base):
+        if not isinstance(base, Set): # it should be a Group
+            raise TypeError('base is not a Set: %r' % base)
+        return Set.__new__(cls, base)
 
-#     @property
-#     def base(self):
-#         return self.args[0]
+    @property
+    def base(self):
+        return self.args[0]
 
-#     def _contains(self, pth):
-#         if not isinstance(pth, Path):
-#             return False
-#         res = self.base.contains(pth.function.expr)
-#         if res in (True, False):
-#             return res
-#         return all(pth(t) in self.base for t in range(int(pth.length)+1))
+    def _contains(self, pth):
+        if not isinstance(pth, Path):
+            return False
 
-#     def __mul__(self, other):
-#         return PathMonoid.tensor((self, other))
+        elif isinstance(pth, LambdaPath):
+            res = self.base._contains(pth.expr)
+            if res in (True, False):
+                return res
+            # return all(pth(t) in self.base for t in range(int(pth.length)+1))
 
-#     def __pow__(self, n):
-#         return PathMonoid.tensor((self,)*n)
+        elif isinstance(pth, TensorPath) and all(isinstance(p, LambdaPath) for p in pth.paths):
+            res = self.base._contains(tuple(p.expr for p in pth.paths))
+            if res in (True, False):
+                return res
 
-#     @staticmethod
-#     def tensor(pmnds):
-#         pmnds = tuple(pmnds)
-#         if any(not isinstance(pmnd, PathMonoid) for pmnd in pmnds):
-#             return ProductSet(pmnds)
-#         return PathMonoid(ProductSet(*[pmnd.base for pmnd in pmnds]))
+    def __mul__(self, other):
+        return PathMonoid.tensor((self, other))
+
+    def __pow__(self, n):
+        return PathMonoid.tensor((self,)*n)
+
+    @staticmethod
+    def tensor(pmnds):
+        pmnds = tuple(pmnds)
+        if any(not isinstance(pmnd, PathMonoid) for pmnd in pmnds):
+            return ProductSet(pmnds)
+        return PathMonoid(ProductSet(*[pmnd.base for pmnd in pmnds]))
 
