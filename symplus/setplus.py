@@ -478,11 +478,11 @@ def as_abstract(aset):
         return AbstractSet(x, expr)
 
 
-class Topology(Basic):
+class NaturalTopology(Set):
     def __new__(cls, space):
         if not isinstance(space, Set):
             raise TypeError
-        return Basic.__new__(cls, space)
+        return Set.__new__(cls, space)
 
     @property
     def space(self):
@@ -490,10 +490,3 @@ class Topology(Basic):
 
     def contains(self, other):
         return self.space.is_superset(other) & other.is_open()
-
-    def __contains__(self, other):
-        symb = self.contains(other)
-        if symb not in (true, false):
-            raise TypeError('contains did not evaluate to a bool: %r' % symb)
-        return bool(symb)
-

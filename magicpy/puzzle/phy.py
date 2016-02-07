@@ -3,7 +3,7 @@ from sympy.core import S, Lambda
 from sympy.sets import Set
 from sympy.simplify import simplify
 from sympy.matrices import MatrixBase
-from symplus.setplus import AbstractSet, Topology
+from symplus.setplus import AbstractSet, NaturalTopology
 from symplus.strplus import mstr
 from magicpy.engine.marching import cube_engine
 from magicpy.model.path import PathMonoid, Path
@@ -15,7 +15,7 @@ motionSet = PathMonoid(SE3)
 rotationSet = PathMonoid(SO3)
 translationSet = PathMonoid(T3)
 
-regionSet = Topology(S.Reals**3)
+regionSet = NaturalTopology(S.Reals**3)
 
 
 class TotalOperation:

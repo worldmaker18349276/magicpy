@@ -80,11 +80,11 @@ class Voxels:
         else:
             return self._bits_of_set(AbstractSet(var, expr))
 
-def cube_voxels(length=2, n=10):
+def cube_voxels(r=2, n=10):
     def voxels_iter_getter():
         return map(lambda v: (v[0]/n, v[1]/n, v[2]/n),
-                   product(range(-length*n, length*n+1), repeat=3))
-    return Voxels(voxels_iter_getter, (2*length*n+1)**3)
+                   product(range(-r*n, r*n+1), repeat=3))
+    return Voxels(voxels_iter_getter, (2*r*n+1)**3)
 
 
 def Intersection_(*args):
@@ -299,6 +299,6 @@ class MarchingCubesEngine(Engine):
         else:
             return aset
 
-def cube_engine(length=2, n=10):
-    return MarchingCubesEngine(cube_voxels(length, n))
+def cube_engine(r=2, n=10):
+    return MarchingCubesEngine(cube_voxels(r, n))
 
