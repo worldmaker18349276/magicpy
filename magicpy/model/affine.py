@@ -1,4 +1,5 @@
 from sympy.core import Ne, Eq, Symbol, Lambda, Tuple, pi, Dummy
+from sympy.core.singleton import Singleton
 from sympy.simplify import simplify
 from sympy.sets import Set, Intersection, Union, Complement, EmptySet, ImageSet
 from sympy.sets.sets import UniversalSet
@@ -531,4 +532,43 @@ def transform(trans, st):
 
     else:
         raise ValueError
+
+
+class TransformationGroup(Set, metaclass=Singleton):
+    def _contains(self, other):
+        return isinstance(other, Transformation)
+    def is_subset(self, other):
+        return issubclass(type(other), type(self))
+
+class AffineGroup(TransformationGroup):
+    def _contains(self, other):
+        return isinstance(other, AffineTransformation)
+
+class EuclideanGroup(AffineGroup):
+    def _contains(self, other):
+        return isinstance(other, EuclideanTransformation)
+
+class SpecialEuclideanGroup(EuclideanGroup):
+    def _contains(self, other):
+        return (isinstance(other, EuclideanTransformation) and
+                other.parity == 1)
+
+class RotationGroup(SpecialEuclideanGroup):
+    def _contains(self, other):
+        return (isinstance(other, EuclideanTransformation) and
+                other.parity == 1 and
+                other.tvec == zeros3)
+
+class TranslationGroup(SpecialEuclideanGroup):
+    def _contains(self, other):
+        return (isinstance(other, EuclideanTransformation) and
+                other.parity == 1 and
+                other.rquat == Mat([1,0,0,0]))
+
+Trans = TransformationGroup()
+Aff4 = AffineGroup()
+E3 = EuclideanGroup()
+SE3 = SpecialEuclideanGroup()
+SO3 = RotationGroup()
+T3 = TranslationGroup()
 
