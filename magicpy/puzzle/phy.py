@@ -3,7 +3,8 @@ from sympy.core import S, Lambda
 from sympy.sets import Set
 from sympy.simplify import simplify
 from sympy.matrices import MatrixBase
-from symplus.setplus import AbstractSet, NaturalTopology
+from symplus.setplus import AbstractSet
+from symplus.topoplus import NaturalTopology
 from symplus.strplus import mstr
 from magicpy.engine.marching import cube_engine
 from magicpy.model.path import PathMonoid, Path

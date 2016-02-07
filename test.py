@@ -16,6 +16,9 @@ doctest.testmod(simplus)
 import symplus.setplus as setplus
 doctest.testmod(setplus)
 
+import symplus.topoplus as topoplus
+doctest.testmod(topoplus)
+
 import symplus.funcplus as funcplus
 doctest.testmod(funcplus)
 

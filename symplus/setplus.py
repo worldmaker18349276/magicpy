@@ -477,16 +477,3 @@ def as_abstract(aset):
         expr = aset.contains(x)
         return AbstractSet(x, expr)
 
-
-class NaturalTopology(Set):
-    def __new__(cls, space):
-        if not isinstance(space, Set):
-            raise TypeError
-        return Set.__new__(cls, space)
-
-    @property
-    def space(self):
-        return self.args[0]
-
-    def contains(self, other):
-        return self.space.is_superset(other) & other.is_open()
