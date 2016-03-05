@@ -1,3 +1,7 @@
 *.pyc
 *.pyo
-report.txt
+test.py
+test_poly.py
+report
+old/
+ref/
