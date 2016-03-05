@@ -1,4 +1,4 @@
-from sympy.core import Basic, S, sympify
+from sympy.core import Basic, S, sympify, symbols
 from sympy.core.singleton import Singleton
 from sympy.simplify import simplify
 from sympy.logic import true
@@ -6,6 +6,7 @@ from sympy.sets import Set, Intersection, Union, Complement
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from symplus.util import *
 from symplus.setplus import AbstractSet
+from symplus.topoplus import NaturalTopology
 from symplus.matplus import norm, normalize, dot, cross, project, x, y, z, r
 
 
@@ -25,7 +26,6 @@ class EuclideanSpace(Set):
         if isinstance(other, WholeSpace):
             return self
 
-
 class WholeSpace(EuclideanSpace, metaclass=Singleton):
     def _absolute_complement(self, other):
         return S.EmptySet
@@ -41,10 +41,16 @@ class WholeSpace(EuclideanSpace, metaclass=Singleton):
     def _contains(self, other):
         return is_Tuple(other) and len(other) == 3
 
+    def as_abstract(self):
+        return AbstractSet(symbols('x y z', real=True), true)
 
-def complement(aset):
-    return Complement(WholeSpace(), aset, evaluate=True)
+    @property
+    def is_open(self):
+        return True
 
+    @property
+    def is_closed(self):
+        return True
 
 class Halfspace(EuclideanSpace):
     def __new__(cls, direction=[1,0,0], offset=0, closed=False, normalization=True):
@@ -121,6 +127,13 @@ class Halfspace(EuclideanSpace):
                          offset=-self.offset,
                          closed=~self.closed)
 
+    @property
+    def is_open(self):
+        return ~self.closed
+
+    @property
+    def is_closed(self):
+        return self.closed
 
 class Sphere(EuclideanSpace):
     def __new__(cls, radius=1, center=[0,0,0], closed=False, normalization=True):
@@ -206,6 +219,13 @@ class Sphere(EuclideanSpace):
                          center=self.center,
                          closed=~self.closed)
 
+    @property
+    def is_open(self):
+        return ~self.closed
+
+    @property
+    def is_closed(self):
+        return self.closed
 
 class Cylinder(EuclideanSpace):
     def __new__(cls, direction=[1,0,0], radius=1, center=[0,0,0], closed=False, normalization=True):
@@ -305,6 +325,13 @@ class Cylinder(EuclideanSpace):
                         center=self.center,
                         closed=~self.closed)
 
+    @property
+    def is_open(self):
+        return ~self.closed
+
+    @property
+    def is_closed(self):
+        return self.closed
 
 class Cone(EuclideanSpace):
     def __new__(cls, direction=[1,0,0], slope=1, center=[0,0,0], closed=False, normalization=True):
@@ -402,6 +429,13 @@ class Cone(EuclideanSpace):
                     center=self.center,
                     closed=~self.closed)
 
+    @property
+    def is_open(self):
+        return ~self.closed
+
+    @property
+    def is_closed(self):
+        return self.closed
 
 class Revolution(EuclideanSpace):
     def __new__(cls, func, direction=[1,0,0], center=[0,0,0], normalization=True):
@@ -444,6 +478,12 @@ class Revolution(EuclideanSpace):
         return AbstractSet((x,y,z), expr)
 
 
+def complement(aset):
+    return Complement(WholeSpace(), aset, evaluate=True)
+
 def with_complement(aset):
     return (aset, complement(aset))
+
+class EuclideanTopology(NaturalTopology, metaclass=Singleton):
+    space = WholeSpace()
 
