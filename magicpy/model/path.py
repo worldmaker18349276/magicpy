@@ -1,4 +1,4 @@
-from sympy.core import Basic, Lambda, Tuple, sympify, Dummy
+from sympy.core import Basic, Lambda, Tuple, sympify, Dummy, Symbol
 from sympy.functions import Piecewise
 from sympy.sets import Set, FiniteSet, ProductSet, Interval
 from symplus.util import *
@@ -145,7 +145,7 @@ class TensorPath(Path):
         return Lambda(t, tuple(pth(t) for pth in self.paths))
 
     def concat(self, other):
-        if not isinstance(other, TensorPath) or len(self.paths) != len(self.paths):
+        if not isinstance(other, TensorPath) or len(self.paths) != len(other.paths):
             raise ValueError
         return TensorPath(*[pth1.concat(pth2)
                             for pth1, pth2 in zip(self.paths, other.paths)])
@@ -157,8 +157,8 @@ class LambdaPath(Path):
     def __new__(cls, flen, variable, expr):
         if flen < 0:
             raise ValueError('flen must be positive: %s' % flen)
-        if not is_Symbol(variable):
-            raise TypeError('variable is not a Symbol or MatrixSymbol: %r' % variable)
+        if not isinstance(variable, Symbol):
+            raise TypeError('variable is not a Symbol: %r' % variable)
         return Path.__new__(cls, flen, variable, expr)
 
     @property
@@ -187,7 +187,7 @@ class LambdaPath(Path):
                            (self.base_compose(other(t-l), self(l)), True))
         return self.func(self.length+other.length, t, expr12)
 
-    def slice(self, start, stop):
+    def slice(self, start=None, stop=None):
         stop = stop if stop is not None else self.length
         start = start if start is not None else 0
         if (stop not in Interval(0, self.length) or
@@ -195,7 +195,7 @@ class LambdaPath(Path):
             stop < start):
             raise IndexError
         if start == 0:
-            return self.func(self.variable, self.expr, stop)
+            return self.func(stop, self.variable, self.expr)
         else:
             t = self.variable
             expr = self.base_decompose(self(start+t), self(start))
@@ -229,15 +229,15 @@ class MultiplicativePath(LambdaPath):
     TensorPath(MultiplicativePath(5, t, (t + 2)**2/5 + 1/5), MultiplicativePath(5, t, exp(-2)*exp(t + 2)))
     """
     @staticmethod
-    def base_compose(self, other):
-        return self * other
+    def base_compose(action1, action2):
+        return action1 * action2
 
     @staticmethod
-    def base_decompose(self, other):
-        if is_Matrix(other):
-            return self * other.inv()
+    def base_decompose(action1, action2):
+        if is_Matrix(action2):
+            return action1 * action2.inv()
         else:
-            return self / other
+            return action1 / action2
 
 class AdditivePath(LambdaPath):
     """
@@ -267,12 +267,12 @@ class AdditivePath(LambdaPath):
     TensorPath(AdditivePath(5, t, (t + 2)**2 - 4), AdditivePath(5, t, exp(t + 2) - exp(2)))
     """
     @staticmethod
-    def base_compose(self, other):
-        return self + other
+    def base_compose(action1, action2):
+        return action1 + action2
 
     @staticmethod
-    def base_decompose(self, other):
-        return self - other
+    def base_decompose(action1, action2):
+        return action1 - action2
 
 class TransformationPath(LambdaPath):
     """
@@ -303,12 +303,12 @@ class TransformationPath(LambdaPath):
     TensorPath(TransformationPath(5, t, Lambda(a0, a0*(t + 2)/2)), TransformationPath(5, t, Lambda(a0, a0 + t)))
     """
     @staticmethod
-    def base_compose(self, other):
-        return compose(self, other)
+    def base_compose(action1, action2):
+        return compose(action1, action2)
 
     @staticmethod
-    def base_decompose(self, other):
-        return compose(self, inverse(other))
+    def base_decompose(action1, action2):
+        return compose(action1, inverse(action2))
 
 class PathMonoid(Set):
     """
@@ -316,13 +316,13 @@ class PathMonoid(Set):
     >>> t = Symbol('t', positive=True)
     >>> pmnd1 = PathMonoid(S.Reals); pmnd1
     PathMonoid((-oo, oo))
-    >>> LambdaPath(10, t, t**2+1) in pmnd1
+    >>> AdditivePath(10, t, t**2+1) in pmnd1
     True
-    >>> LambdaPath(10, t, t*I+1) in pmnd1
+    >>> AdditivePath(10, t, t*I+1) in pmnd1
     False
     >>> pmnd2 = pmnd1**2; pmnd2
     PathMonoid((-oo, oo) x (-oo, oo))
-    >>> LambdaPath(10, t, t**2+1)*LambdaPath(10, t, exp(t)) in pmnd2
+    >>> AdditivePath(10, t, t**2+1)*AdditivePath(10, t, exp(t)) in pmnd2
     True
     """
     def __new__(cls, base):
