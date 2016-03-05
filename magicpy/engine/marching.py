@@ -293,9 +293,13 @@ class MarchingCubesEngine(Engine):
             if expr == true:
                 return S.UniversalSet
             elif expr == false:
-                return S.EmptySet
+                return None
             else:
                 return AbstractSet(aset.variables, expr)
+
+        elif aset == S.EmptySet:
+            return None
+
         else:
             return aset
 
