@@ -1,4 +1,5 @@
 import operator
+from functools import reduce
 from sympy.core import S, Tuple, Basic, sympify
 from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent, to_nnf
 from sympy.sets import Set, Intersection, Union, ProductSet, Contains
@@ -341,6 +342,15 @@ class AbstractSet(Set):
         """
         return Forall(self.variables, Not(self.expr))
 
+    @property
+    def _boundary(self):
+        if isinstance(self.expr, (Or, And)):
+            return self.expand()._boundary
+        elif isinstance(self.expr, Rel):
+            return AbstractSet(self.variables, Eq(self.expr.args[0], self.expr.args[1]))
+        else:
+            raise NotImplementedError
+
     def expand(self, depth=-1):
         """
         >>> from sympy import *
@@ -393,6 +403,9 @@ class AbstractSet(Set):
             return AbstractSet(tuple(vars1)+tuple(vars2_), And(expr1, expr2_))
         else:
             return None
+
+    def _eval_Eq(self, other):
+        return self.is_equivalent(other)
 
 
 class SetBuilder:
