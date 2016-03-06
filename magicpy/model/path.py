@@ -1,4 +1,5 @@
-from sympy.core import Basic, Lambda, Tuple, sympify, Dummy, Symbol
+from sympy.core import S, Basic, Lambda, Tuple, sympify, Symbol
+from sympy.core.evaluate import global_evaluate
 from sympy.functions import Piecewise
 from sympy.sets import Set, FiniteSet, ProductSet, Interval
 from symplus.util import *
@@ -90,76 +91,233 @@ class FreeMonoid(Set):
 
 
 class Path(Functor):
-    def __new__(cls, flen, *args):
-        if flen < 0:
-            raise ValueError('flen must be positive: %s' % flen)
-        return Functor.__new__(cls, flen, *args)
-
-    narg = 1
-    nres = 1
-
-    @property
-    def length(self):
-        return self.args[0]
-
-    @staticmethod
-    def tensor(pths):
-        return TensorPath(*pths)
+    narg = S.One
+    nres = S.One
 
     def __len__(self):
         return self.length
 
-    def __add__(self, other):
-        return self.concat(other)
-
     def __getitem__(self, key):
         if not isinstance(key, slice):
             raise TypeError
-        return self.slice(key.start, key.stop)
+        return SlicedPath(self, key.start, key.stop)
+
+    def __add__(self, other):
+        return ConcatenatedPath(self, other)
 
     def __mul__(self, other):
-        return Path.tensor((self, other))
+        return TensorPath(self, other)
 
-class TensorPath(Path):
-    def __new__(cls, *paths):
-        if any(not isinstance(pth, Path) for pth in paths):
-            raise TypeError
-        if len(set(pth.length for pth in paths)) != 1:
-            raise ValueError
-        return Functor.__new__(cls, *paths)
+    def as_lambda(self):
+        t = Symbol('t')
+        t = rename_variables_in((t,), free_symbols(self))
+        return Lambda(t, self(t))
+
+class IdentityPath(Path):
+    def __new__(cls, nres, **kwargs):
+        return Functor.__new__(cls, sympify(nres))
+
+    length = S.Zero
 
     @property
     def nres(self):
-        return len(self.paths)
+        return self.args[0]
+
+class SlicedPath(Path):
+    def __new__(cls, path, start, stop, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+
+        if not isinstance(path, Path):
+            raise TypeError
+        stop = sympify(stop) if stop is not None else path.length
+        start = sympify(start) if start is not None else S.Zero
+        if (stop not in Interval(0, path.length) or
+            start not in Interval(0, path.length) or
+            stop < start):
+            raise IndexError
+
+        if evaluate:
+            if start == 0 and stop == path.length:
+                sliced_path = path
+            elif start == stop:
+                sliced_path = IdentityPath(path.nres)
+            else:
+                sliced_path = path._slice(start, stop)
+
+        if sliced_path is not None:
+            return sliced_path
+        else:
+            return Functor.__new__(cls, path, start, stop)
+
+    @property
+    def path(self):
+        return self.args[0]
+
+    @property
+    def start(self):
+        return self.args[1]
+
+    @property
+    def stop(self):
+        return self.args[2]
+
+    @property
+    def nres(self):
+        return self.path.nres
+
+    @property
+    def length(self):
+        return self.stop - self.start
+
+    def _concat(self, other):
+        if (isinstance(other, SlicedPath) and
+            self.path == other.path and
+            self.stop == other.start):
+            return SlicedPath(self.path, self.start, other.stop)
+
+    def _slice(self, start, stop):
+        return SlicedPath(self.path, self.start+start, self.start+stop)
+
+class ConcatenatedPath(Path):
+    def __new__(cls, *paths, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+
+        if any(not isinstance(pth, Path) for pth in paths):
+            raise TypeError
+        if len(paths) != 0 and len(set(pth.nres for pth in paths)) != 1:
+            raise ValueError
+
+        nres = paths[0].nres if len(paths) != 0 else S.One
+        if evaluate:
+            paths = cls.reduce(paths)
+
+        if len(paths) == 0:
+            return IdentityPath(nres)
+        elif len(paths) == 1:
+            return paths[0]
+        else:
+            return Functor.__new__(cls, *paths)
+
+    @staticmethod
+    def reduce(paths):
+        i = 0
+        while i < len(paths):
+            if isinstance(paths[i], IdentityPath):
+                paths = paths[:i] + paths[i+1:]
+            elif isinstance(paths[i], ConcatenatedPath):
+                paths = paths[:i] + paths[i].paths + paths[i+1:]
+            elif i-1 >= 0 and hasattr(paths[i-1], '_concat'):
+                concat_path = paths[i-1]._concat(paths[i])
+                if concat_path is not None:
+                    paths = paths[:i-1] + (concat_path,) + paths[i+1:]
+                    i = i - 1
+            i = i + 1
+        return paths
 
     @property
     def paths(self):
         return self.args
 
     @property
+    def nres(self):
+        return self.paths[0].nres
+
+    @property
     def length(self):
-        return self.args[0].length
+        return sum(pth.length for pth in self.paths)
+
+    def _slice(self, start, stop):
+        paths = []
+        for pth in self.paths:
+            if start < 0:
+                start_ = 0
+            elif start > pth.length:
+                start_ = pth.length
+            else:
+                start_ = start
+            if stop < 0:
+                stop_ = 0
+            elif stop > pth.length:
+                stop_ = pth.length
+            else:
+                stop_ = stop
+
+            paths.append(SlicedPath(pth, start_, stop_))
+            start = start - pth.length
+            stop = stop - pth.length
+        return ConcatenatedPath(*paths)
+
+class TensorPath(Path):
+    def __new__(cls, *paths, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+
+        if any(not isinstance(pth, Path) for pth in paths):
+            raise TypeError
+        if len(paths) != 0 and len(set(pth.length for pth in paths)) != 1:
+            raise ValueError
+
+        nres = sum(pth.nres for pth in paths)
+        if evaluate:
+            paths = cls.reduce(paths)
+
+        if len(paths) == 0:
+            return IdentityPath(nres)
+        elif len(paths) == 1:
+            return paths[0]
+        else:
+            return Functor.__new__(cls, *paths)
+
+    @staticmethod
+    def reduce(paths):
+        i = 0
+        while i < len(paths):
+            if paths[i].nres == 0:
+                paths = paths[:i] + paths[i+1:]
+            elif isinstance(paths[i], TensorPath):
+                paths = paths[:i] + paths[i].paths + paths[i+1:]
+            i = i + 1
+        return paths
+
+    @property
+    def paths(self):
+        return self.args
+
+    @property
+    def nres(self):
+        return sum(pth.nres for pth in self.paths)
+
+    @property
+    def length(self):
+        return self.paths[0].length
+
+    def _concat(self, other):
+        if isinstance(other, TensorPath):
+            paths1 = self.reduce(self.paths)
+            paths2 = other.reduce(other.paths)
+            return TensorPath(*[ConcatenatedPath(pth1, pth2)
+                                for pth1, pth2 in zip(paths1, paths2)])
+
+    def _slice(self, start, stop):
+        return TensorPath(*[SlicedPath(pth, start, stop) for pth in self.paths])
 
     def as_lambda(self):
-        t = Dummy('t')
-        return Lambda(t, tuple(pth(t) for pth in self.paths))
-
-    def concat(self, other):
-        if not isinstance(other, TensorPath) or len(self.paths) != len(other.paths):
-            raise ValueError
-        return TensorPath(*[pth1.concat(pth2)
-                            for pth1, pth2 in zip(self.paths, other.paths)])
-
-    def slice(self, start, stop):
-        return TensorPath(*[pth.slice(start, stop) for pth in self.paths])
+        lambdas = tuple(pth.as_lambda() for pth in self.paths)
+        t = lambdas[0].variables
+        t = rename_variables_in(t, free_symbols(lambdas))
+        return Lambda(t, tuple(f(*t) for f in lambdas))
 
 class LambdaPath(Path):
     def __new__(cls, flen, variable, expr):
+        flen = sympify(flen)
         if flen < 0:
             raise ValueError('flen must be positive: %s' % flen)
         if not isinstance(variable, Symbol):
             raise TypeError('variable is not a Symbol: %r' % variable)
         return Path.__new__(cls, flen, variable, expr)
+
+    @property
+    def length(self):
+        return self.args[0]
 
     @property
     def variable(self):
@@ -178,7 +336,7 @@ class LambdaPath(Path):
             raise ValueError
         return self.as_lambda()(t)
 
-    def concat(self, other):
+    def _concat(self, other):
         if not isinstance(other, type(self)):
             raise ValueError('other is not a %s: %s' % (type(self), other))
         t = self.variable
@@ -187,7 +345,7 @@ class LambdaPath(Path):
                            (self.base_compose(other(t-l), self(l)), True))
         return self.func(self.length+other.length, t, expr12)
 
-    def slice(self, start=None, stop=None):
+    def _slice(self, start=None, stop=None):
         stop = stop if stop is not None else self.length
         start = start if start is not None else 0
         if (stop not in Interval(0, self.length) or
@@ -220,11 +378,11 @@ class MultiplicativePath(LambdaPath):
     >>> pth12 = pth1 * pth2; pth12
     TensorPath(MultiplicativePath(10, t, t**2 + 1), MultiplicativePath(10, t, exp(t)))
     >>> pth12.as_lambda()
-    Lambda(_t, (_t**2 + 1, exp(_t)))
+    Lambda(t, (t**2 + 1, exp(t)))
     >>> pth12.length
     10
     >>> (pth12 + pth12).as_lambda().expr
-    (Piecewise((_t**2 + 1, _t <= 10), (101*(_t - 10)**2 + 101, True)), Piecewise((exp(_t), _t <= 10), (exp(10)*exp(_t - 10), True)))
+    (Piecewise((t**2 + 1, t <= 10), (101*(t - 10)**2 + 101, True)), Piecewise((exp(t), t <= 10), (exp(10)*exp(t - 10), True)))
     >>> pth12[2:7]
     TensorPath(MultiplicativePath(5, t, (t + 2)**2/5 + 1/5), MultiplicativePath(5, t, exp(-2)*exp(t + 2)))
     """
@@ -258,11 +416,11 @@ class AdditivePath(LambdaPath):
     >>> pth12 = pth1 * pth2; pth12
     TensorPath(AdditivePath(10, t, t**2 + 1), AdditivePath(10, t, exp(t)))
     >>> pth12.as_lambda()
-    Lambda(_t, (_t**2 + 1, exp(_t)))
+    Lambda(t, (t**2 + 1, exp(t)))
     >>> pth12.length
     10
     >>> (pth12 + pth12).as_lambda().expr
-    (Piecewise((_t**2 + 1, _t <= 10), ((_t - 10)**2 + 102, True)), Piecewise((exp(_t), _t <= 10), (exp(_t - 10) + exp(10), True)))
+    (Piecewise((t**2 + 1, t <= 10), ((t - 10)**2 + 102, True)), Piecewise((exp(t), t <= 10), (exp(t - 10) + exp(10), True)))
     >>> pth12[2:7]
     TensorPath(AdditivePath(5, t, (t + 2)**2 - 4), AdditivePath(5, t, exp(t + 2) - exp(2)))
     """
@@ -294,11 +452,11 @@ class TransformationPath(LambdaPath):
     >>> pth12 = pth1 * pth2; pth12
     TensorPath(TransformationPath(10, t, Lambda(x, t*x)), TransformationPath(10, t, Lambda(x, t + x)))
     >>> pth12.as_lambda()
-    Lambda(_t, (Lambda(x, _t*x), Lambda(x, _t + x)))
+    Lambda(t, (Lambda(x, t*x), Lambda(x, t + x)))
     >>> pth12.length
     10
     >>> (pth12 + pth12).as_lambda().expr
-    (Piecewise((Lambda(x, _t*x), _t <= 10), (Lambda(x, 10*x*(_t - 10)), True)), Lambda(x, _t + x))
+    (Piecewise((Lambda(x, t*x), t <= 10), (Lambda(x, 10*x*(t - 10)), True)), Lambda(x, t + x))
     >>> pth12[2:7]
     TensorPath(TransformationPath(5, t, Lambda(a0, a0*(t + 2)/2)), TransformationPath(5, t, Lambda(a0, a0 + t)))
     """
