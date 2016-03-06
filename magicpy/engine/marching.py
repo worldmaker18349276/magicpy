@@ -7,7 +7,7 @@ from sympy.logic import Not, And, Or, Xor, Implies, Equivalent
 from sympy.logic.boolalg import true, false, Boolean, is_nnf
 from sympy.utilities import lambdify
 from symplus.simplus import logicrelsimp
-from symplus.setplus import AbstractSet
+from symplus.setplus import AbstractSet, as_abstract
 from magicpy.engine.basic import Engine
 
 
@@ -64,7 +64,7 @@ class Voxels:
         elif isinstance(aset, AbstractSet):
             return self.bits_of_expr(aset.variables, aset.expr)
         else:
-            return self._bits_of_set(aset)
+            return self._bits_of_set(as_abstract(aset))
 
     def bits_of_expr(self, var, expr):
         if isinstance(expr, And):
@@ -287,7 +287,10 @@ class MarchingCubesEngine(Engine):
 
     def simp(self, aset):
         aset = aset.doit()
-        if isinstance(aset, AbstractSet):
+        if aset == S.EmptySet:
+            return None
+
+        elif isinstance(aset, AbstractSet):
             expr = logicrelsimp(aset.expr)
             expr = marchingfuncsimp(self.voxels, aset.variables, expr)
             if expr == true:
@@ -297,8 +300,12 @@ class MarchingCubesEngine(Engine):
             else:
                 return AbstractSet(aset.variables, expr)
 
-        elif aset == S.EmptySet:
-            return None
+        elif isinstance(aset, Set):
+            aset = marchingsetsimp(self.voxels, aset)
+            if aset == S.EmptySet:
+                return None
+            else:
+                return aset
 
         else:
             return aset

@@ -9,8 +9,8 @@ class Engine:
     def union(self, *asets):
         return Union(*asets)
 
-    def transform(self, aset, mat):
-        return transform(aset, mat)
+    def transform(self, aset, trans):
+        return transform(trans, aset)
 
     def simp(self, aset):
         return aset

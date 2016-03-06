@@ -485,5 +485,8 @@ def with_complement(aset):
     return (aset, complement(aset))
 
 class EuclideanTopology(NaturalTopology, metaclass=Singleton):
+    def __new__(cls):
+        return Set.__new__(cls)
+
     space = WholeSpace()
 

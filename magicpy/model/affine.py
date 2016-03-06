@@ -11,6 +11,7 @@ from symplus.util import *
 from symplus.setplus import AbstractSet
 from symplus.funcplus import Functor, compose, inverse, Image
 from symplus.matplus import *
+from symplus.pathplus import TransformationPath
 from magicpy.model.euclid import WholeSpace, Halfspace, Sphere, Cylinder, Cone, Revolution
 
 
@@ -571,4 +572,13 @@ E3 = EuclideanGroup()
 SE3 = SpecialEuclideanGroup()
 SO3 = RotationGroup()
 T3 = TranslationGroup()
+
+
+t = Symbol('t')
+
+def translate(tvec, flen=10):
+    return TransformationPath(flen, t, EuclideanTransformation(tvec=tvec*t/flen))
+
+def rotate(th, axis, flen=10):
+    return TransformationPath(flen, t, EuclideanTransformation(rquat=rquat(th*t/flen, axis)))
 
