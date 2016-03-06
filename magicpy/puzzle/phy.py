@@ -9,7 +9,7 @@ from symplus.strplus import mstr
 from symplus.pathplus import PathMonoid, Path
 from magicpy.engine.marching import cube_engine
 from magicpy.model.affine import SE3, SO3, T3, transform
-from magicpy.model.euclid import EuclideanTopology, complement
+from magicpy.model.euclid import EuclideanTopology
 
 
 class TotalOperation:
@@ -95,7 +95,7 @@ class PhysicalPuzzle(frozenset):
         >>> from magicpy.engine.marching import *
         >>> knives = Halfspace(i, 1), Halfspace(j, 1), Halfspace(-i, 1), Halfspace(-j, 1)
         >>> floppy3x3x1 = RotationalPhysicalPuzzle({Sphere(3)})
-        >>> floppy3x3x1 = floppy3x3x1.cut_by(*map(with_complement, knives))
+        >>> floppy3x3x1 = floppy3x3x1.cut_by(*map(with_exterior, knives))
         >>> print(str(floppy3x3x1))
         RotationalPhysicalPuzzle(
             {(Halfspace([-1, 0, 0]', -1, True)) n (Halfspace([-1, 0, 0]', 1, False)) n (Halfspace([0, -1, 0]', -1, True)) n (Halfspace([0, -1, 0]', 1, False)) n (Sphere(3, [0, 0, 0]', False)),

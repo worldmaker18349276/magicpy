@@ -45,6 +45,14 @@ class WholeSpace(EuclideanSpace, metaclass=Singleton):
         return AbstractSet(symbols('x y z', real=True), true)
 
     @property
+    def interior(self):
+        return self
+
+    @property
+    def closure(self):
+        return self
+
+    @property
     def is_open(self):
         return True
 
@@ -126,6 +134,18 @@ class Halfspace(EuclideanSpace):
         return Halfspace(direction=-self.direction,
                          offset=-self.offset,
                          closed=~self.closed)
+
+    @property
+    def interior(self):
+        return Halfspace(direction=self.direction,
+                         offset=self.offset,
+                         closed=false)
+
+    @property
+    def closure(self):
+        return Halfspace(direction=self.direction,
+                         offset=self.offset,
+                         closed=true)
 
     @property
     def is_open(self):
@@ -218,6 +238,18 @@ class Sphere(EuclideanSpace):
         return Sphere(radius=-self.radius,
                          center=self.center,
                          closed=~self.closed)
+
+    @property
+    def interior(self):
+        return Sphere(radius=self.radius,
+                         center=self.center,
+                         closed=false)
+
+    @property
+    def closure(self):
+        return Sphere(radius=self.radius,
+                         center=self.center,
+                         closed=true)
 
     @property
     def is_open(self):
@@ -326,6 +358,20 @@ class Cylinder(EuclideanSpace):
                         closed=~self.closed)
 
     @property
+    def interior(self):
+        return Cylinder(direction=self.direction,
+                        radius=self.radius,
+                        center=self.center,
+                        closed=false)
+
+    @property
+    def closure(self):
+        return Cylinder(direction=self.direction,
+                        radius=self.radius,
+                        center=self.center,
+                        closed=true)
+
+    @property
     def is_open(self):
         return ~self.closed
 
@@ -430,6 +476,20 @@ class Cone(EuclideanSpace):
                     closed=~self.closed)
 
     @property
+    def interior(self):
+        return Cone(direction=self.direction,
+                    slope=self.slope,
+                    center=self.center,
+                    closed=false)
+
+    @property
+    def closure(self):
+        return Cone(direction=self.direction,
+                    slope=self.slope,
+                    center=self.center,
+                    closed=true)
+
+    @property
     def is_open(self):
         return ~self.closed
 
@@ -478,11 +538,11 @@ class Revolution(EuclideanSpace):
         return AbstractSet((x,y,z), expr)
 
 
-def complement(aset):
-    return Complement(WholeSpace(), aset, evaluate=True)
+def exterior(aset):
+    return Complement(WholeSpace(), aset, evaluate=True).interior
 
-def with_complement(aset):
-    return (aset, complement(aset))
+def with_exterior(aset):
+    return (aset, exterior(aset))
 
 class EuclideanTopology(NaturalTopology, metaclass=Singleton):
     def __new__(cls):

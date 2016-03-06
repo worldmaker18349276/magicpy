@@ -1,10 +1,10 @@
-from sympy.core import S, Ne, Eq, Gt, Ge, Lt, Le, oo
+from sympy.core import S, Ne, Eq, Gt, Ge, Lt, Le, oo, symbols
 from sympy.logic import true, false, Or, And
 from sympy.sets import Set, Interval, Intersection, Union, Complement, ProductSet
 from symplus.setplus import AbstractSet
 
 
-def is_open(set):
+def is_open(aset):
     """
     >>> from sympy import *
     >>> from symplus.setplus import *
@@ -24,38 +24,38 @@ def is_open(set):
     >>> is_open(AbstractSet((x,y), x<=y))
     False
     """
-    if isinstance(set, Interval):
-        return (set.left_open | (set.start==-oo)) & (set.right_open | (set.end==oo))
+    if isinstance(aset, Interval):
+        return (aset.left_open | (aset.start==-oo)) & (aset.right_open | (aset.end==oo))
 
-    elif isinstance(set, AbstractSet):
-        if isinstance(set.expr, (Or, And)):
-            return is_open(set.expand())
-        elif isinstance(set.expr, (Ne, Gt, Lt)):
+    elif isinstance(aset, AbstractSet):
+        if isinstance(aset.expr, (Or, And)):
+            return is_open(aset.expand())
+        elif isinstance(aset.expr, (Ne, Gt, Lt)):
             return true
-        elif isinstance(set.expr, (Eq, Ge, Le)):
+        elif isinstance(aset.expr, (Eq, Ge, Le)):
             return false
 
-    elif isinstance(set, (Intersection, Union)):
-        if all(is_open(s) == true for s in set.args):
+    elif isinstance(aset, (Intersection, Union)):
+        if all(is_open(s) == true for s in aset.args):
             return true
 
-    elif isinstance(set, Complement):
-        if is_open(set.args[0]) & is_closed(set.args[1]) == true:
+    elif isinstance(aset, Complement):
+        if is_open(aset.args[0]) & is_closed(aset.args[1]) == true:
             return true
 
-    elif isinstance(set, ProductSet):
-        return And(*[is_open(s) for s in set.args])
+    elif isinstance(aset, ProductSet):
+        return And(*[is_open(s) for s in aset.args])
 
     try:
-        res = set.is_open
+        res = aset.is_open
         if res in (true, false):
             return res
         else:
-            return Eq(Intersection(set, set.boundary), S.EmptySet)
+            return Eq(Intersection(aset, aset.boundary), S.EmptySet)
     except NotImplementedError:
         raise NotImplementedError
 
-def is_closed(set):
+def is_closed(aset):
     """
     >>> from sympy import *
     >>> from symplus.setplus import *
@@ -75,43 +75,78 @@ def is_closed(set):
     >>> is_closed(AbstractSet((x,y), x<=y))
     True
     """
-    if isinstance(set, Interval):
-        return ((~set.left_open) | (set.start==-oo)) & ((~set.right_open) | (set.end==oo))
+    if isinstance(aset, Interval):
+        return ((~aset.left_open) | (aset.start==-oo)) & ((~aset.right_open) | (aset.end==oo))
 
-    elif isinstance(set, AbstractSet):
-        if isinstance(set.expr, (Or, And)):
-            return is_closed(set.expand())
-        elif isinstance(set.expr, (Eq, Ge, Le)):
+    elif isinstance(aset, AbstractSet):
+        if isinstance(aset.expr, (Or, And)):
+            return is_closed(aset.expand())
+        elif isinstance(aset.expr, (Eq, Ge, Le)):
             return true
-        elif isinstance(set.expr, (Ne, Gt, Lt)):
+        elif isinstance(aset.expr, (Ne, Gt, Lt)):
             return false
 
-    elif isinstance(set, (Intersection, Union)):
-        if all(is_closed(s) == true for s in set.args):
+    elif isinstance(aset, (Intersection, Union)):
+        if all(is_closed(s) == true for s in aset.args):
             return true
 
-    elif isinstance(set, Complement):
-        if is_closed(set.args[0]) & is_open(set.args[1]) == true:
+    elif isinstance(aset, Complement):
+        if is_closed(aset.args[0]) & is_open(aset.args[1]) == true:
             return true
 
-    elif isinstance(set, ProductSet):
-        return And(*[is_closed(s) for s in set.args])
+    elif isinstance(aset, ProductSet):
+        return And(*[is_closed(s) for s in aset.args])
 
     try:
-        res = set.is_closed
+        res = aset.is_closed
         if res in (true, false):
             return res
         else:
-            return Eq(Intersection(set, set.boundary), set.boundary)
+            return Eq(Intersection(aset, aset.boundary), aset.boundary)
     except NotImplementedError:
         raise NotImplementedError
 
 
-class TrivialTopology(Set):
+class Topology(Set):
+    @property
+    def space(self):
+        raise NotImplementedError
+
+    def contains(self, other):
+        return is_open(other)
+
+    def boundary_of(self, aset):
+        raise NotImplementedError
+
+    def closure_of(self, aset):
+        return aset + self.boundary_of(aset)
+
+    def interior_of(self, aset):
+        return aset - self.boundary_of(aset)
+
+    def complement_of(self, aset):
+        return self.space - aset
+
+    def exterior_of(self, aset):
+        return self.interior_of(self.complement_of(aset))
+
+    def is_open_set(self, aset):
+        return Eq(aset, self.interior_of(aset))
+
+    def is_closed_set(self, aset):
+        return Eq(aset, self.closure_of(aset))
+
+    def is_regular_open_set(self, aset):
+        return Eq(aset, self.interior_of(self.closure_of(aset)))
+
+    def is_regular_open_set(self, aset):
+        return Eq(aset, self.closure_of(self.interior_of(aset)))
+
+class DiscreteTopology(Set):
     """
     >>> from sympy import *
     >>> from symplus.setplus import *
-    >>> t = TrivialTopology(Interval(-3,3))
+    >>> t = DiscreteTopology(Interval(-3,3))
     >>> t.contains(Interval(0,1, True, True))
     True
     >>> t.contains(Interval(-4,-2, True, True))
@@ -132,6 +167,27 @@ class TrivialTopology(Set):
 
     def contains(self, other):
         return self.space.is_superset(other)
+
+    def boundary_of(self, aset):
+        return S.EmptySet
+
+    def closure_of(self, aset):
+        return aset
+
+    def interior_of(self, aset):
+        return aset
+
+    def is_open_set(self, aset):
+        return true
+
+    def is_closed_set(self, aset):
+        return true
+
+    def is_regular_open_set(self, aset):
+        return true
+
+    def is_regular_open_set(self, aset):
+        return true
 
 class NaturalTopology(Set):
     """
@@ -158,4 +214,22 @@ class NaturalTopology(Set):
 
     def contains(self, other):
         return self.space.is_superset(other) & is_open(other)
+
+    def boundary_of(self, aset):
+        raise aset.boundary
+
+    def closure_of(self, aset):
+        return aset.closure
+
+    def interior_of(self, aset):
+        return aset.interior
+
+    def is_open_set(self, aset):
+        return is_open(aset)
+
+    def is_closed_set(self, aset):
+        return is_closed(aset)
+
+
+Reals = AbstractSet(symbols('x', real=True), true)
 
