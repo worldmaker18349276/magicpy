@@ -6,9 +6,11 @@ from sympy.sets import Set, Intersection, Union, Complement
 from sympy.matrices.immutable import ImmutableMatrix as Mat
 from symplus.util import *
 from symplus.setplus import AbstractSet
-from symplus.topoplus import NaturalTopology
-from symplus.matplus import norm, normalize, dot, cross, project, x, y, z, r
+from symplus.topoplus import NaturalTopology, AbsoluteComplement, Exterior
+from symplus.matplus import norm, normalize, dot, cross, project, i, j, k, x, y, z, r
 
+
+# primitive sets
 
 class EuclideanSpace(Set):
     def _complement(self, other):
@@ -27,7 +29,7 @@ class EuclideanSpace(Set):
             return self
 
 class WholeSpace(EuclideanSpace, metaclass=Singleton):
-    def _absolute_complement(self, other):
+    def _absolute_complement(self):
         return S.EmptySet
 
     def _union(self, other):
@@ -122,13 +124,13 @@ class Halfspace(EuclideanSpace):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
-        >>> mprint(complement(Halfspace()))
+        >>> mprint(AbsoluteComplement(Halfspace()))
         Halfspace([-1, 0, 0]', 0, True)
-        >>> mprint(complement(Halfspace([1,2,0], 3)))
+        >>> mprint(AbsoluteComplement(Halfspace([1,2,0], 3)))
         Halfspace([-sqrt(5)/5, -2*sqrt(5)/5, 0]', -3, True)
-        >>> complement(Halfspace()).contains((1,2,3))
+        >>> AbsoluteComplement(Halfspace()).contains((1,2,3))
         False
-        >>> complement(Halfspace([1,2,0], 3)).contains((1,2,3))
+        >>> AbsoluteComplement(Halfspace([1,2,0], 3)).contains((1,2,3))
         True
         """
         return Halfspace(direction=-self.direction,
@@ -226,13 +228,13 @@ class Sphere(EuclideanSpace):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
-        >>> mprint(complement(Sphere()))
+        >>> mprint(AbsoluteComplement(Sphere()))
         Sphere(-1, [0, 0, 0]', True)
-        >>> mprint(complement(Sphere(3, [1,0,2])))
+        >>> mprint(AbsoluteComplement(Sphere(3, [1,0,2])))
         Sphere(-3, [1, 0, 2]', True)
-        >>> complement(Sphere()).contains((1,1,1))
+        >>> AbsoluteComplement(Sphere()).contains((1,1,1))
         True
-        >>> complement(Sphere(3, [1,0,2])).contains((1,1,1))
+        >>> AbsoluteComplement(Sphere(3, [1,0,2])).contains((1,1,1))
         False
         """
         return Sphere(radius=-self.radius,
@@ -343,13 +345,13 @@ class Cylinder(EuclideanSpace):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
-        >>> mprint(complement(Cylinder()))
+        >>> mprint(AbsoluteComplement(Cylinder()))
         Cylinder([1, 0, 0]', -1, [0, 0, 0]', True)
-        >>> mprint(complement(Cylinder([0,1,1], 2)))
+        >>> mprint(AbsoluteComplement(Cylinder([0,1,1], 2)))
         Cylinder([0, sqrt(2)/2, sqrt(2)/2]', -2, [0, 0, 0]', True)
-        >>> complement(Cylinder()).contains((1,1,1))
+        >>> AbsoluteComplement(Cylinder()).contains((1,1,1))
         True
-        >>> complement(Cylinder([0,1,1], 2)).contains((1,1,1))
+        >>> AbsoluteComplement(Cylinder([0,1,1], 2)).contains((1,1,1))
         False
         """
         return Cylinder(direction=self.direction,
@@ -461,13 +463,13 @@ class Cone(EuclideanSpace):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
-        >>> mprint(complement(Cone()))
+        >>> mprint(AbsoluteComplement(Cone()))
         Cone([1, 0, 0]', -1, [0, 0, 0]', True)
-        >>> mprint(complement(Cone([3,4,0], 5)))
+        >>> mprint(AbsoluteComplement(Cone([3,4,0], 5)))
         Cone([3/5, 4/5, 0]', -5, [0, 0, 0]', True)
-        >>> complement(Cone()).contains((-1,0,1))
+        >>> AbsoluteComplement(Cone()).contains((-1,0,1))
         True
-        >>> complement(Cone([3,4,0], 5)).contains((-1,0,1))
+        >>> AbsoluteComplement(Cone([3,4,0], 5)).contains((-1,0,1))
         False
         """
         return Cone(direction=self.direction,
@@ -537,16 +539,43 @@ class Revolution(EuclideanSpace):
         expr = self.func(dot(p, self.direction), norm(cross(p, self.direction)))
         return AbstractSet((x,y,z), expr)
 
-
-def exterior(aset):
-    return Complement(WholeSpace(), aset, evaluate=True).interior
-
-def with_exterior(aset):
-    return (aset, exterior(aset))
+# topology of Euclidean Space
 
 class EuclideanTopology(NaturalTopology, metaclass=Singleton):
     def __new__(cls):
         return Set.__new__(cls)
 
     space = WholeSpace()
+
+T_RR3 = EuclideanTopology()
+
+
+# useful constructors
+
+def cube(size=[2,2,2]):
+    return Intersection(
+        Halfspace(direction=+i, offset=-size[0]/2, closed=False, normalization=False),
+        Halfspace(direction=+j, offset=-size[1]/2, closed=False, normalization=False),
+        Halfspace(direction=+k, offset=-size[2]/2, closed=False, normalization=False),
+        Halfspace(direction=-i, offset=-size[0]/2, closed=False, normalization=False),
+        Halfspace(direction=-j, offset=-size[1]/2, closed=False, normalization=False),
+        Halfspace(direction=-k, offset=-size[2]/2, closed=False, normalization=False))
+
+def sphere(radius=1):
+    return Sphere(radius=radius, center=[0,0,0], closed=False)
+
+def cylinder(radius=1, height=2):
+    return Intersection(
+        Cylinder(direction=i, radius=radius, center=[0,0,0], closed=False, normalization=False),
+        Halfspace(direction=+i, offset=-height/2, closed=False, normalization=False),
+        Halfspace(direction=-i, offset=-height/2, closed=False, normalization=False))
+
+def cone(radius=1, height=1):
+    return Intersection(
+        Cone(direction=i, slope=radius/height, center=[0,0,0], closed=False, normalization=False),
+        Halfspace(direction=+i, offset=0, closed=False, normalization=False),
+        Halfspace(direction=-i, offset=-height, closed=False, normalization=False))
+
+def with_exterior(aset):
+    return (aset, Exterior(aset))
 

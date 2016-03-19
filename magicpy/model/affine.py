@@ -11,16 +11,16 @@ from symplus.util import *
 from symplus.setplus import AbstractSet
 from symplus.funcplus import Functor, compose, inverse, Image
 from symplus.matplus import *
-from symplus.pathplus import TransformationPath
+from symplus.pathplus import PathMonoid, TransformationPath
 from magicpy.model.euclid import WholeSpace, Halfspace, Sphere, Cylinder, Cone, Revolution
 
+
+# algorithm for affine transformation
+# ref: https://github.com/matthew-brett/transforms3d
 
 eye3 = eye(3)
 zeros3 = ZeroMatrix(3,1)
 ones3 = Mat([1,1,1])
-
-
-# ref: https://github.com/matthew-brett/transforms3d
 
 def augment(m=eye3, v=zeros3):
     return m.row_join(v).col_join(eye(4)[-1,:])
@@ -201,7 +201,6 @@ def aff2trpzs(affmat):
     rquat = rmat2rquat(rpmat*parity)
     return tvec, rquat, parity, zfac, stri
 
-
 def fvec2fmat(fvec):
     """
     >>> from sympy import *
@@ -277,6 +276,8 @@ def zvec2zmat(zvec):
     return eye3 + nvec*nvec.T*(zfac-1)
 
 
+# general transformation
+
 class Transformation(Functor):
     def __new__(cls, variables, expr):
         if not is_Tuple(variables) or len(variables) != 3:
@@ -302,6 +303,45 @@ class Transformation(Functor):
 
     def call(self, *args):
         return self.as_lambda()(*args)
+
+    def transform(self, st):
+        """
+        >>> from sympy import *
+        >>> m = translation([2,3,5])
+        >>> m.transform((1,2,3))
+        (3, 5, 8)
+        >>> s = shearing(2*j,sqrt(3)*i)
+        >>> m.transform(s)
+        AffineTransformation(Matrix([
+        [        1, 0, 0],
+        [2*sqrt(3), 1, 0],
+        [        0, 0, 1]]), Matrix([
+        [         0],
+        [-4*sqrt(3)],
+        [         0]]))
+        >>> import symplus.setplus
+        >>> x, y, z = symbols('x,y,z')
+        >>> m.transform(AbstractSet((x,y,z), x**2+y**2+z**2<1))
+        Image(EuclideanTransformation(Matrix([
+        [2],
+        [3],
+        [5]]), Matrix([
+        [1],
+        [0],
+        [0],
+        [0]]), 1), AbstractSet((x, y, z), x**2 + y**2 + z**2 < 1))
+        """
+        if is_Tuple(st) and len(st) == 3:
+            return self(*st)
+
+        elif is_Function(st):
+            return compose(self, st, inverse(self))
+
+        elif isinstance(st, Set):
+            return Image(self, st)
+
+        else:
+            raise ValueError
 
     @property
     def free_symbols(self):
@@ -478,62 +518,7 @@ class EuclideanTransformation(AffineTransformation):
             return Revolution(func=func, direction=direction, center=center,
                               normalization=False)
 
-def translation(tvec):
-    return EuclideanTransformation(tvec=tvec)
-
-def rotation(th, axis):
-    return EuclideanTransformation(rquat=rquat(th, axis))
-
-def reflection(fvec):
-    t,r,p,z,s = aff2trpzs(augment(m=fvec2fmat(fvec)))
-    return EuclideanTransformation(rquat=r, parity=p)
-
-def shearing(mvec, nvec):
-    return AffineTransformation(matrix=mn2smat(mvec, nvec))
-
-def scaling(zvec):
-    return AffineTransformation(matrix=zvec2zmat(zvec))
-
-
-def transform(trans, st):
-    """
-    >>> from sympy import *
-    >>> m = translation([2,3,5])
-    >>> transform(m, (1,2,3))
-    (3, 5, 8)
-    >>> s = shearing(2*j,sqrt(3)*i)
-    >>> transform(m, s)
-    AffineTransformation(Matrix([
-    [        1, 0, 0],
-    [2*sqrt(3), 1, 0],
-    [        0, 0, 1]]), Matrix([
-    [         0],
-    [-4*sqrt(3)],
-    [         0]]))
-    >>> import symplus.setplus
-    >>> x, y, z = symbols('x,y,z')
-    >>> transform(m, AbstractSet((x,y,z), x**2+y**2+z**2<1))
-    Image(EuclideanTransformation(Matrix([
-    [2],
-    [3],
-    [5]]), Matrix([
-    [1],
-    [0],
-    [0],
-    [0]]), 1), AbstractSet((x, y, z), x**2 + y**2 + z**2 < 1))
-    """
-    if is_Tuple(st) and len(st) == 3:
-        return trans(*st)
-
-    elif is_Function(st):
-        return compose(trans, st, inverse(trans))
-
-    elif isinstance(st, Set):
-        return Image(trans, st)
-
-    else:
-        raise ValueError
-
+# transformation group
 
 class TransformationGroup(Set, metaclass=Singleton):
     def _contains(self, other):
@@ -573,6 +558,28 @@ SE3 = SpecialEuclideanGroup()
 SO3 = RotationGroup()
 T3 = TranslationGroup()
 
+SE3_star = PathMonoid(SE3)
+SO3_star = PathMonoid(SO3)
+T3_star = PathMonoid(T3)
+
+
+# useful constructor
+
+def translation(tvec):
+    return EuclideanTransformation(tvec=tvec)
+
+def rotation(th, axis):
+    return EuclideanTransformation(rquat=rquat(th, axis))
+
+def reflection(fvec):
+    t,r,p,z,s = aff2trpzs(augment(m=fvec2fmat(fvec)))
+    return EuclideanTransformation(rquat=r, parity=p)
+
+def scaling(zvec):
+    return AffineTransformation(matrix=zvec2zmat(zvec))
+
+def shearing(mvec, nvec):
+    return AffineTransformation(matrix=mn2smat(mvec, nvec))
 
 t = Symbol('t')
 
