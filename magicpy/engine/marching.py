@@ -42,29 +42,29 @@ class Voxels:
         return self.length
 
     @lru_cache(maxsize=128)
-    def _bits_of_set(self, aset):
-        if isinstance(aset, AbstractSet):
-            var = aset.variables
-            expr = aset.expr
+    def _bits_of_set(self, zet):
+        if isinstance(zet, AbstractSet):
+            var = zet.variables
+            expr = zet.expr
             func = lambdify(var, expr)
             if len(var) == 1:
                 return bitmap(func, self)
             else:
                 return bitmap(lambda v: func(*v), self)
         else:
-            return bitmap(aset.__contains__, self)
+            return bitmap(zet.__contains__, self)
 
-    def bits_of_set(self, aset):
-        if isinstance(aset, Intersection):
-            return reduce(and_, (self.bits_of_set(e) for e in aset.args))
-        elif isinstance(aset, Union):
-            return reduce(or_, (self.bits_of_set(e) for e in aset.args))
-        elif isinstance(aset, Complement):
-            return self.bits_of_set(aset.args[0]) &~self.bits_of_set(aset.args[1])
-        elif isinstance(aset, AbstractSet):
-            return self.bits_of_expr(aset.variables, aset.expr)
+    def bits_of_set(self, zet):
+        if isinstance(zet, Intersection):
+            return reduce(and_, (self.bits_of_set(e) for e in zet.args))
+        elif isinstance(zet, Union):
+            return reduce(or_, (self.bits_of_set(e) for e in zet.args))
+        elif isinstance(zet, Complement):
+            return self.bits_of_set(zet.args[0]) &~self.bits_of_set(zet.args[1])
+        elif isinstance(zet, AbstractSet):
+            return self.bits_of_expr(zet.variables, zet.expr)
         else:
-            return self._bits_of_set(as_abstract(aset))
+            return self._bits_of_set(as_abstract(zet))
 
     def bits_of_expr(self, var, expr):
         if isinstance(expr, And):
@@ -119,7 +119,7 @@ def Or_(*args):
     else:
         return false
 
-def marchingsetsimp(voxels, aset, ran=None):
+def marchingsetsimp(voxels, zet, ran=None):
     """
     >>> from sympy import *
     >>> from symplus.setplus import *
@@ -142,29 +142,29 @@ def marchingsetsimp(voxels, aset, ran=None):
     >>> marchingsetsimp(voxels, s346)
     EmptySet()
     """
-    if not isinstance(aset, Set):
-        raise TypeError('aset is not Set: %r' % aset)
+    if not isinstance(zet, Set):
+        raise TypeError('zet is not Set: %r' % zet)
 
-    if aset in (S.EmptySet, S.UniversalSet):
-        return aset
+    if zet in (S.EmptySet, S.UniversalSet):
+        return zet
 
-    if aset.has(Complement):
-        raise TypeError('aset is not nnf: %r' % aset)
+    if zet.has(Complement):
+        raise TypeError('zet is not nnf: %r' % zet)
 
     if ran is None:
         ran = voxels.ran
 
-    bits = voxels.bits_of_set(aset) & ran
+    bits = voxels.bits_of_set(zet) & ran
     if bits == 0:
         return S.EmptySet
     elif bits == ran:
         return S.UniversalSet
 
-    if isinstance(aset, Intersection):
+    if isinstance(zet, Intersection):
         # select important arguments
         args = []
-        for arg in aset.args:
-            args_ = set(aset.args) - {arg}
+        for arg in zet.args:
+            args_ = set(zet.args) - {arg}
             bits_ = voxels.bits_of_set(Intersection_(*args_)) & ran
             if bits_ != bits:
                 args.append(arg)
@@ -176,11 +176,11 @@ def marchingsetsimp(voxels, aset, ran=None):
             args[i] = marchingsetsimp(voxels, args[i], ran_)
         return Intersection_(*args)
 
-    elif isinstance(aset, Union):
+    elif isinstance(zet, Union):
         # select important arguments
         args = []
-        for arg in aset.args:
-            args_ = set(aset.args) - {arg}
+        for arg in zet.args:
+            args_ = set(zet.args) - {arg}
             bits_ = voxels.bits_of_set(Union_(*args_)) & ran
             if bits_ != bits:
                 args.append(arg)
@@ -193,7 +193,7 @@ def marchingsetsimp(voxels, aset, ran=None):
         return Union_(*args)
 
     else:
-        return aset
+        return zet
 
 def marchingfuncsimp(voxels, var, expr, ran=None):
     """
@@ -276,39 +276,39 @@ class MarchingCubesEngine(Engine):
     def __init__(self, voxels):
         self.voxels = voxels
 
-    def is_disjoint(self, aset1, aset2):
-        return self.voxels.bits_of_set(aset1) & self.voxels.bits_of_set(aset2) == 0
+    def is_disjoint(self, zet1, zet2):
+        return self.voxels.bits_of_set(zet1) & self.voxels.bits_of_set(zet2) == 0
 
-    def is_subset(self, aset1, aset2):
-        return self.voxels.bits_of_set(aset1) &~self.voxels.bits_of_set(aset2) == 0
+    def is_subset(self, zet1, zet2):
+        return self.voxels.bits_of_set(zet1) &~self.voxels.bits_of_set(zet2) == 0
 
-    def equal(self, aset1, aset2):
-        return self.voxels.bits_of_set(aset1) == self.voxels.bits_of_set(aset2)
+    def equal(self, zet1, zet2):
+        return self.voxels.bits_of_set(zet1) == self.voxels.bits_of_set(zet2)
 
-    def simp(self, aset):
-        aset = aset.doit()
-        if aset == S.EmptySet:
+    def simp(self, zet):
+        zet = zet.doit()
+        if zet == S.EmptySet:
             return None
 
-        elif isinstance(aset, AbstractSet):
-            expr = logicrelsimp(aset.expr)
-            expr = marchingfuncsimp(self.voxels, aset.variables, expr)
+        elif isinstance(zet, AbstractSet):
+            expr = logicrelsimp(zet.expr)
+            expr = marchingfuncsimp(self.voxels, zet.variables, expr)
             if expr == true:
                 return S.UniversalSet
             elif expr == false:
                 return None
             else:
-                return AbstractSet(aset.variables, expr)
+                return AbstractSet(zet.variables, expr)
 
-        elif isinstance(aset, Set):
-            aset = marchingsetsimp(self.voxels, aset)
-            if aset == S.EmptySet:
+        elif isinstance(zet, Set):
+            zet = marchingsetsimp(self.voxels, zet)
+            if zet == S.EmptySet:
                 return None
             else:
-                return aset
+                return zet
 
         else:
-            return aset
+            return zet
 
 def cube_engine(r=2, n=10):
     return MarchingCubesEngine(cube_voxels(r, n))

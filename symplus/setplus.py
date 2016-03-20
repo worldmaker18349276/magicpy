@@ -409,7 +409,7 @@ class AbstractSet(Set):
 
 
 class SetBuilder:
-    def __getitem__(self, asets):
+    def __getitem__(self, zets):
         """
         >>> from sympy import *
         >>> x, y = symbols('x y')
@@ -422,15 +422,15 @@ class SetBuilder:
         >>> St[S.Reals, x : x<1]
         Intersection((-oo, oo), AbstractSet(x, x < 1))
         """
-        asets = asets if isinstance(asets, tuple) else (asets,)
+        zets = zets if isinstance(zets, tuple) else (zets,)
         sts = []
-        for aset in asets:
-            if isinstance(aset, slice):
-                if aset.start is None or aset.stop is None:
+        for zet in zets:
+            if isinstance(zet, slice):
+                if zet.start is None or zet.stop is None:
                     raise SyntaxError
-                sts.append(AbstractSet(aset.start, aset.stop))
-            elif isinstance(aset, Set):
-                sts.append(aset)
+                sts.append(AbstractSet(zet.start, zet.stop))
+            elif isinstance(zet, Set):
+                sts.append(zet)
             else:
                 raise SyntaxError
 
@@ -441,7 +441,7 @@ class SetBuilder:
         else:
             return Intersection(*sts)
 
-    def __call__(self, *asets, evaluate=True):
+    def __call__(self, *zets, evaluate=True):
         """
         >>> from sympy import *
         >>> x, y = symbols('x y')
@@ -455,13 +455,13 @@ class SetBuilder:
         Intersection((-oo, oo), AbstractSet(x, x < 1))
         """
         sts = []
-        for aset in asets:
-            if isinstance(aset, dict):
-                if len(aset) != 1:
+        for zet in zets:
+            if isinstance(zet, dict):
+                if len(zet) != 1:
                     raise SyntaxError
-                sts.append(AbstractSet(*list(aset.items())[0]))
-            elif isinstance(aset, Set):
-                sts.append(aset)
+                sts.append(AbstractSet(*list(zet.items())[0]))
+            elif isinstance(zet, Set):
+                sts.append(zet)
             else:
                 raise SyntaxError
 
@@ -475,18 +475,18 @@ class SetBuilder:
 St = SetBuilder()
 
 
-def as_abstract(aset):
-    if hasattr(aset, 'as_abstract'):
-        return aset.as_abstract()
+def as_abstract(zet):
+    if hasattr(zet, 'as_abstract'):
+        return zet.as_abstract()
 
-    elif isinstance(aset, ProductSet):
-        args = tuple(as_abstract(arg) for arg in aset.args)
+    elif isinstance(zet, ProductSet):
+        args = tuple(as_abstract(arg) for arg in zet.args)
         if all(isinstance(arg, AbstractSet) for arg in args):
             return reduce(operator.mul, args)
         else:
-            return aset
+            return zet
     else:
         x = Symbol('x', real=True)
-        expr = aset.contains(x)
+        expr = zet.contains(x)
         return AbstractSet(x, expr)
 

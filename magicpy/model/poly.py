@@ -122,15 +122,15 @@ dodecahedron = Intersection(*[Halfspace(v, -ri_dodeca/ru_dodeca, True) for v in 
 #             return None
 #         return vertex
 
-# def is_convex_polyhedron(aset):
-#     if not isinstance(aset, AbstractSet):
+# def is_convex_polyhedron(zet):
+#     if not isinstance(zet, AbstractSet):
 #         return False
-#     if not isinstance(aset.expr, And):
+#     if not isinstance(zet.expr, And):
 #         return False
-#     if any(not isinstance(h, (Ge, Le)) for h in aset.expr.args):
+#     if any(not isinstance(h, (Ge, Le)) for h in zet.expr.args):
 #         return False
-#     planes = tuple(h.args[0]-h.args[1] for h in aset.expr.args)
-#     if any(not is_polynomial(p) or not Poly(p, aset.variables).is_linear for p in planes):
+#     planes = tuple(h.args[0]-h.args[1] for h in zet.expr.args)
+#     if any(not is_polynomial(p) or not Poly(p, zet.variables).is_linear for p in planes):
 #         return False
 
 # class ConvexPolyhedron:

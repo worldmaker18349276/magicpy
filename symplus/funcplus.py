@@ -142,9 +142,7 @@ class FunctionInverse(Functor):
             raise TypeError('function is not a FunctionClass, Functor or Lambda: %s'%function)
 
         if evaluate:
-            eval_func = FunctionInverse.eval(function)
-            if eval_func is not None:
-                return eval_func
+            return FunctionInverse.eval(function)
 
         return Functor.__new__(cls, function)
 
@@ -175,7 +173,7 @@ class FunctionInverse(Functor):
         elif isinstance(func, FunctionClass):
             return FunctionClass_inverse(func)
 
-        return None
+        return FunctionInverse(func, evaluate=False)
 
     @property
     def function(self):
@@ -289,76 +287,76 @@ class Image(Set):
     >>> Image(g, AbstractSet((x,y), x<y)).contains(g(1,2))
     False
     """
-    def __new__(cls, function, set, **kwargs):
+    def __new__(cls, function, zet, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         if not is_Function(function):
             raise TypeError('function is not a FunctionClass, Functor or Lambda: %s'%function)
-        if not isinstance(set, Set):
-            raise TypeError('set is not a Set: %s'%set)
+        if not isinstance(zet, Set):
+            raise TypeError('zet is not a Set: %s'%zet)
 
         if evaluate:
-            function, set = Image.reduce(function, set)
+            function, zet = Image.reduce(function, zet)
 
         if function == Id:
-            return set
+            return zet
         else:
-            return Set.__new__(cls, function, set, **kwargs)
+            return Set.__new__(cls, function, zet, **kwargs)
 
     @staticmethod
-    def reduce(func, set):
-        def pre_reduce(func, set):
-            while isinstance(set, Image):
-                func = FunctionCompose(func, set.function, evaluate=True)
-                set = set.set
+    def reduce(func, zet):
+        def pre_reduce(func, zet):
+            while isinstance(zet, Image):
+                func = FunctionCompose(func, zet.function, evaluate=True)
+                zet = zet.set
 
-            if isinstance(set, (Intersection, Union, Complement)):
-                args = [Image(func, arg, evaluate=True) for arg in set.args]
-                return Id, set.func(*args, evaluate=False)
+            if isinstance(zet, (Intersection, Union, Complement)):
+                args = [Image(func, arg, evaluate=True) for arg in zet.args]
+                return Id, zet.func(*args, evaluate=False)
 
-            if set == S.EmptySet:
-                return Id, set
+            if zet == S.EmptySet:
+                return Id, zet
 
-            return func, set
+            return func, zet
 
-        def post_reduce(func, set):
+        def post_reduce(func, zet):
             if isinstance(func, FunctionCompose):
                 funcs = func.functions
                 while True:
-                    func_, set_ = post_reduce(funcs[-1], set)
-                    if (func_, set_) == (funcs[-1], set):
+                    func_, zet_ = post_reduce(funcs[-1], zet)
+                    if (func_, zet_) == (funcs[-1], zet):
                         break
                     elif func_ != Id:
                         funcs = funcs[:-1] + (func_,)
-                        set = set_
+                        zet = zet_
                         break
                     else:
                         funcs = funcs[:-1]
-                        set = set_
-                return FunctionCompose(*funcs, evaluate=False), set
+                        zet = zet_
+                return FunctionCompose(*funcs, evaluate=False), zet
 
             elif hasattr(func, '_image'):
-                res = func._image(set)
+                res = func._image(zet)
                 if res is not None:
                     if isinstance(res, Image):
                         return res.function, res.set
                     else:
                         return Id, res
                 else:
-                    return func, set
+                    return func, zet
 
-            elif isinstance(set, AbstractSet):
+            elif isinstance(zet, AbstractSet):
                 inv_func = FunctionInverse(func, evaluate=True)
                 if not isinstance(inv_func, FunctionInverse):
                     lambda_inv_func = as_lambda(inv_func)
-                    return Id, AbstractSet(lambda_inv_func.variables, set.contains(lambda_inv_func.expr))
+                    return Id, AbstractSet(lambda_inv_func.variables, zet.contains(lambda_inv_func.expr))
                 else:
-                    return func, set
+                    return func, zet
 
             else:
-                return func, set
+                return func, zet
 
-        return post_reduce(*pre_reduce(func, set))
+        return post_reduce(*pre_reduce(func, zet))
 
     @property
     def function(self):

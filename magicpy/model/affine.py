@@ -444,7 +444,7 @@ class EuclideanTransformation(AffineTransformation):
         parity = trans.parity
         return EuclideanTransformation(tvec, rquat, parity)
 
-    def _image(self, set):
+    def _image(self, zet):
         """
         >>> from sympy import *
         >>> t = EuclideanTransformation([0,1,-1], rquat(pi/3, [1,0,1]))
@@ -477,44 +477,44 @@ class EuclideanTransformation(AffineTransformation):
         [ sqrt(6)/2 + 3/2],
         [-1/2 + sqrt(6)/4]]), False)
         """
-        if isinstance(set, WholeSpace):
-            return set
+        if isinstance(zet, WholeSpace):
+            return zet
 
-        elif isinstance(set, Halfspace):
-            direction = simplify(qrotate(self.rquat, self.parity*set.direction))
-            offset = simplify(set.offset + dot(self.tvec, direction))
-            closed = set.closed
+        elif isinstance(zet, Halfspace):
+            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
+            offset = simplify(zet.offset + dot(self.tvec, direction))
+            closed = zet.closed
             return Halfspace(direction=direction, offset=offset, closed=closed,
                              normalization=False)
 
-        elif isinstance(set, Sphere):
-            radius = set.radius
-            center = self.call(*set.center)
-            closed = set.closed
+        elif isinstance(zet, Sphere):
+            radius = zet.radius
+            center = self.call(*zet.center)
+            closed = zet.closed
             return Sphere(radius=radius, center=center, closed=closed,
                           normalization=False)
 
-        elif isinstance(set, Cylinder):
-            direction = simplify(qrotate(self.rquat, self.parity*set.direction))
-            radius = set.radius
-            center = simplify(qrotate(self.rquat, self.parity*set.center))
+        elif isinstance(zet, Cylinder):
+            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
+            radius = zet.radius
+            center = simplify(qrotate(self.rquat, self.parity*zet.center))
             center = simplify(center + self.tvec - project(self.tvec, direction))
-            closed = set.closed
+            closed = zet.closed
             return Cylinder(direction=direction, radius=radius, center=center, closed=closed,
                             normalization=False)
 
-        elif isinstance(set, Cone):
-            direction = simplify(qrotate(self.rquat, self.parity*set.direction))
-            slope = set.slope
-            center = self.call(*set.center)
-            closed = set.closed
+        elif isinstance(zet, Cone):
+            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
+            slope = zet.slope
+            center = self.call(*zet.center)
+            closed = zet.closed
             return Cone(direction=direction, slope=slope, center=center, closed=closed,
                         normalization=False)
 
-        elif isinstance(set, Revolution):
-            func = set.func
-            direction = simplify(qrotate(self.rquat, self.parity*set.direction))
-            center = self.call(*set.center)
+        elif isinstance(zet, Revolution):
+            func = zet.func
+            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
+            center = self.call(*zet.center)
             return Revolution(func=func, direction=direction, center=center,
                               normalization=False)
 

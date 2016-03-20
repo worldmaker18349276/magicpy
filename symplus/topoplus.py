@@ -5,7 +5,7 @@ from sympy.sets import Set, Interval, Intersection, Union, Complement, ProductSe
 from symplus.setplus import AbstractSet
 
 
-def is_open(aset):
+def is_open(zet):
     """
     >>> from sympy import *
     >>> from symplus.setplus import *
@@ -25,39 +25,39 @@ def is_open(aset):
     >>> is_open(AbstractSet((x,y), x<=y))
     False
     """
-    if isinstance(aset, Interval):
-        return (aset.left_open | (aset.start==-oo)) & (aset.right_open | (aset.end==oo))
+    if isinstance(zet, Interval):
+        return (zet.left_open | (zet.start==-oo)) & (zet.right_open | (zet.end==oo))
 
-    elif isinstance(aset, AbstractSet):
-        if isinstance(aset.expr, (Or, And)):
-            return is_open(aset.expand())
-        elif isinstance(aset.expr, (Ne, Gt, Lt)):
+    elif isinstance(zet, AbstractSet):
+        if isinstance(zet.expr, (Or, And)):
+            return is_open(zet.expand())
+        elif isinstance(zet.expr, (Ne, Gt, Lt)):
             return true
-        elif isinstance(aset.expr, (Eq, Ge, Le)):
+        elif isinstance(zet.expr, (Eq, Ge, Le)):
             return false
 
-    elif isinstance(aset, (Intersection, Union)):
+    elif isinstance(zet, (Intersection, Union)):
 
-        if And(*map(is_open, aset.args)) == true:
+        if And(*map(is_open, zet.args)) == true:
             return true
 
-    elif isinstance(aset, Complement):
-        if is_open(aset.args[0]) & is_closed(aset.args[1]) == true:
+    elif isinstance(zet, Complement):
+        if is_open(zet.args[0]) & is_closed(zet.args[1]) == true:
             return true
 
-    elif isinstance(aset, ProductSet):
-        return And(*map(is_open, aset.args))
+    elif isinstance(zet, ProductSet):
+        return And(*map(is_open, zet.args))
 
     try:
-        res = aset.is_open
+        res = zet.is_open
         if res in (true, false):
             return res
         else:
-            return Eq(Intersection(aset, aset.boundary), S.EmptySet)
+            return Eq(Intersection(zet, zet.boundary), S.EmptySet)
     except NotImplementedError:
         raise NotImplementedError
 
-def is_closed(aset):
+def is_closed(zet):
     """
     >>> from sympy import *
     >>> from symplus.setplus import *
@@ -77,34 +77,34 @@ def is_closed(aset):
     >>> is_closed(AbstractSet((x,y), x<=y))
     True
     """
-    if isinstance(aset, Interval):
-        return ((~aset.left_open) | (aset.start==-oo)) & ((~aset.right_open) | (aset.end==oo))
+    if isinstance(zet, Interval):
+        return ((~zet.left_open) | (zet.start==-oo)) & ((~zet.right_open) | (zet.end==oo))
 
-    elif isinstance(aset, AbstractSet):
-        if isinstance(aset.expr, (Or, And)):
-            return is_closed(aset.expand())
-        elif isinstance(aset.expr, (Eq, Ge, Le)):
+    elif isinstance(zet, AbstractSet):
+        if isinstance(zet.expr, (Or, And)):
+            return is_closed(zet.expand())
+        elif isinstance(zet.expr, (Eq, Ge, Le)):
             return true
-        elif isinstance(aset.expr, (Ne, Gt, Lt)):
+        elif isinstance(zet.expr, (Ne, Gt, Lt)):
             return false
 
-    elif isinstance(aset, (Intersection, Union)):
-        if And(*map(is_closed, aset.args)) == true:
+    elif isinstance(zet, (Intersection, Union)):
+        if And(*map(is_closed, zet.args)) == true:
             return true
 
-    elif isinstance(aset, Complement):
-        if is_closed(aset.args[0]) & is_open(aset.args[1]) == true:
+    elif isinstance(zet, Complement):
+        if is_closed(zet.args[0]) & is_open(zet.args[1]) == true:
             return true
 
-    elif isinstance(aset, ProductSet):
-        return And(*map(is_closed, aset.args))
+    elif isinstance(zet, ProductSet):
+        return And(*map(is_closed, zet.args))
 
     try:
-        res = aset.is_closed
+        res = zet.is_closed
         if res in (true, false):
             return res
         else:
-            return Eq(Intersection(aset, aset.boundary), aset.boundary)
+            return Eq(Intersection(zet, zet.boundary), zet.boundary)
     except NotImplementedError:
         raise NotImplementedError
 
@@ -112,11 +112,11 @@ class Interior(Set):
     def __new__(cls, set, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
         if evaluate:
-            return Interior.reduce(set)
+            return Interior.eval(set)
         return Set.__new__(cls, set, **kwargs)
 
     @staticmethod
-    def reduce(aset):
+    def eval(zet):
         """
         >>> from sympy import *
         >>> from symplus.setplus import *
@@ -136,41 +136,41 @@ class Interior(Set):
         >>> Interior(AbstractSet((x,y), x<=y))
         AbstractSet((x, y), x < y)
         """
-        if isinstance(aset, Interior):
-            return aset
+        if isinstance(zet, Interior):
+            return zet
 
-        elif isinstance(aset, Interval):
-            return Interval(aset.start, aset.end, left_open=True, right_open=True)
+        elif isinstance(zet, Interval):
+            return Interval(zet.start, zet.end, left_open=True, right_open=True)
 
-        elif isinstance(aset, AbstractSet):
-            if isinstance(aset.expr, (Or, And)):
-                return Interior.reduce(aset.expand())
-            elif isinstance(aset.expr, Ne):
-                return aset
-            elif isinstance(aset.expr, Eq):
-                return AbstractSet(aset.variables, false)
-            elif isinstance(aset.expr, (Gt, Ge)):
-                return AbstractSet(aset.variables, Gt(*aset.expr.args))
-            elif isinstance(aset.expr, (Lt, Le)):
-                return AbstractSet(aset.variables, Lt(*aset.expr.args))
+        elif isinstance(zet, AbstractSet):
+            if isinstance(zet.expr, (Or, And)):
+                return Interior.eval(zet.expand())
+            elif isinstance(zet.expr, Ne):
+                return zet
+            elif isinstance(zet.expr, Eq):
+                return AbstractSet(zet.variables, false)
+            elif isinstance(zet.expr, (Gt, Ge)):
+                return AbstractSet(zet.variables, Gt(*zet.expr.args))
+            elif isinstance(zet.expr, (Lt, Le)):
+                return AbstractSet(zet.variables, Lt(*zet.expr.args))
 
-        elif isinstance(aset, Intersection):
-            return aset.func(*map(Interior.reduce, aset.args))
+        elif isinstance(zet, Intersection):
+            return zet.func(*map(Interior.eval, zet.args))
 
-        elif isinstance(aset, Complement):
-            return aset.func(Interior.reduce(aset.args[0]), Closure.reduce(aset.args[1]))
+        elif isinstance(zet, Complement):
+            return zet.func(Interior.eval(zet.args[0]), Closure.eval(zet.args[1]))
 
-        elif isinstance(aset, ProductSet):
-            return aset.func(*map(Interior.reduce, aset.args))
+        elif isinstance(zet, ProductSet):
+            return zet.func(*map(Interior.eval, zet.args))
 
         try:
-            res = aset.interior
+            res = zet.interior
             if res is not None:
                 return res
             else:
-                return aset - aset.boundary
+                return zet - zet.boundary
         except NotImplementedError:
-            return Interior(aset, evaluate=False)
+            return Interior(zet, evaluate=False)
 
     @property
     def set(self):
@@ -191,11 +191,11 @@ class Closure(Set):
     def __new__(cls, set, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
         if evaluate:
-            return Closure.reduce(set)
+            return Closure.eval(set)
         return Set.__new__(cls, set, **kwargs)
 
     @staticmethod
-    def reduce(aset):
+    def eval(zet):
         """
         >>> from sympy import *
         >>> from symplus.setplus import *
@@ -215,36 +215,36 @@ class Closure(Set):
         >>> Closure(AbstractSet((x,y), x<=y))
         AbstractSet((x, y), x <= y)
         """
-        if isinstance(aset, Closure):
-            return aset
+        if isinstance(zet, Closure):
+            return zet
 
-        elif isinstance(aset, Interval):
-            return Interval(aset.start, aset.end, left_open=False, right_open=False)
+        elif isinstance(zet, Interval):
+            return Interval(zet.start, zet.end, left_open=False, right_open=False)
 
-        elif isinstance(aset, AbstractSet):
-            if isinstance(aset.expr, (Or, And)):
-                return Closure.reduce(aset.expand())
-            elif isinstance(aset.expr, Eq):
-                return aset
-            elif isinstance(aset.expr, Ne):
-                return AbstractSet(aset.variables, true)
-            elif isinstance(aset.expr, (Ge, Gt)):
-                return AbstractSet(aset.variables, Ge(*aset.expr.args))
-            elif isinstance(aset.expr, (Le, Lt)):
-                return AbstractSet(aset.variables, Le(*aset.expr.args))
+        elif isinstance(zet, AbstractSet):
+            if isinstance(zet.expr, (Or, And)):
+                return Closure.eval(zet.expand())
+            elif isinstance(zet.expr, Eq):
+                return zet
+            elif isinstance(zet.expr, Ne):
+                return AbstractSet(zet.variables, true)
+            elif isinstance(zet.expr, (Ge, Gt)):
+                return AbstractSet(zet.variables, Ge(*zet.expr.args))
+            elif isinstance(zet.expr, (Le, Lt)):
+                return AbstractSet(zet.variables, Le(*zet.expr.args))
 
-        elif isinstance(aset, Union):
-            return aset.func(*map(Closure.reduce, aset.args))
+        elif isinstance(zet, Union):
+            return zet.func(*map(Closure.eval, zet.args))
 
-        elif isinstance(aset, ProductSet):
-            return aset.func(*map(Closure.reduce, aset.args))
+        elif isinstance(zet, ProductSet):
+            return zet.func(*map(Closure.eval, zet.args))
 
         try:
-            res = aset.closure
+            res = zet.closure
             if res is not None:
                 return res
             else:
-                return aset + aset.boundary
+                return zet + zet.boundary
         except NotImplementedError:
             return None
 
@@ -263,11 +263,11 @@ class Closure(Set):
     def _absolute_complement(self):
         return Interior(AbsoluteComplement(self.set))
 
-def AbsoluteComplement(aset):
-    return aset._absolute_complement()
+def AbsoluteComplement(zet):
+    return zet._absolute_complement()
 
-def Exterior(aset):
-    return Interior(AbsoluteComplement(aset))
+def Exterior(zet):
+    return Interior(AbsoluteComplement(zet))
 
 # topology(open set definition)
 
@@ -279,32 +279,32 @@ class Topology(Set):
     def contains(self, other):
         return is_open(other)
 
-    def boundary_of(self, aset):
+    def boundary_of(self, zet):
         raise NotImplementedError
 
-    def closure_of(self, aset):
-        return aset + self.boundary_of(aset)
+    def closure_of(self, zet):
+        return zet + self.boundary_of(zet)
 
-    def interior_of(self, aset):
-        return aset - self.boundary_of(aset)
+    def interior_of(self, zet):
+        return zet - self.boundary_of(zet)
 
-    def complement_of(self, aset):
-        return self.space - aset
+    def complement_of(self, zet):
+        return self.space - zet
 
-    def exterior_of(self, aset):
-        return self.interior_of(self.complement_of(aset))
+    def exterior_of(self, zet):
+        return self.interior_of(self.complement_of(zet))
 
-    def is_open_set(self, aset):
-        return Eq(aset, self.interior_of(aset))
+    def is_open_set(self, zet):
+        return Eq(zet, self.interior_of(zet))
 
-    def is_closed_set(self, aset):
-        return Eq(aset, self.closure_of(aset))
+    def is_closed_set(self, zet):
+        return Eq(zet, self.closure_of(zet))
 
-    def is_regular_open_set(self, aset):
-        return Eq(aset, self.interior_of(self.closure_of(aset)))
+    def is_regular_open_set(self, zet):
+        return Eq(zet, self.interior_of(self.closure_of(zet)))
 
-    def is_regular_open_set(self, aset):
-        return Eq(aset, self.closure_of(self.interior_of(aset)))
+    def is_regular_open_set(self, zet):
+        return Eq(zet, self.closure_of(self.interior_of(zet)))
 
 class DiscreteTopology(Topology):
     """
@@ -332,25 +332,25 @@ class DiscreteTopology(Topology):
     def contains(self, other):
         return self.space.is_superset(other)
 
-    def boundary_of(self, aset):
+    def boundary_of(self, zet):
         return S.EmptySet
 
-    def closure_of(self, aset):
-        return aset
+    def closure_of(self, zet):
+        return zet
 
-    def interior_of(self, aset):
-        return aset
+    def interior_of(self, zet):
+        return zet
 
-    def is_open_set(self, aset):
+    def is_open_set(self, zet):
         return true
 
-    def is_closed_set(self, aset):
+    def is_closed_set(self, zet):
         return true
 
-    def is_regular_open_set(self, aset):
+    def is_regular_open_set(self, zet):
         return true
 
-    def is_regular_open_set(self, aset):
+    def is_regular_open_set(self, zet):
         return true
 
 class NaturalTopology(Topology):
@@ -379,20 +379,20 @@ class NaturalTopology(Topology):
     def contains(self, other):
         return self.space.is_superset(other) & is_open(other)
 
-    def boundary_of(self, aset):
-        raise aset.boundary
+    def boundary_of(self, zet):
+        raise zet.boundary
 
-    def closure_of(self, aset):
-        return Closure(aset)
+    def closure_of(self, zet):
+        return Closure(zet)
 
-    def interior_of(self, aset):
-        return Interior(aset)
+    def interior_of(self, zet):
+        return Interior(zet)
 
-    def is_open_set(self, aset):
-        return is_open(aset)
+    def is_open_set(self, zet):
+        return is_open(zet)
 
-    def is_closed_set(self, aset):
-        return is_closed(aset)
+    def is_closed_set(self, zet):
+        return is_closed(zet)
 
 
 Reals = AbstractSet(symbols('x', real=True), true)

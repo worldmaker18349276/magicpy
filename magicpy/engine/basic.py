@@ -3,24 +3,24 @@ from magicpy.model.affine import transform
 
 
 class Engine:
-    def intersection(self, *asets):
-        return Intersection(*asets)
+    def intersection(self, *zets):
+        return Intersection(*zets)
 
-    def union(self, *asets):
-        return Union(*asets)
+    def union(self, *zets):
+        return Union(*zets)
 
-    def transform(self, aset, trans):
-        return transform(trans, aset)
+    def transform(self, zet, trans):
+        return transform(trans, zet)
 
-    def simp(self, aset):
-        return aset
+    def simp(self, zet):
+        return zet
 
-    def is_disjoint(self, aset1, aset2):
+    def is_disjoint(self, zet1, zet2):
         raise NotImplementedError
 
-    def is_subset(self, aset1, aset2):
+    def is_subset(self, zet1, zet2):
         raise NotImplementedError
 
-    def equal(self, aset1, aset2):
+    def equal(self, zet1, zet2):
         raise NotImplementedError
 

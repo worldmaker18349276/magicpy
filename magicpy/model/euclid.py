@@ -576,6 +576,6 @@ def cone(radius=1, height=1):
         Halfspace(direction=+i, offset=0, closed=False, normalization=False),
         Halfspace(direction=-i, offset=-height, closed=False, normalization=False))
 
-def with_exterior(aset):
-    return (aset, Exterior(aset))
+def with_exterior(zet):
+    return (zet, Exterior(zet))
 

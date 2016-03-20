@@ -1,4 +1,5 @@
 from sympy.core import sympify
+from sympy.core.evaluate import global_evaluate
 from sympy.logic import true, false
 from sympy.logic.boolalg import BooleanFunction
 from sympy.logic.inference import valid, satisfiable
@@ -7,6 +8,7 @@ from symplus.util import *
 
 class Forall(BooleanFunction):
     def __new__(cls, variable, expr, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
         variable = repack_if_can(sympify(unpack_if_can(variable)))
 
         for v in pack_if_not(variable):
@@ -15,13 +17,15 @@ class Forall(BooleanFunction):
         if not is_Boolean(expr):
             raise TypeError('expression is not boolean or relational: %r' % expr)
 
+        if evaluate:
+            return Forall.eval(variable, expr)
         return BooleanFunction.__new__(cls, variable, expr, **kwargs)
 
-    @classmethod
-    def eval(cls, var, expr):
+    @staticmethod
+    def eval(variable, expr):
         if valid(expr) == True:
             return true
-        return None
+        return Forall(variable, expr, evaluate=False)
 
     @property
     def variable(self):
@@ -44,6 +48,7 @@ class Forall(BooleanFunction):
 
 class Exist(BooleanFunction):
     def __new__(cls, variable, expr, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
         variable = repack_if_can(sympify(unpack_if_can(variable)))
 
         for v in pack_if_not(variable):
@@ -52,13 +57,15 @@ class Exist(BooleanFunction):
         if not is_Boolean(expr):
             raise TypeError('expression is not boolean or relational: %r' % expr)
 
+        if evaluate:
+            return Exist.eval(variable, expr)
         return BooleanFunction.__new__(cls, variable, expr, **kwargs)
 
-    @classmethod
-    def eval(cls, variables, expr):
+    @staticmethod
+    def eval(variable, expr):
         if satisfiable(expr) == False:
             return false
-        return None
+        return Exist(variable, expr, evaluate=False)
 
     @property
     def variable(self):

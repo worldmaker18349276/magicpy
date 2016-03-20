@@ -25,7 +25,7 @@ class Functor(Basic):
     # def _inv(self):
     #     return None
 
-    # def _image(self, set):
+    # def _image(self, zet):
     #     return None
 
     # def as_lambda(self):
