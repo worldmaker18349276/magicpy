@@ -1,6 +1,6 @@
 from functools import reduce
 from sympy.core import (S, FunctionClass, Function, Expr, Basic,
-                        Lambda, Tuple, symbols, cacheit, sympify)
+                        Lambda, Tuple, symbols, Dummy, cacheit, sympify)
 from sympy.core.evaluate import global_evaluate
 from sympy.solvers import solve
 from sympy.functions import (Id, exp, log, cos, acos, sin, asin, tan, atan,
@@ -10,29 +10,25 @@ from symplus.util import *
 from symplus.setplus import AbstractSet
 
 
-inv_table = {
-    exp: log,
+FunctionClass_inverse_table = {
     cos: acos,
     sin: asin,
-    tan: atan,
-    cot: acot,
-    sec: asec,
-    csc: acsc,
-    log: exp,
-    acos: cos,
-    asin: sin,
-    atan: tan,
-    acot: cot,
-    asec: sec,
-    acsc: csc,
 }
+
+dummy = Dummy()
+
+def FunctionClass_inverse(func):
+    if func in FunctionClass_inverse_table:
+        return FunctionClass_inverse_table[func]
+    else:
+        return func(dummy).inverse()
 
 def is_inverse_of(func1, func2):
     if isinstance(func1, FunctionInverse) and func1.function == func2:
         return True
     elif isinstance(func2, FunctionInverse) and func2.function == func1:
         return True
-    elif func1 in inv_table and inv_table[func1] == func2:
+    elif isinstance(func1, FunctionClass) and FunctionClass_inverse(func1) == func2:
         return True
     else:
         return False
@@ -176,8 +172,8 @@ class FunctionInverse(Functor):
             if res is not None:
                 return Lambda(var, res)
 
-        elif func in inv_table:
-            return inv_table[func]
+        elif isinstance(func, FunctionClass):
+            return FunctionClass_inverse(func)
 
         return None
 
@@ -271,8 +267,10 @@ class Image(Set):
     >>> Image(cos, S.EmptySet)
     EmptySet()
     >>> x, y = symbols('x y')
+    >>> Image(cos, AbstractSet(x, x > 0))
+    AbstractSet(a0, acos(a0) > 0)
     >>> Image(cos, Intersection(AbstractSet(x, x > 0), AbstractSet(x, x < 0), evaluate=False))
-    Intersection(Image(cos, AbstractSet(x, x > 0)), Image(cos, AbstractSet(x, x < 0)))
+    Intersection(AbstractSet(a0, acos(a0) > 0), AbstractSet(a0, acos(a0) < 0))
     >>> Image(Lambda(x, x+1), Interval(-1, 1)).contains(1)
     True
     >>> Image(Lambda(x, sin(x)+x), Interval(-1, 1)).contains(1)
@@ -339,15 +337,26 @@ class Image(Set):
                         set = set_
                 return FunctionCompose(*funcs, evaluate=False), set
 
-            if hasattr(func, '_image'):
+            elif hasattr(func, '_image'):
                 res = func._image(set)
                 if res is not None:
                     if isinstance(res, Image):
                         return res.function, res.set
                     else:
                         return Id, res
+                else:
+                    return func, set
 
-            return func, set
+            elif isinstance(set, AbstractSet):
+                inv_func = FunctionInverse(func, evaluate=True)
+                if not isinstance(inv_func, FunctionInverse):
+                    lambda_inv_func = as_lambda(inv_func)
+                    return Id, AbstractSet(lambda_inv_func.variables, set.contains(lambda_inv_func.expr))
+                else:
+                    return func, set
+
+            else:
+                return func, set
 
         return post_reduce(*pre_reduce(func, set))
 
