@@ -80,12 +80,12 @@ class PhysicalPuzzle(frozenset):
             cutted.add(self.engine.intersection(*sub))
         return type(self)(cutted)
 
-    def combine(self, region=None):
+    def fuse(self, region=None):
         if region is None:
             return type(self)({self.engine.union(*self)})
         else:
             selected, others = self.select_by(region)
-            return type(self)(others | selected.combine())
+            return type(self)(others | selected.fuse())
 
     def simp(self):
         """
