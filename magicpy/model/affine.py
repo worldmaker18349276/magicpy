@@ -12,7 +12,7 @@ from symplus.setplus import AbstractSet
 from symplus.funcplus import Functor, compose, inverse, Image
 from symplus.matplus import *
 from symplus.pathplus import PathMonoid, TransformationPath
-from magicpy.model.euclid import WholeSpace, Halfspace, Sphere, Cylinder, Cone, Revolution
+from magicpy.model.euclid import WholeSpace, Halfspace, Sphere, InfiniteCylinder, InfiniteCone, Revolution
 
 
 # algorithm for affine transformation
@@ -460,16 +460,16 @@ class EuclideanTransformation(AffineTransformation):
         [          7/4],
         [sqrt(6)/4 + 1],
         [          1/4]]), False)
-        >>> t._image(Cylinder([0,1,4], 3, [1,1,0]))
-        Cylinder(Matrix([
+        >>> t._image(InfiniteCylinder([0,1,4], 3, [1,1,0]))
+        InfiniteCylinder(Matrix([
         [ -sqrt(102)/68 + sqrt(17)/17],
         [ -sqrt(102)/17 + sqrt(17)/34],
         [sqrt(102)/68 + 3*sqrt(17)/17]]), 3, Matrix([
         [-27*sqrt(6)/136 + 99/136],
         [  27*sqrt(6)/136 + 75/68],
         [   -3/8 + 67*sqrt(6)/136]]), False)
-        >>> t._image(Cone([2,3,1], 1, [2,1,0]))
-        Cone(Matrix([
+        >>> t._image(InfiniteCone([2,3,1], 1, [2,1,0]))
+        InfiniteCone(Matrix([
         [   -sqrt(14)/8 + 3*sqrt(21)/28],
         [  -3*sqrt(14)/28 - sqrt(21)/28],
         [-3*sqrt(21)/28 - 5*sqrt(14)/56]]), 1, Matrix([
@@ -494,21 +494,21 @@ class EuclideanTransformation(AffineTransformation):
             return Sphere(radius=radius, center=center, closed=closed,
                           normalization=False)
 
-        elif isinstance(zet, Cylinder):
+        elif isinstance(zet, InfiniteCylinder):
             direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
             radius = zet.radius
             center = simplify(qrotate(self.rquat, self.parity*zet.center))
             center = simplify(center + self.tvec - project(self.tvec, direction))
             closed = zet.closed
-            return Cylinder(direction=direction, radius=radius, center=center, closed=closed,
+            return InfiniteCylinder(direction=direction, radius=radius, center=center, closed=closed,
                             normalization=False)
 
-        elif isinstance(zet, Cone):
+        elif isinstance(zet, InfiniteCone):
             direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
             slope = zet.slope
             center = self.call(*zet.center)
             closed = zet.closed
-            return Cone(direction=direction, slope=slope, center=center, closed=closed,
+            return InfiniteCone(direction=direction, slope=slope, center=center, closed=closed,
                         normalization=False)
 
         elif isinstance(zet, Revolution):

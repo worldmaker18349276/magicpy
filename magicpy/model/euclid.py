@@ -261,18 +261,18 @@ class Sphere(EuclideanSpace):
     def is_closed(self):
         return self.closed
 
-class Cylinder(EuclideanSpace):
+class InfiniteCylinder(EuclideanSpace):
     def __new__(cls, direction=[1,0,0], radius=1, center=[0,0,0], closed=False, normalization=True):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
-        >>> mprint(Cylinder())
-        Cylinder([1, 0, 0]', 1, [0, 0, 0]', False)
-        >>> mprint(Cylinder([0,1,1], 2))
-        Cylinder([0, sqrt(2)/2, sqrt(2)/2]', 2, [0, 0, 0]', False)
-        >>> Cylinder().contains((1,1,1))
+        >>> mprint(InfiniteCylinder())
+        InfiniteCylinder([1, 0, 0]', 1, [0, 0, 0]', False)
+        >>> mprint(InfiniteCylinder([0,1,1], 2))
+        InfiniteCylinder([0, sqrt(2)/2, sqrt(2)/2]', 2, [0, 0, 0]', False)
+        >>> InfiniteCylinder().contains((1,1,1))
         False
-        >>> Cylinder([0,1,1], 2).contains((1,1,1))
+        >>> InfiniteCylinder([0,1,1], 2).contains((1,1,1))
         True
         """
         direction = Mat(direction)
@@ -323,9 +323,9 @@ class Cylinder(EuclideanSpace):
     def as_abstract(self):
         """
         >>> from sympy import *
-        >>> Cylinder().as_abstract()
+        >>> InfiniteCylinder().as_abstract()
         AbstractSet((x, y, z), y**2 + z**2 < 1)
-        >>> Cylinder([0,1,1], 2).as_abstract()
+        >>> InfiniteCylinder([0,1,1], 2).as_abstract()
         AbstractSet((x, y, z), x**2 + (sqrt(2)*y/2 - sqrt(2)*z/2)**2 < 4)
         """
         p = r - self.center
@@ -345,30 +345,30 @@ class Cylinder(EuclideanSpace):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
-        >>> mprint(AbsoluteComplement(Cylinder()))
-        Cylinder([1, 0, 0]', -1, [0, 0, 0]', True)
-        >>> mprint(AbsoluteComplement(Cylinder([0,1,1], 2)))
-        Cylinder([0, sqrt(2)/2, sqrt(2)/2]', -2, [0, 0, 0]', True)
-        >>> AbsoluteComplement(Cylinder()).contains((1,1,1))
+        >>> mprint(AbsoluteComplement(InfiniteCylinder()))
+        InfiniteCylinder([1, 0, 0]', -1, [0, 0, 0]', True)
+        >>> mprint(AbsoluteComplement(InfiniteCylinder([0,1,1], 2)))
+        InfiniteCylinder([0, sqrt(2)/2, sqrt(2)/2]', -2, [0, 0, 0]', True)
+        >>> AbsoluteComplement(InfiniteCylinder()).contains((1,1,1))
         True
-        >>> AbsoluteComplement(Cylinder([0,1,1], 2)).contains((1,1,1))
+        >>> AbsoluteComplement(InfiniteCylinder([0,1,1], 2)).contains((1,1,1))
         False
         """
-        return Cylinder(direction=self.direction,
+        return InfiniteCylinder(direction=self.direction,
                         radius=-self.radius,
                         center=self.center,
                         closed=~self.closed)
 
     @property
     def interior(self):
-        return Cylinder(direction=self.direction,
+        return InfiniteCylinder(direction=self.direction,
                         radius=self.radius,
                         center=self.center,
                         closed=false)
 
     @property
     def closure(self):
-        return Cylinder(direction=self.direction,
+        return InfiniteCylinder(direction=self.direction,
                         radius=self.radius,
                         center=self.center,
                         closed=true)
@@ -381,18 +381,18 @@ class Cylinder(EuclideanSpace):
     def is_closed(self):
         return self.closed
 
-class Cone(EuclideanSpace):
+class InfiniteCone(EuclideanSpace):
     def __new__(cls, direction=[1,0,0], slope=1, center=[0,0,0], closed=False, normalization=True):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
-        >>> mprint(Cone())
-        Cone([1, 0, 0]', 1, [0, 0, 0]', False)
-        >>> mprint(Cone([3,4,0], 5))
-        Cone([3/5, 4/5, 0]', 5, [0, 0, 0]', False)
-        >>> Cone().contains((-1,0,1))
+        >>> mprint(InfiniteCone())
+        InfiniteCone([1, 0, 0]', 1, [0, 0, 0]', False)
+        >>> mprint(InfiniteCone([3,4,0], 5))
+        InfiniteCone([3/5, 4/5, 0]', 5, [0, 0, 0]', False)
+        >>> InfiniteCone().contains((-1,0,1))
         False
-        >>> Cone([3,4,0], 5).contains((-1,0,1))
+        >>> InfiniteCone([3,4,0], 5).contains((-1,0,1))
         True
         """
         direction = Mat(direction)
@@ -441,9 +441,9 @@ class Cone(EuclideanSpace):
     def as_abstract(self):
         """
         >>> from sympy import *
-        >>> Cone().as_abstract()
+        >>> InfiniteCone().as_abstract()
         AbstractSet((x, y, z), y**2 + z**2 < x**2)
-        >>> Cone([3,4,0], 5).as_abstract()
+        >>> InfiniteCone([3,4,0], 5).as_abstract()
         AbstractSet((x, y, z), z**2 + (4*x/5 - 3*y/5)**2 < (3*x + 4*y)**2)
         """
         p = r - self.center
@@ -463,30 +463,30 @@ class Cone(EuclideanSpace):
         """
         >>> from sympy import *
         >>> from symplus.strplus import mprint
-        >>> mprint(AbsoluteComplement(Cone()))
-        Cone([1, 0, 0]', -1, [0, 0, 0]', True)
-        >>> mprint(AbsoluteComplement(Cone([3,4,0], 5)))
-        Cone([3/5, 4/5, 0]', -5, [0, 0, 0]', True)
-        >>> AbsoluteComplement(Cone()).contains((-1,0,1))
+        >>> mprint(AbsoluteComplement(InfiniteCone()))
+        InfiniteCone([1, 0, 0]', -1, [0, 0, 0]', True)
+        >>> mprint(AbsoluteComplement(InfiniteCone([3,4,0], 5)))
+        InfiniteCone([3/5, 4/5, 0]', -5, [0, 0, 0]', True)
+        >>> AbsoluteComplement(InfiniteCone()).contains((-1,0,1))
         True
-        >>> AbsoluteComplement(Cone([3,4,0], 5)).contains((-1,0,1))
+        >>> AbsoluteComplement(InfiniteCone([3,4,0], 5)).contains((-1,0,1))
         False
         """
-        return Cone(direction=self.direction,
+        return InfiniteCone(direction=self.direction,
                     slope=-self.slope,
                     center=self.center,
                     closed=~self.closed)
 
     @property
     def interior(self):
-        return Cone(direction=self.direction,
+        return InfiniteCone(direction=self.direction,
                     slope=self.slope,
                     center=self.center,
                     closed=false)
 
     @property
     def closure(self):
-        return Cone(direction=self.direction,
+        return InfiniteCone(direction=self.direction,
                     slope=self.slope,
                     center=self.center,
                     closed=true)
@@ -566,13 +566,13 @@ def sphere(radius=1):
 
 def cylinder(radius=1, height=2):
     return Intersection(
-        Cylinder(direction=i, radius=radius, center=[0,0,0], closed=False, normalization=False),
+        InfiniteCylinder(direction=i, radius=radius, center=[0,0,0], closed=False, normalization=False),
         Halfspace(direction=+i, offset=-height/2, closed=False, normalization=False),
         Halfspace(direction=-i, offset=-height/2, closed=False, normalization=False))
 
 def cone(radius=1, height=1):
     return Intersection(
-        Cone(direction=i, slope=radius/height, center=[0,0,0], closed=False, normalization=False),
+        InfiniteCone(direction=i, slope=radius/height, center=[0,0,0], closed=False, normalization=False),
         Halfspace(direction=+i, offset=0, closed=False, normalization=False),
         Halfspace(direction=-i, offset=-height, closed=False, normalization=False))
 
