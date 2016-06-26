@@ -47,6 +47,9 @@ class Puzzle:
         raise NotImplementedError
 
     def apply(self, op):
+        if not self.is_valid_operation(op):
+            raise IllegalOperationError
+
         if isinstance(op, IdentityOperation):
             return self
 
@@ -62,24 +65,69 @@ class Puzzle:
             raise TypeError
 
     def _apply(self, op):
-        raise NotImplementedError
-        # # for ElementaryOperation
-        # if not self.is_valid_operation(op):
-        #     raise IllegalOperationError
+        self = self._transform_by(op)
 
-        # self = self.transform_by(op)
+        if not self.is_valid_state():
+            raise IllegalStateError
 
-        # if not self.is_valid_state():
-        #     raise IllegalStateError
+        return self
 
-        # return self
+class TensorPuzzle(tuple, Puzzle):
+    def is_valid_state(self):
+        return all(pzl_i.is_valid_state() for pzl_i in self)
+
+    def is_valid_operation(self, op):
+        if isinstance(op, IdentityOperation):
+            return True
+
+        elif isinstance(op, ConcatenatedOperation):
+            return all(self.is_valid_operation(op_i) for op_i in op.operations)
+
+        elif isinstance(op, TensorOperation):
+            return self._is_valid_operation(op)
+
+        else:
+            return False
+
+    def _is_valid_operation(self, op):
+        return len(self) == len(op) and all(pzl_i.is_valid_operation(op_i) for pzl_i, op_i in zip(self, op))
+
+    def transform_by(self, op):
+        if isinstance(op, IdentityOperation):
+            return self
+
+        elif isinstance(op, ConcatenatedOperation):
+            for op_i in op.operations:
+                self = self.transform_by(op_i)
+            return self
+
+        elif isinstance(op, TensorOperation):
+            return self._transform_by(op)
+
+        else:
+            raise TypeError
+
+    def _transform_by(self, op):
+        return type(self)([pzl_i.transform_by(op_i) for pzl_i, op_i in zip(self, op)])
+
+    def apply(self, op):
+        if isinstance(op, IdentityOperation):
+            return self
+
+        elif isinstance(op, ConcatenatedOperation):
+            for op_i in op.operations:
+                self = self.apply(op_i)
+            return self
+
+        elif isinstance(op, TensorOperation):
+            return self._apply(op)
+
+        else:
+            raise TypeError
+
 
 class Operation:
-    def _concat(self, other):
-        return None
-
-    def __add__(self, other):
-        return ConcatenatedOperation(self, other)
+    pass
 
 class IdentityOperation(Operation):
     pass
@@ -132,4 +180,7 @@ class ConcatenatedOperation(Operation):
             return ConcatenatedOperation(*self.operations[key])
         else:
             raise IndexError
+
+class TensorOperation(tuple, Operation):
+    pass
 
