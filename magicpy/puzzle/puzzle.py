@@ -72,58 +72,49 @@ class Puzzle:
 
         return self
 
-class TensorPuzzle(tuple, Puzzle):
+
+class TensorPuzzle(Puzzle, tuple):
+    def __new__(cls, pzls):
+        if not all(isinstance(pzl_i, Puzzle) for pzl_i in pzls):
+            raise TypeError
+        return tuple.__new__(cls, pzls)
+
     def is_valid_state(self):
         return all(pzl_i.is_valid_state() for pzl_i in self)
 
-    def is_valid_operation(self, op):
-        if isinstance(op, IdentityOperation):
-            return True
-
-        elif isinstance(op, ConcatenatedOperation):
-            return all(self.is_valid_operation(op_i) for op_i in op.operations)
-
-        elif isinstance(op, TensorOperation):
-            return self._is_valid_operation(op)
-
-        else:
-            return False
-
     def _is_valid_operation(self, op):
-        return len(self) == len(op) and all(pzl_i.is_valid_operation(op_i) for pzl_i, op_i in zip(self, op))
-
-    def transform_by(self, op):
-        if isinstance(op, IdentityOperation):
-            return self
-
-        elif isinstance(op, ConcatenatedOperation):
-            for op_i in op.operations:
-                self = self.transform_by(op_i)
-            return self
-
-        elif isinstance(op, TensorOperation):
-            return self._transform_by(op)
-
-        else:
-            raise TypeError
+        return (isinstance(op, TensorOperation) and len(self) == len(op) and
+                all(pzl_i.is_valid_operation(op_i) for pzl_i, op_i in zip(self, op)))
 
     def _transform_by(self, op):
-        return type(self)([pzl_i.transform_by(op_i) for pzl_i, op_i in zip(self, op)])
+        return type(self)(pzl_i.transform_by(op_i) for pzl_i, op_i in zip(self, op))
 
-    def apply(self, op):
-        if isinstance(op, IdentityOperation):
+
+class ContinuousPuzzle(Puzzle):
+    density = 10
+
+    def _apply(self, op):
+        if isinstance(op, ContinuousOperation):
+            for t in range(int(op.distance*density)):
+                moved = self._transform_by(op.to(t/density))
+                if not moved.is_valid_state():
+                    raise IllegalStateError
+
+            self = self._transform_by(op.to(op.distance))
+            if not self.is_valid_state():
+                raise IllegalStateError
+
             return self
-
-        elif isinstance(op, ConcatenatedOperation):
-            for op_i in op.operations:
-                self = self.apply(op_i)
-            return self
-
-        elif isinstance(op, TensorOperation):
-            return self._apply(op)
 
         else:
+            return Puzzle._apply(self, op)
+
+
+class ContinuousTensorPuzzle(ContinuousPuzzle, TensorPuzzle):
+    def __new__(cls, pzls):
+        if not all(isinstance(pzl_i, ContinuousPuzzle) for pzl_i in pzls):
             raise TypeError
+        return TensorPuzzle.__new__(cls, pzls)
 
 
 class Operation:
@@ -181,6 +172,41 @@ class ConcatenatedOperation(Operation):
         else:
             raise IndexError
 
-class TensorOperation(tuple, Operation):
+class TensorOperation(Operation, tuple):
     pass
+
+class ContinuousOperation(Operation):
+    @property
+    def distance(self):
+        raise NotImplementedError
+
+    def to(self, index):
+        raise NotImplementedError
+
+class ContinuousIdentityOperation(ContinuousOperation, IdentityOperation):
+    def __init__(self, dis):
+        self.distance = dis
+
+    def to(self, index):
+        if index > self.distance:
+            raise ValueError
+        return ContinuousIdentityOperation(index)
+
+class ParallelOperation(ContinuousOperation, TensorOperation):
+    def __new__(cls, ops):
+        if not all(isinstance(op_i, ContinuousOperation) for op_i in ops):
+            raise TypeError
+        if len(set(op_i.distance for op_i in ops)) != 1:
+            raise ValueError
+        return TensorOperation.__new__(cls, ops)
+
+    @property
+    def distance(self):
+        return self[0].distance
+
+    def to(self, dis):
+        if dis > self.distance:
+            raise ValueError
+        return type(self)(op_i.to(dis) for op_i in self)
+
 
