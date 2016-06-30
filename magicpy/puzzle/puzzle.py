@@ -8,6 +8,7 @@ class IllegalStateError(Exception):
     pass
 
 
+
 class Puzzle:
     def is_valid_state(self):
         return True
@@ -95,19 +96,22 @@ class ContinuousPuzzle(Puzzle):
 
     def _apply(self, op):
         if isinstance(op, ContinuousOperation):
-            for t in range(int(op.distance*density)):
-                moved = self._transform_by(op.to(t/density))
-                if not moved.is_valid_state():
-                    raise IllegalStateError
-
-            self = self._transform_by(op.to(op.distance))
-            if not self.is_valid_state():
-                raise IllegalStateError
-
-            return self
+            return self._apply_cont(op)
 
         else:
             return Puzzle._apply(self, op)
+
+    def _apply_cont(self, op):
+        for t in range(int(op.distance*density)):
+            moved = self._transform_by(op.to(t/density))
+            if not moved.is_valid_state():
+                raise IllegalStateError
+
+        self = self._transform_by(op.to(op.distance))
+        if not self.is_valid_state():
+            raise IllegalStateError
+
+        return self
 
 
 class ContinuousTensorPuzzle(ContinuousPuzzle, TensorPuzzle):
@@ -115,6 +119,80 @@ class ContinuousTensorPuzzle(ContinuousPuzzle, TensorPuzzle):
         if not all(isinstance(pzl_i, ContinuousPuzzle) for pzl_i in pzls):
             raise TypeError
         return TensorPuzzle.__new__(cls, pzls)
+
+
+class CombinationalPuzzle(Puzzle, tuple):
+    def _is_valid_operation(self, op):
+        if isinstance(op, CombinationalOperation):
+            return (len(self) == len(op) and
+                all(self._is_valid_operation_elem(elem, action) for elem, action in zip(self, op)))
+        elif isinstance(op, PartitionalOperation):
+            return True
+        else:
+            return False
+
+    def _is_valid_operation_elem(self, elem, action):
+        raise NotImplementedError
+
+    def _transform_by(self, op):
+        if isinstance(op, CombinationalOperation):
+            return self._transform_by_comb(op)
+
+        elif isinstance(op, PartitionalOperation):
+            return self._transform_by_comb(self._to_comb_op(op))
+
+        else:
+            raise NotImplementedError
+
+    def _transform_by_comb(self, op):
+        return type(self)(self._transform_by_elem(elem, action) for elem, action in zip(self, op))
+
+    def _transform_by_elem(self, elem, action):
+        raise NotImplementedError
+
+    def _to_comb_op(self, op):
+        comb_op = []
+        for elem in self:
+            for part, action in op.items():
+                if self._filter_elem(elem, part):
+                    comb_op.append(action)
+                    break
+            else:
+                raise IllegalOperationError
+        return op.comb_type(comb_op)
+
+    def _filter_elem(self, elem, part):
+        raise NotImplementedError
+
+
+class UnorderedCombinationalPuzzle(CombinationalPuzzle):
+    def transform_by(self, op):
+        self = CombinationalPuzzle.transform_by(self, op)
+        return self._sort()
+
+    def apply(self, op):
+        self = CombinationalPuzzle.apply(self, op)
+        return self._sort()
+
+    def _sort(self):
+        return type(self)(sorted(self, key=hash))
+
+
+class ContinuousCombinationalPuzzle(ContinuousPuzzle, CombinationalPuzzle):
+    def _apply(self, op):
+        if isinstance(op, ContinuousCombinationalOperation):
+            return self._apply_cont(self._to_comb_op(op))
+
+        elif isinstance(op, ContinuousOperation):
+            return self._apply_cont(op)
+
+        else:
+            return CombinationalPuzzle._apply(self, op)
+
+
+class ContinuousUnorderedCombinationalPuzzle(ContinuousCombinationalPuzzle, UnorderedCombinationalPuzzle):
+    pass
+
 
 
 class Operation:
@@ -209,4 +287,15 @@ class ParallelOperation(ContinuousOperation, TensorOperation):
             raise ValueError
         return type(self)(op_i.to(dis) for op_i in self)
 
+class CombinationalOperation(Operation, tuple):
+    pass
+
+class PartitionalOperation(Operation, dict):
+    comb_type = CombinationalOperation
+
+class ContinuousCombinationalOperation(ContinuousOperation, CombinationalOperation):
+    pass
+
+class ContinuousPartitionalOperation(ContinuousOperation, PartitionalOperation):
+    comb_type = ContinuousCombinationalOperation
 
