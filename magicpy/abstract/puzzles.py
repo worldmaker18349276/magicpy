@@ -1,4 +1,4 @@
-
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 class IllegalOperationError(Exception):
@@ -9,9 +9,10 @@ class IllegalStateError(Exception):
 
 
 
-class Puzzle:
+class Puzzle(metaclass=ABCMeta):
+    @abstractmethod
     def is_valid_state(self):
-        return True
+        ...
 
     def is_valid_operation(self, op):
         if isinstance(op, IdentityOperation):
@@ -26,8 +27,9 @@ class Puzzle:
         else:
             return False
 
+    @abstractmethod
     def _is_valid_operation(self, op):
-        return True
+        ...
 
     def transform_by(self, op):
         if isinstance(op, IdentityOperation):
@@ -44,8 +46,9 @@ class Puzzle:
         else:
             raise TypeError
 
+    @abstractmethod
     def _transform_by(self, op):
-        raise NotImplementedError
+        ...
 
     def apply(self, op):
         if not self.is_valid_operation(op):
@@ -131,8 +134,9 @@ class CombinationalPuzzle(Puzzle, tuple):
         else:
             return False
 
+    @abstractmethod
     def elem_is_valid_operation(self, elem, action):
-        raise NotImplementedError
+        ...
 
     def _transform_by(self, op):
         if isinstance(op, CombinationalOperation):
@@ -142,13 +146,14 @@ class CombinationalPuzzle(Puzzle, tuple):
             return self._transform_by_comb(self._to_comb_op(op))
 
         else:
-            raise NotImplementedError
+            return TypeError
 
     def _transform_by_comb(self, op):
         return type(self)(self.elem_transform_by(elem, action) for elem, action in zip(self, op))
 
+    @abstractmethod
     def elem_transform_by(self, elem, action):
-        raise NotImplementedError
+        ...
 
     def _to_comb_op(self, op):
         comb_op = []
@@ -161,8 +166,9 @@ class CombinationalPuzzle(Puzzle, tuple):
                 raise IllegalOperationError
         return op.comb_type(comb_op)
 
+    @abstractmethod
     def elem_filter(self, elem, part):
-        raise NotImplementedError
+        ...
 
 
 class ContinuousCombinationalPuzzle(ContinuousPuzzle, CombinationalPuzzle):
@@ -192,14 +198,17 @@ class PhysicalPuzzle(ContinuousCombinationalPuzzle):
         else:
             return False
 
+    @abstractmethod
     def is_valid_elem(self, elem):
-        return True
+        ...
 
+    @abstractmethod
     def is_valid_region(self, region):
-        return True
+        ...
 
+    @abstractmethod
     def is_valid_action(self, action):
-        return True
+        ...
 
     def elem_filter(self, elem, region):
         return self.elem_is_subset(elem, region)
@@ -229,25 +238,30 @@ class PhysicalPuzzle(ContinuousCombinationalPuzzle):
         others = [self[i] for i in range(len(self)) if i not in ind]
         return type(self)(others+[self.elem_union(*selected)])
 
+    @abstractmethod
     def elem_transform_by(self, elem, action):
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def elem_is_subset(self, elem1, elem2):
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def elem_is_disjoint(self, elem1, elem2):
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def elem_intersection(self, *elems):
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def elem_union(self, *elems):
-        raise NotImplementedError
+        ...
 
 
 
-class Operation:
-    pass
+class Operation(metaclass=ABCMeta):
+    ...
 
 class IdentityOperation(Operation):
     pass
@@ -305,12 +319,13 @@ class TensorOperation(Operation, tuple):
     pass
 
 class ContinuousOperation(Operation):
-    @property
+    @abstractproperty
     def distance(self):
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def to(self, index):
-        raise NotImplementedError
+        ...
 
 class ContinuousIdentityOperation(ContinuousOperation, IdentityOperation):
     def __init__(self, dis):
