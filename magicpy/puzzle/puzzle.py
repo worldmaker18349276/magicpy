@@ -96,18 +96,18 @@ class ContinuousPuzzle(Puzzle):
 
     def _apply(self, op):
         if isinstance(op, ContinuousOperation):
-            return self._apply_cont(op)
+            return self.cont_apply(op)
 
         else:
             return Puzzle._apply(self, op)
 
-    def _apply_cont(self, op):
+    def cont_apply(self, op):
         for t in range(int(op.distance*density)):
             moved = self._transform_by(op.to(t/density))
             if not moved.is_valid_state():
                 raise IllegalStateError
 
-        self = self._transform_by(op.to(op.distance))
+        self = self._transform_by(op)
         if not self.is_valid_state():
             raise IllegalStateError
 
@@ -125,13 +125,13 @@ class CombinationalPuzzle(Puzzle, tuple):
     def _is_valid_operation(self, op):
         if isinstance(op, CombinationalOperation):
             return (len(self) == len(op) and
-                all(self._is_valid_operation_elem(elem, action) for elem, action in zip(self, op)))
+                all(self.elem_is_valid_operation(elem, action) for elem, action in zip(self, op)))
         elif isinstance(op, PartitionalOperation):
             return True
         else:
             return False
 
-    def _is_valid_operation_elem(self, elem, action):
+    def elem_is_valid_operation(self, elem, action):
         raise NotImplementedError
 
     def _transform_by(self, op):
@@ -145,53 +145,104 @@ class CombinationalPuzzle(Puzzle, tuple):
             raise NotImplementedError
 
     def _transform_by_comb(self, op):
-        return type(self)(self._transform_by_elem(elem, action) for elem, action in zip(self, op))
+        return type(self)(self.elem_transform_by(elem, action) for elem, action in zip(self, op))
 
-    def _transform_by_elem(self, elem, action):
+    def elem_transform_by(self, elem, action):
         raise NotImplementedError
 
     def _to_comb_op(self, op):
         comb_op = []
         for elem in self:
             for part, action in op.items():
-                if self._filter_elem(elem, part):
+                if self.elem_filter(elem, part):
                     comb_op.append(action)
                     break
             else:
                 raise IllegalOperationError
         return op.comb_type(comb_op)
 
-    def _filter_elem(self, elem, part):
+    def elem_filter(self, elem, part):
         raise NotImplementedError
-
-
-class UnorderedCombinationalPuzzle(CombinationalPuzzle):
-    def transform_by(self, op):
-        self = CombinationalPuzzle.transform_by(self, op)
-        return self._sort()
-
-    def apply(self, op):
-        self = CombinationalPuzzle.apply(self, op)
-        return self._sort()
-
-    def _sort(self):
-        return type(self)(sorted(self, key=hash))
 
 
 class ContinuousCombinationalPuzzle(ContinuousPuzzle, CombinationalPuzzle):
     def _apply(self, op):
         if isinstance(op, ContinuousCombinationalOperation):
-            return self._apply_cont(self._to_comb_op(op))
+            return self.cont_apply(self._to_comb_op(op))
 
         elif isinstance(op, ContinuousOperation):
-            return self._apply_cont(op)
+            return self.cont_apply(op)
 
         else:
             return CombinationalPuzzle._apply(self, op)
 
 
-class ContinuousUnorderedCombinationalPuzzle(ContinuousCombinationalPuzzle, UnorderedCombinationalPuzzle):
-    pass
+class PhysicalPuzzle(ContinuousCombinationalPuzzle):
+    def is_valid_state(self):
+        return all(self.is_valid_elem(elem) for elem in self) and self.no_collision()
+
+    def _is_valid_operation(self, op):
+        if isinstance(op, ContinuousCombinationalOperation):
+            return (len(self) == len(op)
+                and all(self.is_valid_action(action) for action in op))
+        elif isinstance(op, ContinuousPartitionalOperation):
+            return (all(self.is_valid_action(action) for action in op.values())
+                and all(self.is_valid_region(region) for region in op.keys())
+                and type(self)(op.keys()).no_collision())
+        else:
+            return False
+
+    def is_valid_elem(self, elem):
+        return True
+
+    def is_valid_region(self, region):
+        return True
+
+    def is_valid_action(self, action):
+        return True
+
+    def elem_filter(self, elem, region):
+        return self.elem_is_subset(elem, region)
+
+    def no_collision(self):
+        for elem1, elem2 in combinations(self, 2):
+            if not self.elem_is_disjoint(elem1, elem2):
+                return False
+        return True
+
+    def no_collision_with(self, other):
+        for elem1, elem2 in product(self, other):
+            if not self.elem_is_disjoint(elem1, elem2):
+                return False
+        return True
+
+    def cut_by(self, *knives):
+        cutted = []
+        for sub in product(self, *knives):
+            cutted.append(self.elem_intersection(*sub))
+        return type(self)(cutted)
+
+    def fuse(self, *ind, region=None):
+        if len(ind) == 0:
+            ind = [i for i in range(len(self)) if self.elem_filter(self[i], region)]
+        selected = [self[i] for i in ind]
+        others = [self[i] for i in range(len(self)) if i not in ind]
+        return type(self)(others+[self.elem_union(*selected)])
+
+    def elem_transform_by(self, elem, action):
+        raise NotImplementedError
+
+    def elem_is_subset(self, elem1, elem2):
+        raise NotImplementedError
+
+    def elem_is_disjoint(self, elem1, elem2):
+        raise NotImplementedError
+
+    def elem_intersection(self, *elems):
+        raise NotImplementedError
+
+    def elem_union(self, *elems):
+        raise NotImplementedError
 
 
 
