@@ -129,7 +129,7 @@ class CombinationalPuzzle(Puzzle, tuple):
         if isinstance(op, CombinationalOperation):
             return (len(self) == len(op) and
                 all(self.elem_is_valid_operation(elem, action) for elem, action in zip(self, op)))
-        elif isinstance(op, PartitionalOperation):
+        elif isinstance(op, SelectiveOperation):
             return True
         else:
             return False
@@ -142,7 +142,7 @@ class CombinationalPuzzle(Puzzle, tuple):
         if isinstance(op, CombinationalOperation):
             return self._transform_by_comb(op)
 
-        elif isinstance(op, PartitionalOperation):
+        elif isinstance(op, SelectiveOperation):
             return self._transform_by_comb(self._to_comb_op(op))
 
         else:
@@ -158,8 +158,8 @@ class CombinationalPuzzle(Puzzle, tuple):
     def _to_comb_op(self, op):
         comb_op = []
         for elem in self:
-            for part, action in op.items():
-                if self.elem_filter(elem, part):
+            for select, action in op.items():
+                if self.elem_filter(elem, select):
                     comb_op.append(action)
                     break
             else:
@@ -167,7 +167,7 @@ class CombinationalPuzzle(Puzzle, tuple):
         return op.comb_type(comb_op)
 
     @abstractmethod
-    def elem_filter(self, elem, part):
+    def elem_filter(self, elem, select):
         ...
 
 
@@ -191,7 +191,7 @@ class PhysicalPuzzle(ContinuousCombinationalPuzzle):
         if isinstance(op, ContinuousCombinationalOperation):
             return (len(self) == len(op)
                 and all(self.is_valid_action(action) for action in op))
-        elif isinstance(op, ContinuousPartitionalOperation):
+        elif isinstance(op, ContinuousSelectiveOperation):
             return (all(self.is_valid_action(action) for action in op.values())
                 and all(self.is_valid_region(region) for region in op.keys())
                 and type(self)(op.keys()).no_collision())
@@ -356,12 +356,12 @@ class ParallelOperation(ContinuousOperation, TensorOperation):
 class CombinationalOperation(Operation, tuple):
     pass
 
-class PartitionalOperation(Operation, dict):
+class SelectiveOperation(Operation, dict):
     comb_type = CombinationalOperation
 
 class ContinuousCombinationalOperation(ContinuousOperation, CombinationalOperation):
     pass
 
-class ContinuousPartitionalOperation(ContinuousOperation, PartitionalOperation):
+class ContinuousSelectiveOperation(ContinuousOperation, SelectiveOperation):
     comb_type = ContinuousCombinationalOperation
 
