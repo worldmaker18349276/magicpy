@@ -188,10 +188,10 @@ class PhysicalPuzzle(ContinuousCombinationalPuzzle):
         return all(self.is_valid_elem(elem) for elem in self) and self.no_collision()
 
     def _is_valid_operation(self, op):
-        if isinstance(op, ContinuousCombinationalOperation):
+        if isinstance(op, PhysicalOperation):
             return (len(self) == len(op)
                 and all(self.is_valid_action(action) for action in op))
-        elif isinstance(op, ContinuousSelectiveOperation):
+        elif isinstance(op, PartitionalOperation):
             return (all(self.is_valid_action(action) for action in op.values())
                 and all(self.is_valid_region(region) for region in op.keys())
                 and type(self)(op.keys()).no_collision())
@@ -364,4 +364,10 @@ class ContinuousCombinationalOperation(ContinuousOperation, CombinationalOperati
 
 class ContinuousSelectiveOperation(ContinuousOperation, SelectiveOperation):
     comb_type = ContinuousCombinationalOperation
+
+class PhysicalOperation(ContinuousCombinationalOperation):
+    pass
+
+class PartitionalOperation(ContinuousSelectiveOperation):
+    comb_type = PhysicalOperation
 

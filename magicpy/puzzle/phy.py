@@ -64,20 +64,7 @@ class SymbolicT3PhysicalPuzzle(SymbolicPhysicalPuzzle):
     states = T_RR3
 
 
-class SymbolicContinuousOperation(ContinuousOperation):
-    def __init__(self, action):
-        self.action = action
-
-    @property
-    def distance(self):
-        return len(self.action)
-
-    def to(self, index):
-        if index > self.distance:
-            raise ValueError
-        return type(self)(self.action[:index])
-
-class SymbolicContinuousCombinationalOperation(ContinuousCombinationalOperation):
+class SymbolicPhysicalOperation(PhysicalOperation):
     def __init__(self, actions):
         if len(set(len(action) for action in actions)) > 1:
             raise ValueError
@@ -91,6 +78,6 @@ class SymbolicContinuousCombinationalOperation(ContinuousCombinationalOperation)
             raise ValueError
         return type(self)(action[:index] for action in self)
 
-class SymbolicContinuousPartitionalOperation(ContinuousPartitionalOperation):
-    comb_type = SymbolicContinuousCombinationalOperation
+class SymbolicPartitionalOperation(PartitionalOperation):
+    comb_type = SymbolicPhysicalOperation
 
