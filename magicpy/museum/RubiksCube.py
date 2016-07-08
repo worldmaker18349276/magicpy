@@ -30,7 +30,7 @@ SymbolicSO3PhysicalPuzzle(
      {(x, y, z) : (x - 1 <= 0) & (x - 1/3 > 0) & (y - 1 <= 0) & (y - 1/3 > 0) & (z - 1 <= 0) & (z - 1/3 > 0)}},
     actions=PathMonoid(SO3))
 """
-from magicpy.puzzle.phy import *
+from magicpy.puzzle.sym import *
 from magicpy.model.euclid import *
 from magicpy.model.poly import *
 from magicpy.model.affine import *

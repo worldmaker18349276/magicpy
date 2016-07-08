@@ -3,7 +3,7 @@ from symplus.strplus import mstr
 from magicpy.engine.marching import cube_engine
 from magicpy.model.affine import SE3_star, SO3_star, T3_star
 from magicpy.model.euclid import T_RR3
-from magicpy.abstract.puzzles import *
+from magicpy.abstract.phy import *
 
 
 class SymbolicPhysicalPuzzle(PhysicalPuzzle):

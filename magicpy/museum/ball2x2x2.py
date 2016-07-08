@@ -32,7 +32,7 @@ SymbolicSO3PhysicalPuzzle(
 """
 from symplus.matplus import *
 from magicpy.model.euclid import *
-from magicpy.puzzle.phy import *
+from magicpy.puzzle.sym import *
 
 ball2x2x2 = SymbolicSO3PhysicalPuzzle({Sphere()})
 ball2x2x2 = ball2x2x2.cut_by(
