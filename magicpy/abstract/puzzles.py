@@ -1,4 +1,3 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 class IllegalOperationError(Exception):
@@ -9,10 +8,9 @@ class IllegalStateError(Exception):
 
 
 
-class Puzzle(metaclass=ABCMeta):
-    @abstractmethod
+class Puzzle:
     def is_valid_state(self):
-        ...
+        return True
 
     def is_valid_operation(self, op):
         if isinstance(op, IdentityOperation):
@@ -27,9 +25,11 @@ class Puzzle(metaclass=ABCMeta):
         else:
             return False
 
-    @abstractmethod
     def _is_valid_operation(self, op):
-        ...
+        if isinstance(op, ConditionalOperation):
+            return all(self.is_valid_operation(op_i) for op_i in op)
+        else:
+            return False
 
     def transform_by(self, op):
         if isinstance(op, IdentityOperation):
@@ -48,21 +48,20 @@ class Puzzle(metaclass=ABCMeta):
 
     def _transform_by(self, op):
         if isinstance(op, ConditionalOperation):
-            return self.transform_by(self._to_op(op))
+            return self.transform_by(self.cond_op_to_op(op))
 
         else:
-            return NotImplemented
+            return TypeError
 
-    def _to_op(self, cond_op):
-        for cond, trans in cond_op.items():
+    def cond_op_to_op(self, cond_op):
+        for cond, op_i in cond_op.items():
             if self._filter(cond):
-                return trans
+                return op_i
         else:
             raise IllegalOperationError
 
-    @abstractmethod
     def _filter(self, cond):
-        ...
+        return NotImplemented
 
     def apply(self, op):
         if not self.is_valid_operation(op):
@@ -113,7 +112,7 @@ class ContinuousPuzzle(Puzzle):
 
     def _apply(self, op):
         if isinstance(op, ContinuousConditionalOperation):
-            return self.cont_apply(self._to_op(op))
+            return self.cont_apply(self.cond_op_to_op(op))
 
         elif isinstance(op, ContinuousOperation):
             return self.cont_apply(op)
@@ -143,17 +142,17 @@ class ContinuousTensorPuzzle(ContinuousPuzzle, TensorPuzzle):
 
 class CombinationalPuzzle(Puzzle, tuple):
     def _is_valid_operation(self, op):
-        if isinstance(op, CombinationalOperation):
+        if isinstance(op, SelectiveOperation):
+            return (all(self.elem_is_valid_operation(elem, action)
+                        for elem in self for action in op.values()))
+        elif isinstance(op, CombinationalOperation):
             return (len(self) == len(op) and
-                all(self.elem_is_valid_operation(elem, action) for elem, action in zip(self, op)))
-        elif isinstance(op, SelectiveOperation):
-            return True
+                    all(self.elem_is_valid_operation(elem, action) for elem, action in zip(self, op)))
         else:
             return False
 
-    @abstractmethod
     def elem_is_valid_operation(self, elem, action):
-        ...
+        return NotImplemented
 
     def _transform_by(self, op):
         if isinstance(op, CombinationalOperation):
@@ -168,9 +167,8 @@ class CombinationalPuzzle(Puzzle, tuple):
     def _transform_by_comb(self, op):
         return type(self)(self.elem_transform_by(elem, action) for elem, action in zip(self, op))
 
-    @abstractmethod
     def elem_transform_by(self, elem, action):
-        ...
+        return NotImplemented
 
     def _to_comb_op(self, op):
         comb_op = []
@@ -183,9 +181,8 @@ class CombinationalPuzzle(Puzzle, tuple):
                 raise IllegalOperationError
         return op.comb_type(comb_op)
 
-    @abstractmethod
     def elem_filter(self, elem, select):
-        ...
+        return NotImplemented
 
 
 class ContinuousCombinationalPuzzle(ContinuousPuzzle, CombinationalPuzzle):
@@ -215,17 +212,14 @@ class PhysicalPuzzle(ContinuousCombinationalPuzzle):
         else:
             return False
 
-    @abstractmethod
     def is_valid_elem(self, elem):
-        ...
+        return NotImplemented
 
-    @abstractmethod
     def is_valid_region(self, region):
-        ...
+        return NotImplemented
 
-    @abstractmethod
     def is_valid_action(self, action):
-        ...
+        return NotImplemented
 
     def elem_filter(self, elem, region):
         return self.elem_is_subset(elem, region)
@@ -255,30 +249,25 @@ class PhysicalPuzzle(ContinuousCombinationalPuzzle):
         others = [self[i] for i in range(len(self)) if i not in ind]
         return type(self)(others+[self.elem_union(*selected)])
 
-    @abstractmethod
     def elem_transform_by(self, elem, action):
-        ...
+        return NotImplemented
 
-    @abstractmethod
     def elem_is_subset(self, elem1, elem2):
-        ...
+        return NotImplemented
 
-    @abstractmethod
     def elem_is_disjoint(self, elem1, elem2):
-        ...
+        return NotImplemented
 
-    @abstractmethod
     def elem_intersection(self, *elems):
-        ...
+        return NotImplemented
 
-    @abstractmethod
     def elem_union(self, *elems):
-        ...
+        return NotImplemented
 
 
 
-class Operation(metaclass=ABCMeta):
-    ...
+class Operation:
+    pass
 
 class IdentityOperation(Operation):
     pass
@@ -299,7 +288,6 @@ class ConcatenatedOperation(Operation):
             op.operations = ops
             return op
 
-    @staticmethod
     def reduce(ops):
         i = 0
         while i < len(ops):
@@ -339,13 +327,11 @@ class TensorOperation(Operation, tuple):
     pass
 
 class ContinuousOperation(Operation):
-    @abstractproperty
     def distance(self):
-        ...
+        return NotImplemented
 
-    @abstractmethod
     def to(self, index):
-        ...
+        return NotImplemented
 
 class ContinuousIdentityOperation(ContinuousOperation, IdentityOperation):
     def __init__(self, dis):
