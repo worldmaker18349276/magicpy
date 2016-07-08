@@ -26,10 +26,7 @@ class Puzzle:
             return False
 
     def _is_valid_operation(self, op):
-        if isinstance(op, ConditionalOperation):
-            return all(self.is_valid_operation(op_i) for op_i in op)
-        else:
-            return False
+        return False
 
     def transform_by(self, op):
         if isinstance(op, IdentityOperation):
@@ -47,20 +44,6 @@ class Puzzle:
             raise TypeError
 
     def _transform_by(self, op):
-        if isinstance(op, ConditionalOperation):
-            return self.transform_by(self.cond_op_to_op(op))
-
-        else:
-            return TypeError
-
-    def cond_op_to_op(self, cond_op):
-        for cond, op_i in cond_op.items():
-            if self._filter(cond):
-                return op_i
-        else:
-            raise IllegalOperationError
-
-    def _filter(self, cond):
         return NotImplemented
 
     def apply(self, op):
@@ -89,6 +72,60 @@ class Puzzle:
 
         return self
 
+class Operation:
+    pass
+
+class IdentityOperation(Operation):
+    pass
+
+class ConcatenatedOperation(Operation):
+    def __new__(cls, *ops):
+        if any(not isinstance(op, Operation) for op in ops):
+            raise TypeError
+
+        ops = ConcatenatedOperation.reduce(ops)
+
+        if len(ops) == 0:
+            return IdentityOperation()
+        elif len(ops) == 1:
+            return ops[0]
+        else:
+            op = Operation.__new__(cls)
+            op.operations = ops
+            return op
+
+    def reduce(ops):
+        i = 0
+        while i < len(ops):
+            if isinstance(ops[i], IdentityOperation):
+                ops = ops[:i] + ops[i+1:]
+
+            elif isinstance(ops[i], ConcatenatedOperation):
+                ops = ops[:i] + ops[i].operations + ops[i+1:]
+
+            elif i > 0 and hasattr(ops[i-1], '_concat'):
+                op_i = ops[i-1]._concat(ops[i])
+                if op_i is not None:
+                    ops = ops[:i-1] + [op_i] + ops[i+1:]
+                else:
+                    i = i + 1
+
+            else:
+                i = i + 1
+
+        return ops
+
+    def __len__(self):
+        return len(self.operations)
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self.operations[key]
+        elif isinstance(key, slice):
+            return ConcatenatedOperation(*self.operations[key])
+        else:
+            raise IndexError
+
 
 class TensorPuzzle(Puzzle, tuple):
     def __new__(cls, pzls):
@@ -106,9 +143,29 @@ class TensorPuzzle(Puzzle, tuple):
     def _transform_by(self, op):
         return type(self)(pzl_i.transform_by(op_i) for pzl_i, op_i in zip(self, op))
 
+class TensorOperation(Operation, tuple):
+    pass
 
-class ContinuousPuzzle(Puzzle):
+
+class GeneralPuzzle(Puzzle):
     density = 10
+
+    def _transform_by(self, op):
+        if isinstance(op, ConditionalOperation):
+            return self.transform_by(self.cond_op_to_op(op))
+
+        else:
+            return NotImplemented
+
+    def cond_op_to_op(self, cond_op):
+        for cond, op_i in cond_op.items():
+            if self._filter(cond):
+                return op_i
+        else:
+            raise IllegalOperationError
+
+    def _filter(self, cond):
+        return NotImplemented
 
     def _apply(self, op):
         if isinstance(op, ContinuousConditionalOperation):
@@ -132,34 +189,67 @@ class ContinuousPuzzle(Puzzle):
 
         return self
 
+class ConditionalOperation(Operation, dict):
+    pass
 
-class ContinuousTensorPuzzle(ContinuousPuzzle, TensorPuzzle):
-    def __new__(cls, pzls):
-        if not all(isinstance(pzl_i, ContinuousPuzzle) for pzl_i in pzls):
-            raise TypeError
-        return TensorPuzzle.__new__(cls, pzls)
-
-
-class CombinationalPuzzle(Puzzle, tuple):
-    def _is_valid_operation(self, op):
-        if isinstance(op, SelectiveOperation):
-            return (all(self.elem_is_valid_operation(elem, action)
-                        for elem in self for action in op.values()))
-        elif isinstance(op, CombinationalOperation):
-            return (len(self) == len(op) and
-                    all(self.elem_is_valid_operation(elem, action) for elem, action in zip(self, op)))
-        else:
-            return False
-
-    def elem_is_valid_operation(self, elem, action):
+class ContinuousOperation(Operation):
+    def distance(self):
         return NotImplemented
 
-    def _transform_by(self, op):
-        if isinstance(op, CombinationalOperation):
-            return self._transform_by_comb(op)
+    def to(self, index):
+        return NotImplemented
 
-        elif isinstance(op, SelectiveOperation):
-            return self._transform_by_comb(self._to_comb_op(op))
+class ContinuousIdentityOperation(ContinuousOperation, IdentityOperation):
+    def __init__(self, dis):
+        self.distance = dis
+
+    def to(self, index):
+        if index > self.distance:
+            raise ValueError
+        return ContinuousIdentityOperation(index)
+
+class ParallelOperation(ContinuousOperation, TensorOperation):
+    def __new__(cls, ops):
+        if not all(isinstance(op_i, ContinuousOperation) for op_i in ops):
+            raise TypeError
+        if len(set(op_i.distance for op_i in ops)) != 1:
+            raise ValueError
+        return TensorOperation.__new__(cls, ops)
+
+    @property
+    def distance(self):
+        return self[0].distance
+
+    def to(self, dis):
+        if dis > self.distance:
+            raise ValueError
+        return type(self)(op_i.to(dis) for op_i in self)
+
+class ContinuousConditionalOperation(ContinuousOperation, ConditionalOperation):
+    def __new__(cls, ops):
+        if not all(isinstance(op_i, ContinuousOperation) for op_i in ops.values()):
+            raise TypeError
+        if len(set(op_i.distance for op_i in ops.values())) != 1:
+            raise ValueError
+        return ConditionalOperation.__new__(cls, ops)
+
+    @property
+    def distance(self):
+        return tuple(self.values())[0].distance
+
+    def to(self, dis):
+        if dis > self.distance:
+            raise ValueError
+        return type(self)(dict((cond, op_i.to(dis)) for cond, op_i in self.items()))
+
+
+class CombinationalPuzzle(GeneralPuzzle, tuple):
+    def _transform_by(self, op):
+        if isinstance(op, SelectiveOperation):
+            return self._transform_by_comb(self.sel_op_to_comb_op(op))
+
+        elif isinstance(op, CombinationalOperation):
+            return self._transform_by_comb(op)
 
         else:
             return TypeError
@@ -170,7 +260,7 @@ class CombinationalPuzzle(Puzzle, tuple):
     def elem_transform_by(self, elem, action):
         return NotImplemented
 
-    def _to_comb_op(self, op):
+    def sel_op_to_comb_op(self, op):
         comb_op = []
         for elem in self:
             for select, action in op.items():
@@ -184,20 +274,30 @@ class CombinationalPuzzle(Puzzle, tuple):
     def elem_filter(self, elem, select):
         return NotImplemented
 
-
-class ContinuousCombinationalPuzzle(ContinuousPuzzle, CombinationalPuzzle):
     def _apply(self, op):
         if isinstance(op, ContinuousCombinationalOperation):
-            return self.cont_apply(self._to_comb_op(op))
+            return self.cont_apply(self.sel_op_to_comb_op(op))
 
         elif isinstance(op, ContinuousOperation):
             return self.cont_apply(op)
 
         else:
-            return CombinationalPuzzle._apply(self, op)
+            return NotImplemented
+
+class CombinationalOperation(Operation, tuple):
+    pass
+
+class SelectiveOperation(Operation, dict):
+    comb_type = CombinationalOperation
+
+class ContinuousCombinationalOperation(ContinuousOperation, CombinationalOperation):
+    pass
+
+class ContinuousSelectiveOperation(ContinuousOperation, SelectiveOperation):
+    comb_type = ContinuousCombinationalOperation
 
 
-class PhysicalPuzzle(ContinuousCombinationalPuzzle):
+class PhysicalPuzzle(CombinationalPuzzle):
     def is_valid_state(self):
         return all(self.is_valid_elem(elem) for elem in self) and self.no_collision()
 
@@ -263,130 +363,6 @@ class PhysicalPuzzle(ContinuousCombinationalPuzzle):
 
     def elem_union(self, *elems):
         return NotImplemented
-
-
-
-class Operation:
-    pass
-
-class IdentityOperation(Operation):
-    pass
-
-class ConcatenatedOperation(Operation):
-    def __new__(cls, *ops):
-        if any(not isinstance(op, Operation) for op in ops):
-            raise TypeError
-
-        ops = ConcatenatedOperation.reduce(ops)
-
-        if len(ops) == 0:
-            return IdentityOperation()
-        elif len(ops) == 1:
-            return ops[0]
-        else:
-            op = Operation.__new__(cls)
-            op.operations = ops
-            return op
-
-    def reduce(ops):
-        i = 0
-        while i < len(ops):
-            if isinstance(ops[i], IdentityOperation):
-                ops = ops[:i] + ops[i+1:]
-
-            elif isinstance(ops[i], ConcatenatedOperation):
-                ops = ops[:i] + ops[i].operations + ops[i+1:]
-
-            elif i > 0 and hasattr(ops[i-1], '_concat'):
-                op_i = ops[i-1]._concat(ops[i])
-                if op_i is not None:
-                    ops = ops[:i-1] + [op_i] + ops[i+1:]
-                else:
-                    i = i + 1
-
-            else:
-                i = i + 1
-
-        return ops
-
-    def __len__(self):
-        return len(self.operations)
-
-    def __getitem__(self, key):
-        if isinstance(key, int):
-            return self.operations[key]
-        elif isinstance(key, slice):
-            return ConcatenatedOperation(*self.operations[key])
-        else:
-            raise IndexError
-
-class ConditionalOperation(Operation, dict):
-    pass
-
-class TensorOperation(Operation, tuple):
-    pass
-
-class ContinuousOperation(Operation):
-    def distance(self):
-        return NotImplemented
-
-    def to(self, index):
-        return NotImplemented
-
-class ContinuousIdentityOperation(ContinuousOperation, IdentityOperation):
-    def __init__(self, dis):
-        self.distance = dis
-
-    def to(self, index):
-        if index > self.distance:
-            raise ValueError
-        return ContinuousIdentityOperation(index)
-
-class ParallelOperation(ContinuousOperation, TensorOperation):
-    def __new__(cls, ops):
-        if not all(isinstance(op_i, ContinuousOperation) for op_i in ops):
-            raise TypeError
-        if len(set(op_i.distance for op_i in ops)) != 1:
-            raise ValueError
-        return TensorOperation.__new__(cls, ops)
-
-    @property
-    def distance(self):
-        return self[0].distance
-
-    def to(self, dis):
-        if dis > self.distance:
-            raise ValueError
-        return type(self)(op_i.to(dis) for op_i in self)
-
-class ContinuousConditionalOperation(ContinuousOperation, ConditionalOperation):
-    def __new__(cls, ops):
-        if not all(isinstance(op_i, ContinuousOperation) for op_i in ops.values()):
-            raise TypeError
-        if len(set(op_i.distance for op_i in ops.values())) != 1:
-            raise ValueError
-        return ConditionalOperation.__new__(cls, ops)
-
-    @property
-    def distance(self):
-        return tuple(self.values())[0].distance
-
-    def to(self, dis):
-        if dis > self.distance:
-            raise ValueError
-        return type(self)(dict((cond, op_i.to(dis)) for cond, op_i in self.items()))
-
-class CombinationalOperation(Operation, tuple):
-    pass
-
-class SelectiveOperation(Operation, dict):
-    comb_type = CombinationalOperation
-
-class ContinuousCombinationalOperation(ContinuousOperation, CombinationalOperation):
-    pass
-
-class ContinuousSelectiveOperation(ContinuousOperation, SelectiveOperation):
-    comb_type = ContinuousCombinationalOperation
 
 class PhysicalOperation(ContinuousCombinationalOperation):
     pass
