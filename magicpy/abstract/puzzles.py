@@ -102,11 +102,11 @@ class ContinuousPuzzle(Puzzle):
             return self.cont_apply(op)
 
         else:
-            return Puzzle._apply(self, op)
+            return NotImplemented
 
     def cont_apply(self, op):
-        for t in range(int(op.distance*density)):
-            moved = self._transform_by(op.to(t/density))
+        for t in range(int(op.distance*self.density)):
+            moved = self._transform_by(op.to(t/self.density))
             if not moved.is_valid_state():
                 raise IllegalStateError
 

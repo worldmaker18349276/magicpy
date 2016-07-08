@@ -19,7 +19,7 @@ class Forall(BooleanFunction):
 
         if evaluate:
             return Forall.eval(variable, expr)
-        return BooleanFunction.__new__(cls, variable, expr, **kwargs)
+        return BooleanFunction.__new__(cls, variable, expr, evaluate=False, **kwargs)
 
     @staticmethod
     def eval(variable, expr):

@@ -330,6 +330,10 @@ class Image(Set):
                         funcs = funcs[:-1] + (func_,)
                         zet = zet_
                         break
+                    elif len(funcs) == 1:
+                        funcs = ()
+                        zet = zet_
+                        break
                     else:
                         funcs = funcs[:-1]
                         zet = zet_

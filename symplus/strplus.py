@@ -211,7 +211,7 @@ def mprint(expr):
     >>> from symplus.funcplus import *
     >>> mprint(FunctionCompose(exp, sin))
     (exp o sin)
-    >>> mprint(Image(FunctionCompose(exp, sin), St({x : x>y})))
+    >>> mprint(Image(FunctionCompose(exp, sin), St({x : x>y}), evaluate=False))
     {(exp o sin)(x) : x > y}
     >>> mprint(Apply(Lambda(x, x*y), 3))
     (x |-> x*y)(3)
