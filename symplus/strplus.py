@@ -60,15 +60,15 @@ class SymplusPrinter(StrPrinter):
                 argstr.append('(%s)'%self._print(a))
         return ' == '.join(sorted(argstr))
 
-    def is_AtomSet(self, expr):
-        return isinstance(expr, (Interval, AbstractSet))
+    def is_ComposedSet(self, expr):
+        return isinstance(expr, (Complement, Intersection, Union))
 
     def _print_Complement(self, expr):
-        if self.is_AtomSet(expr.args[0]) or isinstance(expr.args[0], Complement):
+        if not self.is_ComposedSet(expr.args[0]) or isinstance(expr.args[0], Complement):
             argstr0 = self._print(expr.args[0])
         else:
             argstr0 = '(%s)'%self._print(expr.args[0])
-        if self.is_AtomSet(expr.args[1]):
+        if not self.is_ComposedSet(expr.args[1]):
             argstr1 = self._print(expr.args[1])
         else:
             argstr1 = '(%s)'%self._print(expr.args[1])
@@ -77,7 +77,7 @@ class SymplusPrinter(StrPrinter):
     def _print_Intersection(self, expr):
         argstr = []
         for a in expr.args:
-            if self.is_AtomSet(a) or isinstance(a, (Complement, Intersection)):
+            if not self.is_ComposedSet(a) or isinstance(a, (Complement, Intersection)):
                 argstr.append(self._print(a))
             else:
                 argstr.append('(%s)'%self._print(a))
@@ -86,7 +86,7 @@ class SymplusPrinter(StrPrinter):
     def _print_Union(self, expr):
         argstr = []
         for a in expr.args:
-            if self.is_AtomSet(a) or isinstance(a, (Complement, Intersection, Union)):
+            if not self.is_ComposedSet(a) or isinstance(a, (Complement, Intersection, Union)):
                 argstr.append(self._print(a))
             else:
                 argstr.append('(%s)'%self._print(a))

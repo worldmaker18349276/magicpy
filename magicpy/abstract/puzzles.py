@@ -257,11 +257,12 @@ class ContinuousOperation(Operation):
     operation which operate continuously.
     operation can be sliced to any distance.
     """
+    @property
     def distance(self):
         """
         total distance of this operation.
         """
-        return NotImplemented
+        raise NotImplementedError
 
     def to(self, dis):
         """
@@ -370,7 +371,7 @@ class CombinationalPuzzle(GeneralPuzzle, tuple):
         return NotImplemented
 
     def _apply(self, op):
-        if isinstance(op, ContinuousCombinationalOperation):
+        if isinstance(op, ContinuousSelectiveOperation):
             return self.cont_apply(self.sel_op_to_comb_op(op))
 
         elif isinstance(op, ContinuousOperation):

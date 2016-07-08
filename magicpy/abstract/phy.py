@@ -1,4 +1,5 @@
 from magicpy.abstract.puzzles import *
+from itertools import product, combinations
 
 
 class PhysicalPuzzle(CombinationalPuzzle):

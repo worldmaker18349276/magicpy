@@ -1,5 +1,6 @@
 from sympy.sets import Intersection, Union
-from magicpy.model.affine import transform
+from symplus.funcplus import Image
+from symplus.pathplus import IdentityPath
 
 
 class Engine:
@@ -9,8 +10,11 @@ class Engine:
     def union(self, *zets):
         return Union(*zets)
 
-    def transform(self, zet, trans):
-        return transform(trans, zet)
+    def transform_by(self, zet, op):
+        if isinstance(op, IdentityPath):
+            return zet
+        else:
+            return Image(op.call(), zet)
 
     def simp(self, zet):
         return zet

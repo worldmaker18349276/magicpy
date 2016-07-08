@@ -19,7 +19,7 @@ from magicpy.model.euclid import WholeSpace, Halfspace, Sphere, InfiniteCylinder
 # ref: https://github.com/matthew-brett/transforms3d
 
 eye3 = eye(3)
-zeros3 = ZeroMatrix(3,1)
+zeros3 = Mat([0,0,0])
 ones3 = Mat([1,1,1])
 
 def augment(m=eye3, v=zeros3):
@@ -583,9 +583,12 @@ def shearing(mvec, nvec):
 
 t = Symbol('t')
 
-def translate(tvec, flen=10):
+def identity(flen=1):
+    return TransformationPath(flen, t, EuclideanTransformation())
+
+def translate(tvec, flen=1):
     return TransformationPath(flen, t, EuclideanTransformation(tvec=tvec*t/flen))
 
-def rotate(th, axis, flen=10):
+def rotate(th, axis, flen=1):
     return TransformationPath(flen, t, EuclideanTransformation(rquat=rquat(th*t/flen, axis)))
 

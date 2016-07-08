@@ -554,12 +554,12 @@ T_RR3 = EuclideanTopology()
 
 def cube(size=[2,2,2]):
     return Intersection(
-        Halfspace(direction=+i, offset=-size[0]/2, closed=False, normalization=False),
-        Halfspace(direction=+j, offset=-size[1]/2, closed=False, normalization=False),
-        Halfspace(direction=+k, offset=-size[2]/2, closed=False, normalization=False),
-        Halfspace(direction=-i, offset=-size[0]/2, closed=False, normalization=False),
-        Halfspace(direction=-j, offset=-size[1]/2, closed=False, normalization=False),
-        Halfspace(direction=-k, offset=-size[2]/2, closed=False, normalization=False))
+        Halfspace(direction= i, offset=-size[0]/sympify(2), closed=False, normalization=False),
+        Halfspace(direction= j, offset=-size[1]/sympify(2), closed=False, normalization=False),
+        Halfspace(direction= k, offset=-size[2]/sympify(2), closed=False, normalization=False),
+        Halfspace(direction=-i, offset=-size[0]/sympify(2), closed=False, normalization=False),
+        Halfspace(direction=-j, offset=-size[1]/sympify(2), closed=False, normalization=False),
+        Halfspace(direction=-k, offset=-size[2]/sympify(2), closed=False, normalization=False))
 
 def sphere(radius=1):
     return Sphere(radius=radius, center=[0,0,0], closed=False)
@@ -567,13 +567,13 @@ def sphere(radius=1):
 def cylinder(radius=1, height=2):
     return Intersection(
         InfiniteCylinder(direction=i, radius=radius, center=[0,0,0], closed=False, normalization=False),
-        Halfspace(direction=+i, offset=-height/2, closed=False, normalization=False),
-        Halfspace(direction=-i, offset=-height/2, closed=False, normalization=False))
+        Halfspace(direction= i, offset=-height/sympify(2), closed=False, normalization=False),
+        Halfspace(direction=-i, offset=-height/sympify(2), closed=False, normalization=False))
 
 def cone(radius=1, height=1):
     return Intersection(
-        InfiniteCone(direction=i, slope=radius/height, center=[0,0,0], closed=False, normalization=False),
-        Halfspace(direction=+i, offset=0, closed=False, normalization=False),
+        InfiniteCone(direction=i, slope=radius/sympify(height), center=[0,0,0], closed=False, normalization=False),
+        Halfspace(direction= i, offset=0, closed=False, normalization=False),
         Halfspace(direction=-i, offset=-height, closed=False, normalization=False))
 
 def with_exterior(zet):
