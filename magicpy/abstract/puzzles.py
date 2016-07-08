@@ -46,8 +46,22 @@ class Puzzle(metaclass=ABCMeta):
         else:
             raise TypeError
 
-    @abstractmethod
     def _transform_by(self, op):
+        if isinstance(op, ConditionalOperation):
+            return self.transform_by(self._to_op(op))
+
+        else:
+            return NotImplemented
+
+    def _to_op(self, cond_op):
+        for cond, trans in cond_op.items():
+            if self._filter(cond):
+                return trans
+        else:
+            raise IllegalOperationError
+
+    @abstractmethod
+    def _filter(self, cond):
         ...
 
     def apply(self, op):
@@ -98,7 +112,10 @@ class ContinuousPuzzle(Puzzle):
     density = 10
 
     def _apply(self, op):
-        if isinstance(op, ContinuousOperation):
+        if isinstance(op, ContinuousConditionalOperation):
+            return self.cont_apply(self._to_op(op))
+
+        elif isinstance(op, ContinuousOperation):
             return self.cont_apply(op)
 
         else:
@@ -315,6 +332,9 @@ class ConcatenatedOperation(Operation):
         else:
             raise IndexError
 
+class ConditionalOperation(Operation, dict):
+    pass
+
 class TensorOperation(Operation, tuple):
     pass
 
@@ -352,6 +372,23 @@ class ParallelOperation(ContinuousOperation, TensorOperation):
         if dis > self.distance:
             raise ValueError
         return type(self)(op_i.to(dis) for op_i in self)
+
+class ContinuousConditionalOperation(ContinuousOperation, ConditionalOperation):
+    def __new__(cls, ops):
+        if not all(isinstance(op_i, ContinuousOperation) for op_i in ops.values()):
+            raise TypeError
+        if len(set(op_i.distance for op_i in ops.values())) != 1:
+            raise ValueError
+        return ConditionalOperation.__new__(cls, ops)
+
+    @property
+    def distance(self):
+        return tuple(self.values())[0].distance
+
+    def to(self, dis):
+        if dis > self.distance:
+            raise ValueError
+        return type(self)(dict((cond, op_i.to(dis)) for cond, op_i in self.items()))
 
 class CombinationalOperation(Operation, tuple):
     pass
