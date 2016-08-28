@@ -1,0 +1,27 @@
+<RCC>
+    <qresource>
+        <file>icons/MagicPart_adjust_viewbox.png</file>
+        <file>icons/MagicPart_common.png</file>
+        <file>icons/MagicPart_fuse.png</file>
+        <file>icons/MagicPart_cut.png</file>
+        <file>icons/MagicPart_complement.png</file>
+        <file>icons/MagicPart_transform.png</file>
+        <file>icons/MagicPart_partition.png</file>
+        <file>icons/MagicPart_fragment.png</file>
+        <file>icons/MagicPart_slice.png</file>
+        <file>icons/MagicPart_compound.png</file>
+        <file>icons/MagicPart_compoundRemove.png</file>
+        <file>icons/MagicPart_compoundFuse.png</file>
+        <file>icons/MagicPart_compoundTransform.png</file>
+        <file>icons/MagicPart_apart.png</file>
+        <file>icons/MagicPart_mask.png</file>
+        <file>icons/MagicPart_whole_space.png</file>
+        <file>icons/MagicPart_box.png</file>
+        <file>icons/MagicPart_cylinder.png</file>
+        <file>icons/MagicPart_cone.png</file>
+        <file>icons/MagicPart_sphere.png</file>
+        <file>icons/MagicPart_halfspace.png</file>
+        <file>icons/MagicPart_infinite_cylinder.png</file>
+        <file>icons/MagicPart_infinite_cone.png</file>
+    </qresource>
+</RCC>
