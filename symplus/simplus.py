@@ -3,7 +3,8 @@ from sympy.core import S, Symbol, Dummy
 from sympy.logic import true, false, And, Or, Not
 from sympy.logic.boolalg import BooleanFunction
 from sympy.simplify import simplify
-from symplus.util import *
+
+from symplus.typlus import is_Matrix
 
 
 # sqrt
@@ -140,7 +141,7 @@ def is_simplerel(expr):
     from sympy.logic.boolalg import _find_predicates
 
     variables = _find_predicates(expr)
-    relations = tuple(filter(lambda v: isinstance(v, Rel), variables))
+    relations = tuple(v for v in variables if isinstance(v, Rel))
     if any(rel.args[1] != 0 for rel in relations):
         return False
     simple_form = {Eq: Eq, Ne: Eq,
@@ -163,18 +164,16 @@ def expand_polyeq(eq):
         terms = (expr,)
 
     # eliminate positive/negative terms
-    terms = tuple(filterfalse(_is_positive, terms))
+    terms = tuple(t for t in terms if not _is_positive(t))
     sign = len(terms)
-    terms = tuple(filterfalse(_is_negative, terms))
+    terms = tuple(t for t in terms if not _is_negative(t))
     sign -= len(terms)
 
     # reduce power terms
-    terms1 = filterfalse(lambda t: isinstance(t, Pow), terms)
-    termspow = tuple(filter(lambda t: isinstance(t, Pow), terms))
-    terms2 = filter(lambda t: t.args[1]%2==0, termspow)
-    terms2 = map(lambda t: t.args[0], terms2)
-    terms3 = filter(lambda t: t.args[1]%2==1, termspow)
-    terms3 = map(lambda t: t.args[0], terms3)
+    terms1 = (t for t in terms if not isinstance(t, Pow))
+    termspow = tuple(t for t in terms if isinstance(t, Pow))
+    terms2 = (t.args[0] for t in termspow if t.args[1]%2==0)
+    terms3 = (t.args[0] for t in termspow if t.args[1]%2==1)
 
     # find positive-or-zero terms
     termsp_ = list(terms2)
@@ -370,7 +369,7 @@ def logicrelsimp(expr, form='dnf', deep=True):
 
         # make totality
         variables = _find_predicates(expr)
-        relations = filter(lambda v: isinstance(v, Rel) and v.args[1] == 0, variables)
+        relations = (v for v in variables if isinstance(v, Rel) and v.args[1] == 0)
         totalities = []
         for a in set(rel.args[0] for rel in relations):
             totalities.append(
@@ -489,7 +488,7 @@ def with_matsym(*simplifies):
 
         # replace MatrixElement as Symbol: A[i,j] -> Aij
         elems = tuple(elem for mat in mats for elem in mat)
-        syms = tuple(map(lambda e: Dummy(str(e)), elems))
+        syms = tuple(Dummy(str(e)) for e in elems)
         expr = expr.xreplace(dict(zip(elems, syms)))
 
         # simplify expression

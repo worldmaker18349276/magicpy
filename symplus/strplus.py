@@ -2,11 +2,11 @@ from sympy.printing.str import StrPrinter
 from sympy.core import Atom
 from sympy.logic import Not, And, Xor, Or, Implies, Equivalent
 from sympy.sets import Complement, Intersection, Union, Contains, Interval
-from symplus.setplus import AbstractSet
-from symplus.funcplus import Apply, Image
+from symplus.funcplus import Apply
+from symplus.setplus import AbstractSet, Image
 
 
-class SymplusPrinter(StrPrinter):
+class MathPrinter(StrPrinter):
     def _print_Not(self, expr):
         if isinstance(expr.args[0], (Atom, Not)):
             return '~'+self._print(expr.args[0])
@@ -20,7 +20,7 @@ class SymplusPrinter(StrPrinter):
                 argstr.append(self._print(a))
             else:
                 argstr.append('(%s)'%self._print(a))
-        return ' & '.join(sorted(argstr))
+        return ' /\ '.join(sorted(argstr))
 
     def _print_Xor(self, expr):
         argstr = []
@@ -29,7 +29,7 @@ class SymplusPrinter(StrPrinter):
                 argstr.append(self._print(a))
             else:
                 argstr.append('(%s)'%self._print(a))
-        return ' ^ '.join(sorted(argstr))
+        return ' (+) '.join(sorted(argstr))
 
     def _print_Or(self, expr):
         argstr = []
@@ -38,7 +38,7 @@ class SymplusPrinter(StrPrinter):
                 argstr.append(self._print(a))
             else:
                 argstr.append('(%s)'%self._print(a))
-        return ' | '.join(sorted(argstr))
+        return ' \/ '.join(sorted(argstr))
 
     def _print_Implies(self, expr):
         if isinstance(expr.args[0], (Atom, Not, And, Xor, Or)):
@@ -93,13 +93,13 @@ class SymplusPrinter(StrPrinter):
         return ' u '.join(sorted(argstr))
 
     def _print_AbstractSet(self, expr):
-        return '{{{0} : {1}}}'.format(*[self._print(arg) for arg in expr.args])
+        return '{{{0} | {1}}}'.format(*[self._print(arg) for arg in expr.args])
 
     def _print_ImageSet(self, expr):
         if isinstance(expr.args[1], AbstractSet):
             varstr = self._print(expr.args[0](*expr.args[1].variables))
             exprstr = self._print(expr.args[1].expr)
-            return '{%s : %s}'%(varstr, exprstr)
+            return '{%s | %s}'%(varstr, exprstr)
         else:
             if len(expr.args[0].variables) == 1:
                 varstr = self._print(expr.args[0].variables[0])
@@ -107,13 +107,13 @@ class SymplusPrinter(StrPrinter):
                 varstr = self._print(expr.args[0].variables)
             elemstr = self._print(expr.args[0].expr)
             setstr = self._print(expr.args[1])
-            return '{%s : %s in %s}'%(elemstr, varstr, setstr)
+            return '{%s | %s in %s}'%(elemstr, varstr, setstr)
 
     def _print_Contains(self, expr):
         return '%s in %s'%(expr.args[0], expr.args[1])
 
     def _print_EmptySet(self, expr):
-        return '{}'
+        return '(/)'
 
     def _print_UniversalSet(self, expr):
         return 'V'
@@ -149,7 +149,7 @@ class SymplusPrinter(StrPrinter):
             else:
                 varstr = self._print(expr.set.variables)
             exprstr = self._print(expr.set.expr)
-            return '{%s%s : %s}'%(funcstr, varstr, exprstr)
+            return '{%s%s | %s}'%(funcstr, varstr, exprstr)
         else:
             if len(expr.function.variables) == 1:
                 varstr = self._print(expr.function.variables[0])
@@ -157,17 +157,20 @@ class SymplusPrinter(StrPrinter):
                 varstr = self._print(expr.function.variables)
             elemstr = self._print(expr.function.expr)
             setstr = self._print(expr.set)
-            return '{%s : %s in %s}'%(elemstr, varstr, setstr)
+            return '{%s | %s in %s}'%(elemstr, varstr, setstr)
 
     def _print_MatrixBase(self, expr):
+        from sympy import eye
         if expr.rows == 0 or expr.cols == 0:
             return '[]'
         elif expr.rows == 1:
-            return expr.table(self)
+            return expr.table(self, colsep=' ')
         elif expr.cols == 1:
-            return expr.T.table(self)+'\''
+            return expr.T.table(self, colsep=' ')+'\''
+        elif expr.rows == expr.cols and expr == eye(expr.cols):
+            return 'eye(%s)'%expr.cols
         else:
-            return '\n'+expr.table(self)
+            return '\n'+expr.table(self, colsep=' ')
     _print_SparseMatrix = \
         _print_MutableSparseMatrix = \
         _print_ImmutableSparseMatrix = \
@@ -178,41 +181,41 @@ class SymplusPrinter(StrPrinter):
         _print_ImmutableDenseMatrix = \
         _print_MatrixBase
 
-pr = SymplusPrinter()
+pr = MathPrinter()
 def mprint(expr):
     """
     >>> from sympy import *
     >>> x, y, z = symbols('x y z')
     >>> mprint((x&y)|(y&~z))
-    x & y | y & ~z
+    x /\ y \/ y /\ ~z
     >>> mprint((x|y)&~(y|z))
-    (x | y) & ~(y | z)
+    (x \/ y) /\ ~(y \/ z)
     >>> mprint(((x>0) & y) >> z)
-    (x > 0) & y => z
+    (x > 0) /\ y => z
     >>> mprint((x>0) & y >> z)
-    (x > 0) & (y => z)
+    (x > 0) /\ (y => z)
     >>> from symplus.setplus import *
     >>> mprint(St({x : x>y}))
-    {x : x > y}
+    {x | x > y}
     >>> mprint(St({(x,y) : (x<1)&(y>0)}))
-    {(x, y) : (x < 1) & (y > 0)}
+    {(x, y) | (x < 1) /\ (y > 0)}
     >>> mprint(St({(x,y) : (x<1)&(y>0)}))
-    {(x, y) : (x < 1) & (y > 0)}
+    {(x, y) | (x < 1) /\ (y > 0)}
     >>> mprint(St({x : x<1}, {x : x>0}, evaluate=False) | S.Reals)
-    (-oo, oo) u {x : x < 1} n {x : x > 0}
+    (-oo, oo) u {x | x < 1} n {x | x > 0}
     >>> mprint(St({x : x>0}) | Interval(-1,1))
-    [-1, 1] u {x : x > 0}
+    [-1, 1] u {x | x > 0}
     >>> mprint(St({x : x<1}) - S.Reals)
-    {x : x < 1} \ (-oo, oo)
+    {x | x < 1} \ (-oo, oo)
     >>> mprint(imageset(Lambda(x, x**2), St({x : x>y})))
-    {x**2 : x > y}
+    {x**2 | x > y}
     >>> mprint(imageset(Lambda(x, x*y), S.Naturals))
-    {x*y : x in Naturals()}
+    {x*y | x in Naturals()}
     >>> from symplus.funcplus import *
     >>> mprint(FunctionCompose(exp, sin))
     (exp o sin)
     >>> mprint(Image(FunctionCompose(exp, sin), St({x : x>y}), evaluate=False))
-    {(exp o sin)(x) : x > y}
+    {(exp o sin)(x) | x > y}
     >>> mprint(Apply(Lambda(x, x*y), 3))
     (x |-> x*y)(3)
     """

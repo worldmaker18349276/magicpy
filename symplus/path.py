@@ -2,7 +2,8 @@ from sympy.core import S, Basic, Lambda, Tuple, sympify, Symbol
 from sympy.core.evaluate import global_evaluate
 from sympy.functions import Piecewise
 from sympy.sets import Set, FiniteSet, ProductSet, Interval
-from symplus.util import *
+from symplus.typlus import is_Matrix
+from symplus.symbplus import free_symbols, rename_variables_in
 from symplus.funcplus import Functor, compose, inverse
 
 

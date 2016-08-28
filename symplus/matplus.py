@@ -1,8 +1,9 @@
-from sympy.matrices.immutable import ImmutableMatrix as Mat
+from sympy.matrices.immutable import ImmutableMatrix
 from sympy.functions import sqrt, acos
-from sympy.core import pi
-from symplus.util import *
+from sympy.core import pi, Symbol
 
+
+Mat = ImmutableMatrix
 
 i, j, k = e = Mat([1,0,0]), Mat([0,1,0]), Mat([0,0,1])
 x, y, z = Symbol('x', real=True), Symbol('y', real=True), Symbol('z', real=True)

@@ -3,7 +3,9 @@ from sympy.core.evaluate import global_evaluate
 from sympy.logic import true, false
 from sympy.logic.boolalg import BooleanFunction
 from sympy.logic.inference import valid, satisfiable
-from symplus.util import *
+from symplus.typlus import is_Symbol, is_Boolean
+from symplus.tuplus import pack_if_not, unpack_if_can, repack_if_can
+from symplus.symbplus import free_symbols
 
 
 class Forall(BooleanFunction):
@@ -41,7 +43,7 @@ class Forall(BooleanFunction):
 
     @property
     def free_symbols(self):
-        return self.expr.free_symbols - set(self.variables)
+        return free_symbols(self.expr) - set(self.variables)
 
     def _hashable_content(self):
         return (self.expr.xreplace(self.canonical_variables),)
@@ -81,7 +83,7 @@ class Exist(BooleanFunction):
 
     @property
     def free_symbols(self):
-        return self.expr.free_symbols - set(self.variables)
+        return free_symbols(self.expr) - set(self.variables)
 
     def _hashable_content(self):
         return (self.expr.xreplace(self.canonical_variables),)

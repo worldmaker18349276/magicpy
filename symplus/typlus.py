@@ -1,5 +1,4 @@
 from sympy.core import Symbol, Tuple, FunctionClass, Lambda, Expr, Basic
-from sympy.core.core import BasicMeta
 from sympy.matrices import MatrixSymbol
 from sympy.logic import true, false
 
@@ -32,8 +31,6 @@ class Functor(Basic):
     #     ...
 
 
-# type
-
 def is_Tuple(obj):
     return (isinstance(obj, Tuple) or
             isinstance(obj, (list, tuple)))
@@ -60,26 +57,6 @@ def is_Matrix(obj):
 def is_Function(obj):
     return isinstance(obj, (FunctionClass, Functor, Lambda))
 
-def narg(func):
-    if isinstance(func, Lambda):
-        return len(func.variables)
-    elif isinstance(func, Functor):
-        return func.narg
-    elif isinstance(func, FunctionClass):
-        return next(iter(func.nargs))
-    else:
-        raise TypeError
-
-def nres(func):
-    if isinstance(func, Lambda):
-        return len(pack_if_not(func.expr))
-    elif isinstance(func, Functor):
-        return func.nres
-    elif isinstance(func, FunctionClass):
-        return 1
-    else:
-        raise TypeError
-
 def type_match(obj1, obj2):
     if is_Tuple(obj1):
         if not is_Tuple(obj2):       return false
@@ -98,36 +75,4 @@ def type_match(obj1, obj2):
         if not is_Boolean(obj2):     return false
     else:                            return false
     return true
-
-
-def pack_if_not(a):
-    return Tuple(a) if not is_Tuple(a) else a
-
-def unpack_if_can(a):
-    return a[0] if is_Tuple(a) and len(a) == 1 else a
-
-def repack_if_can(a):
-    return Tuple(*a) if is_Tuple(a) else a
-
-
-# variable
-
-def free_symbols(func):
-    if isinstance(func, BasicMeta):
-        return set()
-    elif isinstance(func, Basic):
-        return func.free_symbols
-    else:
-        return set()
-
-def rename_variables_in(variables, varspace):
-    names = [v.name for v in variables]
-    namespace = {v.name for v in varspace}
-    for i in range(len(names)):
-        while names[i] in namespace:
-            names[i] += '_'
-        namespace.add(names[i])
-    return list(Symbol(n, **v.assumptions0)
-                if isinstance(v, Symbol) else MatrixSymbol(n, v.rows, v.cols)
-                for n, v in zip(names, variables))
 

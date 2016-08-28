@@ -1,18 +1,20 @@
 from sympy.core import Ne, Eq, Symbol, Lambda, Tuple, pi, Dummy
+from sympy.core.compatibility import with_metaclass
 from sympy.core.singleton import Singleton
 from sympy.simplify import simplify
 from sympy.sets import Set, Intersection, Union, Complement, EmptySet, ImageSet
 from sympy.sets.sets import UniversalSet
 from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
                             MatrixSymbol, Identity, ZeroMatrix)
-from sympy.matrices.immutable import ImmutableMatrix as Mat
-from sympy.functions import cos, sin, acos, sign
-from symplus.util import *
-from symplus.setplus import AbstractSet
-from symplus.funcplus import Functor, compose, inverse, Image
-from symplus.matplus import *
-from symplus.pathplus import PathMonoid, TransformationPath
-from magicpy.model.euclid import WholeSpace, Halfspace, Sphere, InfiniteCylinder, InfiniteCone, Revolution
+from sympy.functions import cos, sin, acos, sign, sqrt
+from symplus.typlus import is_Tuple, is_Function
+from symplus.symbplus import free_symbols
+from symplus.funcplus import Functor, compose, inverse
+from symplus.setplus import AbstractSet, Image
+from symplus.matplus import Mat, norm, normalize, dot, cross, project, i, j, k, x, y, z, r
+from symplus.path import PathMonoid, TransformationPath
+from symplus.euclid import (WholeSpace, Halfspace, Sphere, InfiniteCylinder, InfiniteCone,
+                            Revolution, Box, Cylinder, Cone)
 
 
 # algorithm for affine transformation
@@ -23,6 +25,10 @@ zeros3 = Mat([0,0,0])
 ones3 = Mat([1,1,1])
 
 def augment(m=eye3, v=zeros3):
+    if m.shape != (3,3):
+        raise ValueError("shape of matrix m must be (3,3); got %s"%str(m.shape))
+    if v.shape != (3,1):
+        raise ValueError("shape of matrix v must be (3,1); got %s"%str(v.shape))
     return m.row_join(v).col_join(eye(4)[-1,:])
 
 def rquat(th, axis):
@@ -189,7 +195,7 @@ def trpzs2aff(tvec=zeros3, rquat=Mat([1,0,0,0]), parity=1, zfac=ones3, stri=zero
     return augment(mat, tvec)
 
 def aff2trpzs(affmat):
-    tvec = affmat[-1,:-1]
+    tvec = affmat[:-1,-1]
     rpzsmat = affmat[:-1,:-1]
     zsmat = (rpzsmat.T*rpzsmat).cholesky().T
     zfac = Mat([zsmat[0,0], zsmat[1,1], zsmat[2,2]])
@@ -275,6 +281,16 @@ def zvec2zmat(zvec):
     zfac = norm(zvec)
     return eye3 + nvec*nvec.T*(zfac-1)
 
+def rmat_k2d(d):
+    d = normalize(d)
+    if d == k:
+        rot = eye(3)
+    elif d == -k:
+        rot = diag(1,-1,-1)
+    else:
+        rot = rquat2rmat(rquat(acos(dot(k, d)), cross(k, d)))
+    return rot
+
 
 # general transformation
 
@@ -312,13 +328,7 @@ class Transformation(Functor):
         (3, 5, 8)
         >>> s = shearing(2*j,sqrt(3)*i)
         >>> m.transform(s)
-        AffineTransformation(Matrix([
-        [        1, 0, 0],
-        [2*sqrt(3), 1, 0],
-        [        0, 0, 1]]), Matrix([
-        [         0],
-        [-4*sqrt(3)],
-        [         0]]))
+        AffineTransformation([[1, 0, 0], [2*sqrt(3), 1, 0], [0, 0, 1]], [0, -4*sqrt(3), 0])
         >>> import symplus.setplus
         >>> x, y, z = symbols('x,y,z')
         >>> m.transform(AbstractSet((x,y,z), x**2+y**2+z**2<1))
@@ -345,10 +355,11 @@ class Transformation(Functor):
 
     @property
     def free_symbols(self):
-        return self.as_lambda().free_symbols
+        return free_symbols(self.as_lambda())
 
 class AffineTransformation(Transformation):
-    def __new__(cls, matrix=eye(4), vector=zeros3):
+    def __new__(cls, matrix=eye(3), vector=zeros3):
+        matrix = Mat(matrix)
         vector = Mat(vector)
         return Functor.__new__(cls, matrix, vector)
 
@@ -359,6 +370,14 @@ class AffineTransformation(Transformation):
     @property
     def vector(self):
         return self.args[1]
+
+    def _sympystr(self, printer):
+        matrix = list(list(self.matrix[i,j] for j in range(self.matrix.shape[1]))
+                                            for i in range(self.matrix.shape[0]))
+        return "%s(%s, %s)"%(
+            type(self).__name__,
+            printer.doprint(matrix),
+            printer.doprint(list(self.vector)))
 
     @classmethod
     def from_augmented_matrix(cls, augmat):
@@ -376,7 +395,7 @@ class AffineTransformation(Transformation):
 
     @property
     def free_symbols(cls):
-        return cls.matrix.free_symbols + cls.vector.free_symbols
+        return free_symbols(cls.matrix) + free_symbols(cls.vector)
 
     def _compose(trans1, trans2):
         if isinstance(trans2, AffineTransformation):
@@ -407,6 +426,13 @@ class EuclideanTransformation(AffineTransformation):
     @property
     def parity(self):
         return self.args[2]
+
+    def _sympystr(self, printer):
+        return "%s(%s, %s, %s)"%(
+            type(self).__name__,
+            printer.doprint(list(self.tvec)),
+            printer.doprint(list(self.rquat)),
+            printer.doprint(self.parity))
 
     @property
     def matrix(self):
@@ -450,32 +476,19 @@ class EuclideanTransformation(AffineTransformation):
         >>> t = EuclideanTransformation([0,1,-1], rquat(pi/3, [1,0,1]))
         >>> t._image(WholeSpace())
         WholeSpace()
-        >>> t._image(Halfspace([2,1,4], 2))
-        Halfspace(Matrix([
-        [-sqrt(14)/28 + 5*sqrt(21)/42],
-        [  -sqrt(14)/14 + sqrt(21)/42],
-        [    sqrt(14)/28 + sqrt(21)/6]]), -sqrt(21)/7 - 3*sqrt(14)/28 + 2, False)
+        >>> t._image(Halfspace(2, [2,1,4]))
+        Halfspace(-sqrt(21)/7 - 3*sqrt(14)/28 + 2, [-sqrt(14)/28 + 5*sqrt(21)/42,\
+ -sqrt(14)/14 + sqrt(21)/42, sqrt(14)/28 + sqrt(21)/6], False)
         >>> t._image(Sphere(3, [2,0,1]))
-        Sphere(3, Matrix([
-        [          7/4],
-        [sqrt(6)/4 + 1],
-        [          1/4]]), False)
-        >>> t._image(InfiniteCylinder([0,1,4], 3, [1,1,0]))
-        InfiniteCylinder(Matrix([
-        [ -sqrt(102)/68 + sqrt(17)/17],
-        [ -sqrt(102)/17 + sqrt(17)/34],
-        [sqrt(102)/68 + 3*sqrt(17)/17]]), 3, Matrix([
-        [-27*sqrt(6)/136 + 99/136],
-        [  27*sqrt(6)/136 + 75/68],
-        [   -3/8 + 67*sqrt(6)/136]]), False)
-        >>> t._image(InfiniteCone([2,3,1], 1, [2,1,0]))
-        InfiniteCone(Matrix([
-        [   -sqrt(14)/8 + 3*sqrt(21)/28],
-        [  -3*sqrt(14)/28 - sqrt(21)/28],
-        [-3*sqrt(21)/28 - 5*sqrt(14)/56]]), 1, Matrix([
-        [-sqrt(6)/4 + 3/2],
-        [ sqrt(6)/2 + 3/2],
-        [-1/2 + sqrt(6)/4]]), False)
+        Sphere(3, [7/4, sqrt(6)/4 + 1, 1/4], False)
+        >>> t._image(InfiniteCylinder(3, [1,1,0], [0,1,4]))
+        InfiniteCylinder(3, [-27*sqrt(6)/136 + 99/136, 27*sqrt(6)/136 + 75/68,\
+ -3/8 + 67*sqrt(6)/136], [-sqrt(102)/68 + sqrt(17)/17, -sqrt(102)/17 + sqrt(17)/34,\
+ sqrt(102)/68 + 3*sqrt(17)/17], False)
+        >>> t._image(InfiniteCone(1, [2,1,0], [2,3,1]))
+        InfiniteCone(1, [-sqrt(6)/4 + 3/2, sqrt(6)/2 + 3/2, -1/2 + sqrt(6)/4],\
+ [-sqrt(14)/8 + 3*sqrt(21)/28, -3*sqrt(14)/28 - sqrt(21)/28, -3*sqrt(21)/28\
+ - 5*sqrt(14)/56], False)
         """
         if isinstance(zet, WholeSpace):
             return zet
@@ -484,43 +497,100 @@ class EuclideanTransformation(AffineTransformation):
             direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
             offset = simplify(zet.offset + dot(self.tvec, direction))
             closed = zet.closed
-            return Halfspace(direction=direction, offset=offset, closed=closed,
-                             normalization=False)
+            return Halfspace(
+                offset=offset,
+                direction=direction,
+                closed=closed,
+                normalization=False)
 
         elif isinstance(zet, Sphere):
             radius = zet.radius
             center = self.call(*zet.center)
             closed = zet.closed
-            return Sphere(radius=radius, center=center, closed=closed,
-                          normalization=False)
+            return Sphere(
+                radius=radius,
+                center=center,
+                closed=closed,
+                normalization=False)
 
         elif isinstance(zet, InfiniteCylinder):
-            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
             radius = zet.radius
+            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
             center = simplify(qrotate(self.rquat, self.parity*zet.center))
             center = simplify(center + self.tvec - project(self.tvec, direction))
             closed = zet.closed
-            return InfiniteCylinder(direction=direction, radius=radius, center=center, closed=closed,
-                            normalization=False)
+            return InfiniteCylinder(
+                radius=radius,
+                center=center,
+                direction=direction,
+                closed=closed,
+                normalization=False)
 
         elif isinstance(zet, InfiniteCone):
-            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
             slope = zet.slope
             center = self.call(*zet.center)
+            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
             closed = zet.closed
-            return InfiniteCone(direction=direction, slope=slope, center=center, closed=closed,
-                        normalization=False)
+            return InfiniteCone(
+                slope=slope,
+                center=center,
+                direction=direction,
+                closed=closed,
+                normalization=False)
 
         elif isinstance(zet, Revolution):
             func = zet.func
-            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
             center = self.call(*zet.center)
-            return Revolution(func=func, direction=direction, center=center,
-                              normalization=False)
+            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
+            return Revolution(
+                func=func,
+                center=center,
+                direction=direction,
+                normalization=False)
+
+        elif isinstance(zet, Box):
+            size = zet.size
+            center = self.call(*zet.center)
+            orientation = simplify(rquat2rmat(self.rquat)*self.parity*zet.orientation)
+            closed = zet.closed
+            return Box(
+                size=size,
+                center=center,
+                orientation=orientation,
+                closed=closed,
+                normalization=False)
+
+        elif isinstance(zet, Cylinder):
+            radius = zet.radius
+            height = zet.height
+            center = self.call(*zet.center)
+            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
+            closed = zet.closed
+            return Cylinder(
+                radius=radius,
+                height=height,
+                center=center,
+                direction=direction,
+                closed=closed,
+                normalization=False)
+
+        elif isinstance(zet, Cone):
+            radius = zet.radius
+            height = zet.height
+            center = self.call(*zet.center)
+            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
+            closed = zet.closed
+            return Cone(
+                radius=radius,
+                height=height,
+                center=center,
+                direction=direction,
+                closed=closed,
+                normalization=False)
 
 # transformation group
 
-class TransformationGroup(Set, metaclass=Singleton):
+class TransformationGroup(with_metaclass(Singleton, Set)):
     def _contains(self, other):
         return isinstance(other, Transformation)
     def is_subset(self, other):

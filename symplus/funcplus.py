@@ -6,8 +6,9 @@ from sympy.solvers import solve
 from sympy.functions import (Id, exp, log, cos, acos, sin, asin, tan, atan,
                              cot, acot, sec, asec, csc, acsc)
 from sympy.sets import Set, Intersection, Union, Complement
-from symplus.util import *
-from symplus.setplus import AbstractSet
+from symplus.typlus import Functor, is_Function
+from symplus.tuplus import pack_if_not, unpack_if_can, repack_if_can
+from symplus.symbplus import free_symbols, rename_variables_in
 
 
 FunctionClass_inverse_table = {
@@ -16,6 +17,26 @@ FunctionClass_inverse_table = {
 }
 
 dummy = Dummy()
+
+def narg(func):
+    if isinstance(func, Lambda):
+        return len(func.variables)
+    elif isinstance(func, Functor):
+        return func.narg
+    elif isinstance(func, FunctionClass):
+        return next(iter(func.nargs))
+    else:
+        raise TypeError
+
+def nres(func):
+    if isinstance(func, Lambda):
+        return len(pack_if_not(func.expr))
+    elif isinstance(func, Functor):
+        return func.nres
+    elif isinstance(func, FunctionClass):
+        return 1
+    else:
+        raise TypeError
 
 def FunctionClass_inverse(func):
     if func in FunctionClass_inverse_table:
@@ -90,7 +111,7 @@ class FunctionCompose(Functor):
                         funcs = funcs[:i-1] + (comp_funcs,) + funcs[i+1:]
                         i = i - 1
                 elif isinstance(funcs[i-1], Lambda) and isinstance(funcs[i], Lambda):
-                    variables = rename_variables_in(funcs[i].variables, funcs[i-1].free_symbols)
+                    variables = rename_variables_in(funcs[i].variables, free_symbols(funcs[i-1]))
                     expr = funcs[i].expr
                     comp_funcs = Lambda(variables, funcs[i-1](*pack_if_not(expr)))
                     funcs = funcs[:i-1] + (comp_funcs,) + funcs[i+1:]
@@ -252,135 +273,6 @@ class Apply(Function):
     def doit(self, **hints):
         self = Basic.doit(self, **hints)
         return self.function(*self.arguments)
-
-class Image(Set):
-    """
-    >>> from sympy import *
-    >>> Image(sin, Interval(0, pi/2))
-    Image(sin, [0, pi/2])
-    >>> Image(exp, Image(sin, Interval(0, pi/2)))
-    Image(FunctionCompose(exp, sin), [0, pi/2])
-    >>> Image(FunctionInverse(sin), Image(sin, Interval(0, pi/2)))
-    [0, pi/2]
-    >>> Image(cos, S.EmptySet)
-    EmptySet()
-    >>> x, y = symbols('x y')
-    >>> Image(cos, AbstractSet(x, x > 0))
-    AbstractSet(a0, acos(a0) > 0)
-    >>> Image(cos, Intersection(AbstractSet(x, x > 0), AbstractSet(x, x < 0), evaluate=False))
-    Intersection(AbstractSet(a0, acos(a0) > 0), AbstractSet(a0, acos(a0) < 0))
-    >>> Image(Lambda(x, x+1), Interval(-1, 1)).contains(1)
-    True
-    >>> Image(Lambda(x, sin(x)+x), Interval(-1, 1)).contains(1)
-    And(Apply(FunctionInverse(Lambda(x, x + sin(x))), 1) <= 1, Apply(FunctionInverse(Lambda(x, x + sin(x))), 1) >= -1)
-    >>> f = Lambda((x, y), (x*cos(y), x*sin(y)))
-    >>> f_inv = FunctionInverse(f, evaluate=False)
-    >>> f_inv(*f(1, pi/4))
-    (-1, -3*pi/4)
-    >>> Image(f, ProductSet(Interval(0,1), Interval(-pi,pi))).contains(f(1, pi/4))
-    True
-    >>> Image(Lambda(x, x+1), Interval(-1, 1)).as_abstract()
-    AbstractSet(x0, And(x0 - 1 <= 1, x0 - 1 >= -1))
-    >>> g = Lambda((x, y), (x+exp(y), x+sin(y)))
-    >>> Image(g, ProductSet(Interval(-1,1), Interval(-1,1))).contains(g(1,2))
-    False
-    >>> Image(g, AbstractSet((x,y), x<y)).contains(g(1,2))
-    False
-    """
-    def __new__(cls, function, zet, **kwargs):
-        evaluate = kwargs.pop('evaluate', global_evaluate[0])
-
-        if not is_Function(function):
-            raise TypeError('function is not a FunctionClass, Functor or Lambda: %s'%function)
-        if not isinstance(zet, Set):
-            raise TypeError('zet is not a Set: %s'%zet)
-
-        if evaluate:
-            function, zet = Image.reduce(function, zet)
-
-        if function == Id:
-            return zet
-        else:
-            return Set.__new__(cls, function, zet, **kwargs)
-
-    @staticmethod
-    def reduce(func, zet):
-        def pre_reduce(func, zet):
-            while isinstance(zet, Image):
-                func = FunctionCompose(func, zet.function, evaluate=True)
-                zet = zet.set
-
-            if isinstance(zet, (Intersection, Union, Complement)):
-                args = [Image(func, arg, evaluate=True) for arg in zet.args]
-                return Id, zet.func(*args, evaluate=False)
-
-            if zet == S.EmptySet:
-                return Id, zet
-
-            return func, zet
-
-        def post_reduce(func, zet):
-            if isinstance(func, FunctionCompose):
-                funcs = func.functions
-                while True:
-                    func_, zet_ = post_reduce(funcs[-1], zet)
-                    if (func_, zet_) == (funcs[-1], zet):
-                        break
-                    elif func_ != Id:
-                        funcs = funcs[:-1] + (func_,)
-                        zet = zet_
-                        break
-                    elif len(funcs) == 1:
-                        funcs = ()
-                        zet = zet_
-                        break
-                    else:
-                        funcs = funcs[:-1]
-                        zet = zet_
-                return FunctionCompose(*funcs, evaluate=False), zet
-
-            elif hasattr(func, '_image'):
-                res = func._image(zet)
-                if res is not None:
-                    if isinstance(res, Image):
-                        return res.function, res.set
-                    else:
-                        return Id, res
-                else:
-                    return func, zet
-
-            elif isinstance(zet, AbstractSet):
-                inv_func = FunctionInverse(func, evaluate=True)
-                if not isinstance(inv_func, FunctionInverse):
-                    lambda_inv_func = as_lambda(inv_func)
-                    return Id, AbstractSet(lambda_inv_func.variables, zet.contains(lambda_inv_func.expr))
-                else:
-                    return func, zet
-
-            else:
-                return func, zet
-
-        return post_reduce(*pre_reduce(func, zet))
-
-    @property
-    def function(self):
-        return self._args[0]
-
-    @property
-    def set(self):
-        return self._args[1]
-
-    def _contains(self, mem):
-        mem = pack_if_not(mem)
-        inv_func = FunctionInverse(self.function)
-        mem_ = unpack_if_can(inv_func(*mem))
-        return self.set._contains(mem_)
-
-    def as_abstract(self):
-        narg = nres(self.function)
-        x = symbols('x:%d'%narg, real=True)
-        expr = self.contains(x)
-        return AbstractSet(x, expr)
 
 compose = FunctionCompose
 inverse = FunctionInverse
