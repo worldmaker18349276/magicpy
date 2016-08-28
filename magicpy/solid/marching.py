@@ -1,14 +1,18 @@
+from __future__ import division
 from itertools import product
-from functools import lru_cache, reduce
+from functools import reduce
 from operator import and_, or_, xor
 from sympy.core import S
+from sympy.core.compatibility import lru_cache
 from sympy.sets import Set, Intersection, Union, Complement
 from sympy.logic import Not, And, Or, Xor, Implies, Equivalent
 from sympy.logic.boolalg import true, false, Boolean, is_nnf
 from sympy.utilities import lambdify
 from symplus.simplus import logicrelsimp
 from symplus.setplus import AbstractSet, as_abstract
-from magicpy.engine.basic import Engine
+from magicpy.solid.general import SymbolicSolidEngine
+import sys
+if sys.version_info[0] == 2:  range = xrange
 
 
 def setbit1(bits, index):
@@ -80,11 +84,11 @@ class Voxels:
         else:
             return self._bits_of_set(AbstractSet(var, expr))
 
-def cube_voxels(r=2, n=10):
+def cube_voxels(r=2.0, n=10):
+    rn = int(r*n)
     def voxels_iter_getter():
-        return map(lambda v: (v[0]/n, v[1]/n, v[2]/n),
-                   product(range(-r*n, r*n+1), repeat=3))
-    return Voxels(voxels_iter_getter, (2*r*n+1)**3)
+        return ((x/n, y/n, z/n) for x, y, z in product(range(-rn, rn+1), repeat=3))
+    return Voxels(voxels_iter_getter, (2*rn+1)**3)
 
 
 def Intersection_(*args):
@@ -119,7 +123,7 @@ def Or_(*args):
     else:
         return false
 
-def marchingsetsimp(voxels, zet, ran=None):
+def marchingsetsimp(voxels, zet, subs={}, ran=None):
     """
     >>> from sympy import *
     >>> from symplus.setplus import *
@@ -145,7 +149,7 @@ def marchingsetsimp(voxels, zet, ran=None):
     if not isinstance(zet, Set):
         raise TypeError('zet is not Set: %r' % zet)
 
-    if zet in (S.EmptySet, S.UniversalSet):
+    if zet.subs(subs) in (S.EmptySet, S.UniversalSet):
         return zet
 
     if zet.has(Complement):
@@ -154,48 +158,48 @@ def marchingsetsimp(voxels, zet, ran=None):
     if ran is None:
         ran = voxels.ran
 
-    bits = voxels.bits_of_set(zet) & ran
+    bits = voxels.bits_of_set(zet.subs(subs)) & ran
     if bits == 0:
         return S.EmptySet
     elif bits == ran:
         return S.UniversalSet
 
     if isinstance(zet, Intersection):
-        # select important arguments
-        args = []
-        for arg in zet.args:
-            args_ = set(zet.args) - {arg}
-            bits_ = voxels.bits_of_set(Intersection_(*args_)) & ran
+        # remove unimportant arguments
+        args = set(zet.args)
+        for arg in list(args):
+            args.discard(arg)
+            bits_ = voxels.bits_of_set(Intersection_(*args).subs(subs)) & ran
             if bits_ != bits:
-                args.append(arg)
+                args.add(arg)
 
         # simplify remaining arguments
-        for i in range(len(args)):
-            args_ = set(args) - {args[i]}
-            ran_ = ran & voxels.bits_of_set(Intersection_(*args_))
-            args[i] = marchingsetsimp(voxels, args[i], ran_)
+        for arg in list(args):
+            args.discard(arg)
+            ran_ = ran & voxels.bits_of_set(Intersection_(*args).subs(subs))
+            args.add(marchingsetsimp(voxels, arg, subs, ran_))
         return Intersection_(*args)
 
     elif isinstance(zet, Union):
-        # select important arguments
-        args = []
-        for arg in zet.args:
-            args_ = set(zet.args) - {arg}
-            bits_ = voxels.bits_of_set(Union_(*args_)) & ran
+        # remove unimportant arguments
+        args = set(zet.args)
+        for arg in list(args):
+            args.discard(arg)
+            bits_ = voxels.bits_of_set(Union_(*args).subs(subs)) & ran
             if bits_ != bits:
-                args.append(arg)
+                args.add(arg)
 
         # simplify remaining arguments
-        for i in range(len(args)):
-            args_ = set(args) - {args[i]}
-            ran_ = ran &~voxels.bits_of_set(Union_(*args_))
-            args[i] = marchingsetsimp(voxels, args[i], ran_)
+        for arg in list(args):
+            args.discard(arg)
+            ran_ = ran &~voxels.bits_of_set(Union_(*args).subs(subs))
+            args.add(marchingsetsimp(voxels, arg, subs, ran_))
         return Union_(*args)
 
     else:
         return zet
 
-def marchingfuncsimp(voxels, var, expr, ran=None):
+def marchingfuncsimp(voxels, var, expr, subs={}, ran=None):
     """
     >>> from sympy import *
     >>> from symplus.setplus import *
@@ -221,7 +225,7 @@ def marchingfuncsimp(voxels, var, expr, ran=None):
     if not isinstance(expr, Boolean):
         raise TypeError('expr is not Boolean: %r' % expr)
 
-    if expr in (true, false):
+    if expr.subs(subs) in (true, false):
         return expr
 
     if not is_nnf(expr, False):
@@ -230,69 +234,76 @@ def marchingfuncsimp(voxels, var, expr, ran=None):
     if ran is None:
         ran = voxels.ran
 
-    bits = voxels.bits_of_expr(var, expr) & ran
+    bits = voxels.bits_of_expr(var, expr.subs(subs)) & ran
     if bits == 0:
         return false
     elif bits == ran:
         return true
 
     if isinstance(expr, And):
-        # select important arguments
-        args = []
-        for arg in expr.args:
-            args_ = set(expr.args) - {arg}
-            bits_ = voxels.bits_of_expr(var, And_(*args_)) & ran
+        # remove unimportant arguments
+        args = set(expr.args)
+        for arg in list(args):
+            args.discard(arg)
+            bits_ = voxels.bits_of_expr(var, And_(*args).subs(subs)) & ran
             if bits_ != bits:
-                args.append(arg)
+                args.add(arg)
 
         # simplify remaining arguments
-        for i in range(len(args)):
-            args_ = set(args) - {args[i]}
-            ran_ = ran & voxels.bits_of_expr(var, And_(*args_))
-            args[i] = marchingfuncsimp(voxels, var, args[i], ran_)
+        for arg in list(args):
+            args.discard(arg)
+            ran_ = ran & voxels.bits_of_expr(var, And_(*args).subs(subs))
+            args.add(marchingfuncsimp(voxels, var, args, subs, ran_))
         return And_(*args)
 
     elif isinstance(expr, Or):
-        # select important arguments
-        args = []
-        for arg in expr.args:
-            args_ = set(expr.args) - {arg}
-            bits_ = voxels.bits_of_expr(var, Or_(*args_)) & ran
+        # remove unimportant arguments
+        args = set(expr.args)
+        for arg in list(args):
+            args.discard(arg)
+            bits_ = voxels.bits_of_expr(var, Or_(*args).subs(subs)) & ran
             if bits_ != bits:
-                args.append(arg)
+                args.add(arg)
 
         # simplify remaining arguments
-        for i in range(len(args)):
-            args_ = set(args) - {args[i]}
-            ran_ = ran &~voxels.bits_of_expr(Or_(*args_))
-            args[i] = marchingfuncsimp(voxels, var, args[i], ran_)
+        for arg in list(args):
+            args.discard(arg)
+            ran_ = ran &~voxels.bits_of_expr(Or_(*args).subs(subs))
+            args.add(marchingfuncsimp(voxels, var, arg, subs, ran_))
         return Or_(*args)
 
     else:
         return expr
 
 
-class MarchingCubesEngine(Engine):
+class MarchingCubesSolidEngine(SymbolicSolidEngine):
     def __init__(self, voxels):
+        SymbolicSolidEngine.__init__(self)
         self.voxels = voxels
 
-    def is_disjoint(self, zet1, zet2):
+    def is_outside(self, zet1, zet2):
+        zet1 = zet1.subs(self.variables)
+        zet2 = zet2.subs(self.variables)
         return self.voxels.bits_of_set(zet1) & self.voxels.bits_of_set(zet2) == 0
 
-    def is_subset(self, zet1, zet2):
+    def is_inside(self, zet1, zet2):
+        zet1 = zet1.subs(self.variables)
+        zet2 = zet2.subs(self.variables)
         return self.voxels.bits_of_set(zet1) &~self.voxels.bits_of_set(zet2) == 0
 
     def equal(self, zet1, zet2):
+        zet1 = zet1.subs(self.variables)
+        zet2 = zet2.subs(self.variables)
         return self.voxels.bits_of_set(zet1) == self.voxels.bits_of_set(zet2)
 
     def simp(self, zet):
         zet = zet.doit()
-        if zet == S.EmptySet:
+        if zet.subs(self.variables) == S.EmptySet:
             return None
 
         elif isinstance(zet, AbstractSet):
             expr = logicrelsimp(zet.expr)
-            expr = marchingfuncsimp(self.voxels, zet.variables, expr)
+            expr = marchingfuncsimp(self.voxels, zet.variables, expr, self.variables)
             if expr == true:
                 return S.UniversalSet
             elif expr == false:
@@ -301,7 +312,7 @@ class MarchingCubesEngine(Engine):
                 return AbstractSet(zet.variables, expr)
 
         elif isinstance(zet, Set):
-            zet = marchingsetsimp(self.voxels, zet)
+            zet = marchingsetsimp(self.voxels, zet, self.variables)
             if zet == S.EmptySet:
                 return None
             else:
@@ -311,5 +322,5 @@ class MarchingCubesEngine(Engine):
             return zet
 
 def cube_engine(r=2, n=10):
-    return MarchingCubesEngine(cube_voxels(r, n))
+    return MarchingCubesSolidEngine(cube_voxels(r, n))
 

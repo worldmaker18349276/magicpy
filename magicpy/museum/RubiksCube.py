@@ -1,42 +1,43 @@
 """
 >>> print(str(RubiksCube))
 SymbolicSO3PhysicalPuzzle(
-    [Halfspace([-1, 0, 0]', -1, False) n Halfspace([0, -1, 0]', 1/3, False) n Halfspace([0, 0, -1]', -1, False) n Halfspace([0, 0, 1]', 1/3, False) n Halfspace([0, 1, 0]', -1, False) n Halfspace([1, 0, 0]', 1/3, False),
-     Halfspace([-1, 0, 0]', 1/3, False) n Halfspace([0, -1, 0]', 1/3, False) n Halfspace([0, 0, -1]', -1, False) n Halfspace([0, 0, 1]', 1/3, False) n Halfspace([0, 1, 0]', -1, False) n Halfspace([1, 0, 0]', -1, False),
-     Halfspace([-1, 0, 0]', -1/3, False) n Halfspace([0, -1, 0]', 1/3, False) n Halfspace([0, 0, -1]', -1, False) n Halfspace([0, 0, 1]', 1/3, False) n Halfspace([0, 1, 0]', -1, False) n Halfspace([1, 0, 0]', -1/3, False),
-     Halfspace([-1, 0, 0]', -1, False) n Halfspace([0, -1, 0]', 1/3, False) n Halfspace([0, 0, -1]', 1/3, False) n Halfspace([0, 0, 1]', -1, False) n Halfspace([0, 1, 0]', -1, False) n Halfspace([1, 0, 0]', 1/3, False),
-     Halfspace([-1, 0, 0]', 1/3, False) n Halfspace([0, -1, 0]', 1/3, False) n Halfspace([0, 0, -1]', 1/3, False) n Halfspace([0, 0, 1]', -1, False) n Halfspace([0, 1, 0]', -1, False) n Halfspace([1, 0, 0]', -1, False),
-     Halfspace([-1, 0, 0]', -1/3, False) n Halfspace([0, -1, 0]', 1/3, False) n Halfspace([0, 0, -1]', 1/3, False) n Halfspace([0, 0, 1]', -1, False) n Halfspace([0, 1, 0]', -1, False) n Halfspace([1, 0, 0]', -1/3, False),
-     Halfspace([-1, 0, 0]', -1, False) n Halfspace([0, -1, 0]', 1/3, False) n Halfspace([0, 0, -1]', -1/3, False) n Halfspace([0, 0, 1]', -1/3, False) n Halfspace([0, 1, 0]', -1, False) n Halfspace([1, 0, 0]', 1/3, False),
-     Halfspace([-1, 0, 0]', 1/3, False) n Halfspace([0, -1, 0]', 1/3, False) n Halfspace([0, 0, -1]', -1/3, False) n Halfspace([0, 0, 1]', -1/3, False) n Halfspace([0, 1, 0]', -1, False) n Halfspace([1, 0, 0]', -1, False),
-     Halfspace([-1, 0, 0]', -1/3, False) n Halfspace([0, -1, 0]', 1/3, False) n Halfspace([0, 0, -1]', -1/3, False) n Halfspace([0, 0, 1]', -1/3, False) n Halfspace([0, 1, 0]', -1, False) n Halfspace([1, 0, 0]', -1/3, False),
-     Halfspace([-1, 0, 0]', -1, False) n Halfspace([0, -1, 0]', -1, False) n Halfspace([0, 0, -1]', -1, False) n Halfspace([0, 0, 1]', 1/3, False) n Halfspace([0, 1, 0]', 1/3, False) n Halfspace([1, 0, 0]', 1/3, False),
-     Halfspace([-1, 0, 0]', 1/3, False) n Halfspace([0, -1, 0]', -1, False) n Halfspace([0, 0, -1]', -1, False) n Halfspace([0, 0, 1]', 1/3, False) n Halfspace([0, 1, 0]', 1/3, False) n Halfspace([1, 0, 0]', -1, False),
-     Halfspace([-1, 0, 0]', -1/3, False) n Halfspace([0, -1, 0]', -1, False) n Halfspace([0, 0, -1]', -1, False) n Halfspace([0, 0, 1]', 1/3, False) n Halfspace([0, 1, 0]', 1/3, False) n Halfspace([1, 0, 0]', -1/3, False),
-     Halfspace([-1, 0, 0]', -1, False) n Halfspace([0, -1, 0]', -1/3, False) n Halfspace([0, 0, -1]', -1, False) n Halfspace([0, 0, 1]', 1/3, False) n Halfspace([0, 1, 0]', -1/3, False) n Halfspace([1, 0, 0]', 1/3, False),
-     Halfspace([-1, 0, 0]', 1/3, False) n Halfspace([0, -1, 0]', -1/3, False) n Halfspace([0, 0, -1]', -1, False) n Halfspace([0, 0, 1]', 1/3, False) n Halfspace([0, 1, 0]', -1/3, False) n Halfspace([1, 0, 0]', -1, False),
-     Halfspace([-1, 0, 0]', -1/3, False) n Halfspace([0, -1, 0]', -1/3, False) n Halfspace([0, 0, -1]', -1, False) n Halfspace([0, 0, 1]', 1/3, False) n Halfspace([0, 1, 0]', -1/3, False) n Halfspace([1, 0, 0]', -1/3, False),
-     Halfspace([-1, 0, 0]', -1, False) n Halfspace([0, -1, 0]', -1, False) n Halfspace([0, 0, -1]', 1/3, False) n Halfspace([0, 0, 1]', -1, False) n Halfspace([0, 1, 0]', 1/3, False) n Halfspace([1, 0, 0]', 1/3, False),
-     Halfspace([-1, 0, 0]', 1/3, False) n Halfspace([0, -1, 0]', -1, False) n Halfspace([0, 0, -1]', 1/3, False) n Halfspace([0, 0, 1]', -1, False) n Halfspace([0, 1, 0]', 1/3, False) n Halfspace([1, 0, 0]', -1, False),
-     Halfspace([-1, 0, 0]', -1/3, False) n Halfspace([0, -1, 0]', -1, False) n Halfspace([0, 0, -1]', 1/3, False) n Halfspace([0, 0, 1]', -1, False) n Halfspace([0, 1, 0]', 1/3, False) n Halfspace([1, 0, 0]', -1/3, False),
-     Halfspace([-1, 0, 0]', -1, False) n Halfspace([0, -1, 0]', -1, False) n Halfspace([0, 0, -1]', -1/3, False) n Halfspace([0, 0, 1]', -1/3, False) n Halfspace([0, 1, 0]', 1/3, False) n Halfspace([1, 0, 0]', 1/3, False),
-     Halfspace([-1, 0, 0]', 1/3, False) n Halfspace([0, -1, 0]', -1, False) n Halfspace([0, 0, -1]', -1/3, False) n Halfspace([0, 0, 1]', -1/3, False) n Halfspace([0, 1, 0]', 1/3, False) n Halfspace([1, 0, 0]', -1, False),
-     Halfspace([-1, 0, 0]', -1/3, False) n Halfspace([0, -1, 0]', -1, False) n Halfspace([0, 0, -1]', -1/3, False) n Halfspace([0, 0, 1]', -1/3, False) n Halfspace([0, 1, 0]', 1/3, False) n Halfspace([1, 0, 0]', -1/3, False),
-     Halfspace([-1, 0, 0]', -1, False) n Halfspace([0, -1, 0]', -1/3, False) n Halfspace([0, 0, -1]', 1/3, False) n Halfspace([0, 0, 1]', -1, False) n Halfspace([0, 1, 0]', -1/3, False) n Halfspace([1, 0, 0]', 1/3, False),
-     Halfspace([-1, 0, 0]', 1/3, False) n Halfspace([0, -1, 0]', -1/3, False) n Halfspace([0, 0, -1]', 1/3, False) n Halfspace([0, 0, 1]', -1, False) n Halfspace([0, 1, 0]', -1/3, False) n Halfspace([1, 0, 0]', -1, False),
-     Halfspace([-1, 0, 0]', -1/3, False) n Halfspace([0, -1, 0]', -1/3, False) n Halfspace([0, 0, -1]', 1/3, False) n Halfspace([0, 0, 1]', -1, False) n Halfspace([0, 1, 0]', -1/3, False) n Halfspace([1, 0, 0]', -1/3, False),
-     Halfspace([-1, 0, 0]', -1, False) n Halfspace([0, -1, 0]', -1/3, False) n Halfspace([0, 0, -1]', -1/3, False) n Halfspace([0, 0, 1]', -1/3, False) n Halfspace([0, 1, 0]', -1/3, False) n Halfspace([1, 0, 0]', 1/3, False),
-     Halfspace([-1, 0, 0]', 1/3, False) n Halfspace([0, -1, 0]', -1/3, False) n Halfspace([0, 0, -1]', -1/3, False) n Halfspace([0, 0, 1]', -1/3, False) n Halfspace([0, 1, 0]', -1/3, False) n Halfspace([1, 0, 0]', -1, False),
-     Halfspace([-1, 0, 0]', -1/3, False) n Halfspace([0, -1, 0]', -1/3, False) n Halfspace([0, 0, -1]', -1/3, False) n Halfspace([0, 0, 1]', -1/3, False) n Halfspace([0, 1, 0]', -1/3, False) n Halfspace([1, 0, 0]', -1/3, False)])
+    [Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(2/3, [0, 0, 1], False) n Halfspace(2/3, [0, 1, 0], False) n Halfspace(2/3, [1, 0, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(2/3, [0, 0, -1], False) n Halfspace(2/3, [0, 1, 0], False) n Halfspace(2/3, [1, 0, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [0, 0, -1], False) n Halfspace(-2/3, [0, 0, 1], False) n Halfspace(2/3, [0, 1, 0], False) n Halfspace(2/3, [1, 0, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(2/3, [0, -1, 0], False) n Halfspace(2/3, [0, 0, 1], False) n Halfspace(2/3, [1, 0, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(2/3, [0, -1, 0], False) n Halfspace(2/3, [0, 0, -1], False) n Halfspace(2/3, [1, 0, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [0, 0, -1], False) n Halfspace(-2/3, [0, 0, 1], False) n Halfspace(2/3, [0, -1, 0], False) n Halfspace(2/3, [1, 0, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [0, -1, 0], False) n Halfspace(-2/3, [0, 1, 0], False) n Halfspace(2/3, [0, 0, 1], False) n Halfspace(2/3, [1, 0, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [0, -1, 0], False) n Halfspace(-2/3, [0, 1, 0], False) n Halfspace(2/3, [0, 0, -1], False) n Halfspace(2/3, [1, 0, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [0, -1, 0], False) n Halfspace(-2/3, [0, 0, -1], False) n Halfspace(-2/3, [0, 0, 1], False) n Halfspace(-2/3, [0, 1, 0], False) n Halfspace(2/3, [1, 0, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(2/3, [-1, 0, 0], False) n Halfspace(2/3, [0, 0, 1], False) n Halfspace(2/3, [0, 1, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(2/3, [-1, 0, 0], False) n Halfspace(2/3, [0, 0, -1], False) n Halfspace(2/3, [0, 1, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [0, 0, -1], False) n Halfspace(-2/3, [0, 0, 1], False) n Halfspace(2/3, [-1, 0, 0], False) n Halfspace(2/3, [0, 1, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(2/3, [-1, 0, 0], False) n Halfspace(2/3, [0, -1, 0], False) n Halfspace(2/3, [0, 0, 1], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(2/3, [-1, 0, 0], False) n Halfspace(2/3, [0, -1, 0], False) n Halfspace(2/3, [0, 0, -1], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [0, 0, -1], False) n Halfspace(-2/3, [0, 0, 1], False) n Halfspace(2/3, [-1, 0, 0], False) n Halfspace(2/3, [0, -1, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [0, -1, 0], False) n Halfspace(-2/3, [0, 1, 0], False) n Halfspace(2/3, [-1, 0, 0], False) n Halfspace(2/3, [0, 0, 1], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [0, -1, 0], False) n Halfspace(-2/3, [0, 1, 0], False) n Halfspace(2/3, [-1, 0, 0], False) n Halfspace(2/3, [0, 0, -1], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [0, -1, 0], False) n Halfspace(-2/3, [0, 0, -1], False) n Halfspace(-2/3, [0, 0, 1], False) n Halfspace(-2/3, [0, 1, 0], False) n Halfspace(2/3, [-1, 0, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [-1, 0, 0], False) n Halfspace(-2/3, [1, 0, 0], False) n Halfspace(2/3, [0, 0, 1], False) n Halfspace(2/3, [0, 1, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [-1, 0, 0], False) n Halfspace(-2/3, [1, 0, 0], False) n Halfspace(2/3, [0, 0, -1], False) n Halfspace(2/3, [0, 1, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [-1, 0, 0], False) n Halfspace(-2/3, [0, 0, -1], False) n Halfspace(-2/3, [0, 0, 1], False) n Halfspace(-2/3, [1, 0, 0], False) n Halfspace(2/3, [0, 1, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [-1, 0, 0], False) n Halfspace(-2/3, [1, 0, 0], False) n Halfspace(2/3, [0, -1, 0], False) n Halfspace(2/3, [0, 0, 1], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [-1, 0, 0], False) n Halfspace(-2/3, [1, 0, 0], False) n Halfspace(2/3, [0, -1, 0], False) n Halfspace(2/3, [0, 0, -1], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [-1, 0, 0], False) n Halfspace(-2/3, [0, 0, -1], False) n Halfspace(-2/3, [0, 0, 1], False) n Halfspace(-2/3, [1, 0, 0], False) n Halfspace(2/3, [0, -1, 0], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [-1, 0, 0], False) n Halfspace(-2/3, [0, -1, 0], False) n Halfspace(-2/3, [0, 1, 0], False) n Halfspace(-2/3, [1, 0, 0], False) n Halfspace(2/3, [0, 0, 1], False),
+     Box([2, 2, 2], [0, 0, 0], eye(3), False) n Halfspace(-2/3, [-1, 0, 0], False) n Halfspace(-2/3, [0, -1, 0], False) n Halfspace(-2/3, [0, 1, 0], False) n Halfspace(-2/3, [1, 0, 0], False) n Halfspace(2/3, [0, 0, -1], False),
+     Halfspace(-2/3, [-1, 0, 0], False) n Halfspace(-2/3, [0, -1, 0], False) n Halfspace(-2/3, [0, 0, -1], False) n Halfspace(-2/3, [0, 0, 1], False) n Halfspace(-2/3, [0, 1, 0], False) n Halfspace(-2/3, [1, 0, 0], False)])
 """
-from sympy import S
-from magicpy.model.affine import *
-from magicpy.model.euclid import *
-from magicpy.puzzle.sym import *
-from magicpy.model.poly import vertices_octa
+from sympy import sympify
+from symplus.affine import *
+from symplus.euclid import *
+from magicpy.puzzle.phy import *
 
 
-RubiksCube = SymbolicSO3PhysicalPuzzle([cube()])
-RubiksCube = RubiksCube.cut_by(*[(Halfspace(v, S.One/3), Halfspace(-v, -S.One/3)) for v in vertices_octa])
-RubiksCube = RubiksCube.simp()
+unit = sympify(2)/3
+directions = [ i,-i, j,-j, k,-k]
+RubiksCube = SymbolicSO3PhysicalPuzzle([Box()])
+RubiksCube = RubiksCube.cross_common([(Halfspace( unit, d), Halfspace(-unit,-d)) for d in directions])
+RubiksCube = RubiksCube.simplify()
 
