@@ -1,6 +1,13 @@
 import sys, os
-if sys.version_info[0] == 2:  from future_builtins import map
 sys.path.append(os.path.join(os.path.dirname(__file__), "../lib"))
+
+
+if sys.version_info[0] == 2:
+	from future_builtins import map, filter, zip
+	from itertools import ifilterfalse as filterfalse
+	range = xrange
+else:
+	from itertools import filterfalse
 
 
 class Thiz(object):

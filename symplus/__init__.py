@@ -1,6 +1,3 @@
-import sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), "..\\lib"))
-
 from sympy import *
 from symplus.typlus import (Functor, is_Tuple, is_Symbol, is_Number, is_Boolean, is_Matrix,
     is_Function, type_match)
