@@ -139,12 +139,12 @@ class ConcatenatedOperation(Operation):
         return tuple(ops)
 
     def apply(self, pzl):
-        for op in ops.operations:
+        for op in self.operations:
             pzl = op.apply(pzl)
         return pzl
 
     def transform(self, pzl):
-        for op in ops.operations:
+        for op in self.operations:
             pzl = op.transform(pzl)
         return pzl
 

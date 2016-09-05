@@ -1,2 +1,2 @@
-from symplus import *
-from magicpy.puzzle.phy import *
+# from symplus import *
+# from magicpy.puzzle.phy import *

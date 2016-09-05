@@ -1,4 +1,6 @@
-from magicpy.util import thiz, map
+import sys, os
+if sys.version_info[0] == 2:  from future_builtins import map
+sys.path.append(os.path.join(os.path.dirname(__file__), "../lib"))
 
 
 class Thiz(object):
