@@ -1,24 +1,10 @@
 """
-control method:
-+-[apply]------------------------------------+
-|+-[transform_by]---+                        |
-||+-[interpret]----+|                        |
-||| (deal with     ||                        |
-|||  monoid-       ||                        |
-|||  structured    ||                        |
-|||  operation)    ||                        |
-|||     ||         ||                        |
-|||     \/         ||                        |
-||| [_interpret]   ||                        |
-||+---- || --------+|                        |
-||      || <========== <_is_valid_operation> |
-||+---- \/ -----------[_apply]-----------+   |
-||| [_transform_by] |                    |   |
-|||     || <========== <_is_valid_state> |   |
-||+-----||-------------------------------+   |
-|+------||----------+                        |
-+-------\/-----------------------------------+
+this module define control method for puzzle, and implement the procedure for
+dealing with monoid-structured operation and continuous operation.
+`is_valid_operation`, `is_valid_state` indicate the limitation rule of
+puzzle; `transform` and `apply` indicate operation rule of puzzle.
 """
+from magicpy.util import thiz, map
 
 
 class IllegalOperationError(Exception):
@@ -28,12 +14,9 @@ class IllegalStateError(Exception):
     pass
 
 
-
-class Puzzle:
+class Puzzle(object):
     """
     basic class of all puzzles.
-    it define control method for puzzle,
-    and only implement the procedure for dealing with monoid-structured operation.
     """
     def is_valid_state(self):
         """
@@ -43,127 +26,76 @@ class Puzzle:
 
     def is_valid_operation(self, op):
         """
-        True if op is in the valid operation for this puzzle.
-        it should be true if op is appliable for this puzzle.
-        but the inverse is not neccessary to be true; this is just a type test.
-        this method implement the procedure for dealing with monoid-structured operation.
-        """
-        if isinstance(op, IdentityOperation):
-            return True
-
-        elif isinstance(op, ConcatenatedOperation):
-            return all(self.is_valid_operation(op_i) for op_i in op.operations)
-
-        elif isinstance(op, Operation):
-            return self._is_valid_operation(self._interpret(op))
-
-        else:
-            return False
-
-    def _is_valid_operation(self, op):
-        """
-        True if op is valid operation for this puzzle.
-        this is for elementary operation.
+        True if `op` is valid operation for this state, where `op` should be
+        elementary operation.
         """
         return False
 
-    def interpret(self, op):
+    def new(self, *args, **kwargs):
         """
-        interpret operation as exact operation, except for monoid-structured operations.
-        interpretation may depand on state of puzzle.
-        this method implement the procedure for dealing with monoid-structured operation.
+        re-build puzzle from given parameters with this state as default.
         """
-        if isinstance(op, (IdentityOperation, ConcatenatedOperation)):
-            return op
+        return type(self)(*args, **kwargs)
 
-        elif isinstance(op, Operation):
-            return self._interpret(op)
-
-        else:
-            raise TypeError
-
-    def _interpret(self, op):
-        """
-        interpret operation as exact operation.
-        this is for elementary operation.
-        """
-        return op
-
-    def transform_by(self, op):
-        """
-        transform this puzzle by operation op.
-        op is not neccessary to be valid operation.
-        this method implement the procedure for dealing with monoid-structured operation.
-        """
-        if isinstance(op, IdentityOperation):
-            return self
-
-        elif isinstance(op, ConcatenatedOperation):
-            for op_i in op.operations:
-                self = self.transform_by(op_i)
-            return self
-
-        elif isinstance(op, Operation):
-            return self._transform_by(self._interpret(op))
-
-        else:
-            raise TypeError
-
-    def _transform_by(self, op):
-        """
-        transform this puzzle by operation op.
-        this is for elementary operation.
-        """
-        return NotImplemented
-
-    def apply(self, op):
-        """
-        apply op to this puzzle.
-        before applying, op should be valid operation;
-        after applying, this puzzle should be in the valid state.
-        this method implement the procedure for dealing with monoid-structured operation.
-        """
-        if isinstance(op, IdentityOperation):
-            return self
-
-        elif isinstance(op, ConcatenatedOperation):
-            for op_i in op.operations:
-                self = self.apply(op_i)
-            return self
-
-        elif isinstance(op, Operation):
-            op = self._interpret(op)
-            if not self._is_valid_operation(op):
-                raise IllegalOperationError
-            return self._apply(op)
-
-        else:
-            raise TypeError
-
-    def _apply(self, op):
-        """
-        apply op to this puzzle.
-        this is for elementary operation.
-        """
-        self = self._transform_by(op)
-
-        if not self.is_valid_state():
-            raise IllegalStateError
-
-        return self
-
-class Operation:
+class Operation(object):
     """
     basic class of all operations.
     """
+    def apply(self, pzl):
+        """
+        apply this operation to puzzle `pzl`.
+        """
+        # this implementation is for elementary operation.
+        if not pzl.is_valid_operation(self):
+            raise IllegalOperationError
+
+        pzl = self.transform(pzl)
+
+        if not pzl.is_valid_state():
+            raise IllegalStateError
+
+        return pzl
+
+    def transform(self, pzl):
+        """
+        transform puzzle `pzl` by this operation.
+        """
+        raise NotImplementedError
+
+    def new(self, *args, **kwargs):
+        """
+        re-build operation from given parameters with this operation as
+        default.
+        """
+        return type(self)(*args, **kwargs)
+
     def __mul__(self, other):
         return ConcatenatedOperation(self, other)
+
+class WrappedOperation(Operation):
+    def interpret_for(self, pzl):
+        """
+        interpret this operation as exact operation for puzzle `pzl`.
+        """
+        raise NotImplementedError
+
+    def apply(self, pzl):
+        return self.interpret_for(pzl).apply(pzl)
+
+    def transform(self, pzl):
+        return self.interpret_for(pzl).transform(pzl)
 
 class IdentityOperation(Operation):
     """
     operation that do nothing.
-    IdentityOperation is monoid-structured operation.
+    `IdentityOperation` is monoid-structured operation.
     """
+    def apply(self, pzl):
+        return pzl
+
+    def transform(self, pzl):
+        return pzl
+
     def __repr__(self):
         return "%s()"%type(self).__name__
 
@@ -173,7 +105,7 @@ class IdentityOperation(Operation):
 class ConcatenatedOperation(Operation):
     """
     operation which apply operations sequentially.
-    ConcatenatedOperation is monoid-structured operation.
+    `ConcatenatedOperation` is monoid-structured operation.
     """
     def __new__(cls, *ops):
         if any(not isinstance(op, Operation) for op in ops):
@@ -190,26 +122,31 @@ class ConcatenatedOperation(Operation):
             op.operations = ops
             return op
 
+    @staticmethod
     def reduce(ops):
+        ops = list(ops)
         i = 0
         while i < len(ops):
             if isinstance(ops[i], IdentityOperation):
-                ops = ops[:i] + ops[i+1:]
+                del ops[i]
 
             elif isinstance(ops[i], ConcatenatedOperation):
-                ops = ops[:i] + ops[i].operations + ops[i+1:]
-
-            elif i > 0 and hasattr(ops[i-1], '_concat'):
-                op_i = ops[i-1]._concat(ops[i])
-                if op_i is not None:
-                    ops = ops[:i-1] + [op_i] + ops[i+1:]
-                else:
-                    i = i + 1
+                ops[i:i+1] = ops[i].operations
 
             else:
                 i = i + 1
 
-        return ops
+        return tuple(ops)
+
+    def apply(self, pzl):
+        for op in ops.operations:
+            pzl = op.apply(pzl)
+        return pzl
+
+    def transform(self, pzl):
+        for op in ops.operations:
+            pzl = op.transform(pzl)
+        return pzl
 
     def __len__(self):
         return len(self.operations)
@@ -218,7 +155,7 @@ class ConcatenatedOperation(Operation):
         if isinstance(key, int):
             return self.operations[key]
         elif isinstance(key, slice):
-            return type(self)(*self.operations[key])
+            return self.new(*self.operations[key])
         else:
             raise IndexError
 
@@ -227,6 +164,41 @@ class ConcatenatedOperation(Operation):
 
     def __str__(self):
         return "*".join(map(str, self.operations))
+
+class ContinuousOperation(Operation):
+    """
+    operation which operate continuously.
+    continuous operation can be cutted to any distance.
+    """
+    density = 10.0
+
+    @property
+    def distance(self):
+        """
+        total distance of this operation.
+        """
+        raise NotImplementedError
+
+    def to(self, dis):
+        """
+        cut this operation to distance `dis`.
+        """
+        raise NotImplementedError
+
+    def apply(self, pzl):
+        if not pzl.is_valid_operation(self):
+            raise IllegalOperationError
+
+        for t in range(int(self.distance*self.density)+1):
+            moved = self.to(t/self.density).transform(pzl)
+            if not moved.is_valid_state():
+                raise IllegalOperationError
+
+        pzl = self.transform(pzl)
+        if not pzl.is_valid_state():
+            raise IllegalStateError
+
+        return pzl
 
 
 class TensorPuzzle(Puzzle, tuple):
@@ -240,159 +212,66 @@ class TensorPuzzle(Puzzle, tuple):
         return tuple.__new__(cls, pzls)
 
     def is_valid_state(self):
-        return all(pzl_i.is_valid_state() for pzl_i in self)
+        return all(map(thiz.is_valid_state, self))
 
-    def _is_valid_operation(self, op):
-        if isinstance(op, TensorOperation):
-            return (len(self) == len(op) and
-                all(pzl_i.is_valid_operation(op_i) for pzl_i, op_i in zip(self, op)))
-
-        else:
-            return NotImplemented
-
-    def _interpret(self, op):
-        if isinstance(op, TensorOperation):
-            return TensorOperation(pzl_i.interpret(op_i) for pzl_i, op_i in zip(self, op))
-
-        else:
-            return NotImplemented
-
-    def _transform_by(self, op):
-        if isinstance(op, TensorOperation):
-            return type(self)(pzl_i.transform_by(op_i) for pzl_i, op_i in zip(self, op))
-
-        else:
-            return NotImplemented
+    def is_valid_operation(self, op):
+        return (isinstance(op, TensorOperation) and
+                len(self) == len(op) and
+                all(map(thiz.is_valid_operation, self, op)))
 
     def __add__(self, other):
         if type(self) == type(other):
-            return type(self)(tuple(self)+tuple(other))
+            return self.new(tuple(self)+tuple(other))
 
         else:
             raise TypeError
 
     def __getitem__(self, key):
+        value = super(TensorPuzzle, self).__getitem__(key)
         if isinstance(key, int):
-            return super(TensorPuzzle, self).__getitem__[key]
+            return value
         elif isinstance(key, slice):
-            return type(self)(super(TensorPuzzle, self).__getitem__[key])
+            return self.new(value)
         else:
             raise IndexError
 
     def __repr__(self):
-        return "%s(%s)"%(type(self).__name__, str(self))
+        return "%s(%s)"%(type(self).__name__, str(tuple(self)))
 
     def __str__(self):
-        return super(tuple, self).__str__()
+        return str(tuple(self))
 
     def __hash__(self):
-        return hash((type(self), super(tuple, self).__hash__()))
+        return hash((type(self), tuple(self)))
 
 class TensorOperation(Operation, tuple):
     """
-    tensor of operations for TensorPuzzle.
+    tensor of operations.
     """
+    def transform(self, pzl):
+        return pzl.new(map(thiz.transform, self, pzl))
+
     def __add__(self, other):
         if type(self) == type(other):
-            return type(self)(tuple(self)+tuple(other))
+            return self.new(tuple(self)+tuple(other))
 
         else:
             raise TypeError
 
     def __getitem__(self, key):
+        value = super(TensorOperation, self).__getitem__(key)
         if isinstance(key, int):
-            return super(TensorOperation, self).__getitem__[key]
+            return value
         elif isinstance(key, slice):
-            return type(self)(super(TensorOperation, self).__getitem__[key])
+            return self,new(value)
         else:
             raise IndexError
 
     def __repr__(self):
-        return "%s(%s)"%(type(self).__name__, str(self))
+        return "%s(%s)"%(type(self).__name__, str(tuple(self)))
 
     def __str__(self):
-        return super(tuple, self).__str__()
-
-
-class GeneralPuzzle(Puzzle):
-    """
-    define some useful operation: ConditionalOperation, ContinuousOperation.
-    """
-    density = 10
-
-    def _interpret(self, op):
-        if isinstance(op, ConditionalOperation):
-            return _interpret_cond_op(self, op)
-
-        else:
-            return NotImplemented
-
-    def _interpret_cond_op(self, cond_op):
-        """
-        interpret ConditionalOperation to Operation.
-        """
-        for cond, op_i in cond_op.items():
-            if self._filter(cond):
-                return op_i
-        else:
-            raise IllegalOperationError
-
-    def _filter(self, cond):
-        """
-        True if this puzzle is in the condition cond.
-        """
-        return NotImplemented
-
-    def _apply(self, op):
-        if isinstance(op, ContinuousOperation):
-            return self._apply_cont_op(op)
-
-        else:
-            return NotImplemented
-
-    def _apply_cont_op(self, op):
-        """
-        continuously apply op to this puzzle.
-        """
-        for t in range(int(op.distance*self.density)):
-            moved = self._transform_by(op.to(t/self.density))
-            if not moved.is_valid_state():
-                raise IllegalStateError
-
-        self = self._transform_by(op)
-        if not self.is_valid_state():
-            raise IllegalStateError
-
-        return self
-
-class ConditionalOperation(Operation, dict):
-    """
-    operation which operate case by case.
-    key is condition, value is elementary operation.
-    """
-    def __repr__(self):
-        return "%s(%s)"%(type(self).__name__, dict.__str__(self))
-
-    def __str__(self):
-        return "(%s)"%"; ".join("%s: %s"%(cond, op_i) for cond, op_i in self.items())
-
-class ContinuousOperation(Operation):
-    """
-    operation which operate continuously.
-    operation can be cutted to any distance.
-    """
-    @property
-    def distance(self):
-        """
-        total distance of this operation.
-        """
-        raise NotImplementedError
-
-    def to(self, dis):
-        """
-        cut this operation to distance dis.
-        """
-        return NotImplemented
+        return str(tuple(self))
 
 class ParallelOperation(ContinuousOperation, TensorOperation):
     """
@@ -403,7 +282,7 @@ class ParallelOperation(ContinuousOperation, TensorOperation):
         ops = tuple(ops)
         if not all(isinstance(op_i, ContinuousOperation) for op_i in ops):
             raise TypeError
-        if len(set(op_i.distance for op_i in ops)) != 1:
+        if len(set(map(thiz.distance, ops))) != 1:
             raise ValueError
         return TensorOperation.__new__(cls, ops)
 
@@ -412,90 +291,52 @@ class ParallelOperation(ContinuousOperation, TensorOperation):
         return self[0].distance
 
     def to(self, dis):
-        if dis > self.distance:
-            raise ValueError
-        return type(self)(op_i.to(dis) for op_i in self)
+        return self.new(op_i.to(dis) for op_i in self)
 
 
-class CombinationalPuzzle(GeneralPuzzle, tuple):
+class CombinationalPuzzle(Puzzle, tuple):
     """
     puzzle composed by multiple elements.
     """
     ordered = True
 
-    def transform_by(self, op):
-        if not self.ordered:
-            return super(CombinationalPuzzle, self).transform_by(self, op).sort()
-        else:
-            return super(CombinationalPuzzle, self).transform_by(self, op)
+    def is_valid_state(self):
+        return all(map(self.is_valid_elem, self))
 
-    def apply(self, op):
-        if not self.ordered:
-            return super(CombinationalPuzzle, self).apply(op).sort()
-        else:
-            return super(CombinationalPuzzle, self).apply(op)
+    def is_valid_operation(self, op):
+        return len(self) == len(op) and all(map(self.is_valid_action, op))
+
+    def is_valid_elem(self, elem):
+        """
+        True if `elem` is in the valid element.
+        """
+        raise NotImplementedError
+
+    def is_valid_action(self, act):
+        """
+        True if `act` is valid action.
+        """
+        raise NotImplementedError
 
     def sort(self):
-        return type(self)(sorted(self))
-
-    def _interpret(self, op):
-        if isinstance(op, SelectiveOperation):
-            return self._interpret_sel_op(op)
-
-        else:
-            return NotImplemented
-
-    def _interpret_sel_op(self, sel_op):
         """
-        interpret SelectiveOperation to CombinationalOperation.
+        sort elements of this puzzle.
         """
-        comb_op = []
-        for elem in self:
-            for sel, act in sel_op.items():
-                if self.elem_filter(elem, sel):
-                    comb_op.append(act)
-                    break
-            else:
-                raise IllegalOperationError
-        return sel_op.comb_type(comb_op)
-
-    def elem_filter(self, elem, sel):
-        """
-        True if elem is in the selection sel.
-        """
-        return NotImplemented
-
-    def _transform_by(self, op):
-        if isinstance(op, CombinationalOperation):
-            return self._transform_by_comb_op(op)
-
-        else:
-            return NotImplemented
-
-    def _transform_by_comb_op(self, comb_op):
-        """
-        transform this puzzle by combinational operation comb_op.
-        """
-        return type(self)(self.elem_transform_by(elem, act) for elem, act in zip(self, comb_op))
-
-    def elem_transform_by(self, elem, act):
-        """
-        transform elements of this puzzle elem by action act.
-        """
-        return NotImplemented
+        return self.new(sorted(self))
 
     def __add__(self, other):
         if type(self) == type(other):
-            return type(self)(tuple(self)+tuple(other))
+            return self.new(tuple(self)+tuple(other))
 
         else:
             raise TypeError
 
     def __getitem__(self, key):
+        value = super(CombinationalPuzzle, self).__getitem__(key)
         if isinstance(key, int):
-            return super(CombinationalPuzzle, self).__getitem__(key)
+            return value
         elif isinstance(key, slice):
-            return type(self)(super(CombinationalPuzzle, self).__getitem__(key))
+            return self.new(value)
         else:
             raise IndexError
 
@@ -506,25 +347,38 @@ class CombinationalPuzzle(GeneralPuzzle, tuple):
         return str(list(self))
 
     def __hash__(self):
-        return hash((type(self), super(tuple, self).__hash__()))
+        return hash((type(self), tuple(self)))
 
 class CombinationalOperation(Operation, tuple):
     """
     operation that operate elements of combinational puzzle seperatly.
     element of operation is action.
     """
+    def transform(self, pzl):
+        pzl = pzl.new(map(self.elem_transform, pzl, self))
+        if not pzl.ordered:
+            pzl = pzl.sort()
+        return pzl
+
+    def elem_transform(self, elem, act):
+        """
+        transform element `elem` by action `act`.
+        """
+        raise NotImplementedError
+
     def __add__(self, other):
         if type(self) == type(other):
-            return type(self)(tuple(self)+tuple(other))
+            return self.new(tuple(self)+tuple(other))
 
         else:
             raise TypeError
 
     def __getitem__(self, key):
+        value = super(CombinationalOperation, self).__getitem__(key)
         if isinstance(key, int):
-            return super(CombinationalOperation, self).__getitem__(key)
+            return value
         elif isinstance(key, slice):
-            return type(self)(super(CombinationalOperation, self).__getitem__(key))
+            return self.new(value)
         else:
             raise IndexError
 
@@ -534,43 +388,77 @@ class CombinationalOperation(Operation, tuple):
     def __str__(self):
         return str(list(self))
 
-
-class ContinuousCombinationalOperation(ContinuousOperation, CombinationalOperation):
+class ContinuousCombinationalOperation(ContinuousOperation,
+        CombinationalOperation):
     """
     continuous combinational operation.
     """
     def __init__(self, acts):
-        diss = set(self.action_distance(act_i) for act_i in self)
+        diss = set(map(self.action_distance, self))
         if len(diss) != 1:
             raise ValueError
         else:
-            self._distance = tuple(diss)[0]
+            self._distance = diss.pop()
 
     @property
     def distance(self):
         return self._distance
 
-    def action_distance(self, act):
-        return NotImplemented
-
     def to(self, dis):
         if dis > self.distance:
             raise ValueError
-        return type(self)(self.action_to(act_i, dis) for act_i in self)
+        return self.new(self.action_to(act_i, dis) for act_i in self)
+
+    def action_distance(self, act):
+        """
+        total distance of action `act`.
+        """
+        raise NotImplementedError
 
     def action_to(self, act, dis):
-        return NotImplemented
+        """
+        cut action `act` to distance `dis`.
+        """
+        raise NotImplementedError
 
-class SelectiveOperation(Operation, dict):
+class SelectiveOperation(WrappedOperation, tuple):
     """
-    operation that operate different elements of combinational puzzle seperatly by selecting.
-    key is selection, value is action.
+    operation that operate different elements of combinational puzzle
+    seperatly by selecting.
+    the data structure of `SelectiveOperation` is sorted items of dictionary,
+    where key is selection, value is action.
     """
-    comb_type = CombinationalOperation
+    interpreted_type = CombinationalOperation
+
+    def __new__(cls, *args, **kwargs):
+        return tuple.__new__(cls, sorted(dict(*args, **kwargs).iteritems()))
+
+    def interpret_for(self, pzl):
+        interpreted = []
+        for elem in pzl:
+            for sel, act in self:
+                if pzl.elem_filter(elem, sel):
+                    interpreted.append(act)
+                    break
+            else:
+                raise IllegalOperationError
+        return self.interpreted_type(interpreted)
+
+    def elem_filter(self, elem, sel):
+        """
+        True if element `elem` is in the selection `sel`.
+        """
+        raise NotImplementedError
+
+    def keys(self):
+        return list(item[0] for item in self)
+
+    def values(self):
+        return list(item[1] for item in self)
 
     def __repr__(self):
-        return "%s(%s)"%(type(self).__name__, dict.__str__(self))
+        return "%s(%s)"%(type(self).__name__, str(list(self)))
 
     def __str__(self):
-        return "(%s)"%"; ".join("%s: %s"%(sel, act) for sel, act in self.items())
+        return "(%s)"%"; ".join("%s: %s"%(sel, act) for sel, act in self)
 
