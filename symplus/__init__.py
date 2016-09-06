@@ -1,3 +1,6 @@
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), "../lib"))
+
 from sympy import *
 from symplus.typlus import (Functor, is_Tuple, is_Symbol, is_Number, is_Boolean, is_Matrix,
     is_Function, type_match)
@@ -6,7 +9,7 @@ from symplus.symbplus import free_symbols, rename_variables_in
 from symplus.logicplus import Forall, Exist
 from symplus.funcplus import (narg, nres, FunctionCompose, FunctionInverse, Apply,
     compose, inverse, solve_inv, as_lambda)
-from symplus.setplus import (AbstractSet, St, as_abstract, Image, is_open, is_closed,
+from symplus.setplus import (AbstractSet, St, as_abstract, Contains, Image, is_open, is_closed,
     Interior, Closure, AbsoluteComplement, Exterior, Topology, DiscreteTopology, NaturalTopology)
 
 from symplus.strplus import mprint, mstr

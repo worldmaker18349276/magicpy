@@ -14,11 +14,10 @@ from symplus.matplus import Mat, norm, normalize, dot, cross, project, i, j, k, 
 
 class EuclideanSpace(Set):
     def _complement(self, other):
-        if isinstance(other, EuclideanSpace):
-            if hasattr(other, '_absolute_complement'):
-                self_ = self._absolute_complement()
-            if self_ is not None:
-                return Intersection(self_, other, evaluate=True)
+        if hasattr(self, '_absolute_complement'):
+            self_ = self._absolute_complement()
+        if self_ is not None:
+            return Intersection(self_, other, evaluate=True)
 
     def _union(self, other):
         if isinstance(other, WholeSpace):

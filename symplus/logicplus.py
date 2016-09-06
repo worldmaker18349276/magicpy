@@ -1,14 +1,15 @@
 from sympy.core import sympify
 from sympy.core.evaluate import global_evaluate
+from sympy.core.function import Application
 from sympy.logic import true, false
-from sympy.logic.boolalg import BooleanFunction
+from sympy.logic.boolalg import Boolean
 from sympy.logic.inference import valid, satisfiable
 from symplus.typlus import is_Symbol, is_Boolean
 from symplus.tuplus import pack_if_not, unpack_if_can, repack_if_can
 from symplus.symbplus import free_symbols
 
 
-class Forall(BooleanFunction):
+class Forall(Application, Boolean):
     def __new__(cls, variable, expr, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
         variable = repack_if_can(sympify(unpack_if_can(variable)))
@@ -21,7 +22,7 @@ class Forall(BooleanFunction):
 
         if evaluate:
             return Forall.eval(variable, expr)
-        return BooleanFunction.__new__(cls, variable, expr, evaluate=False, **kwargs)
+        return Application.__new__(cls, variable, expr, evaluate=False, **kwargs)
 
     @staticmethod
     def eval(variable, expr):
@@ -48,7 +49,7 @@ class Forall(BooleanFunction):
     def _hashable_content(self):
         return (self.expr.xreplace(self.canonical_variables),)
 
-class Exist(BooleanFunction):
+class Exist(Application, Boolean):
     def __new__(cls, variable, expr, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
         variable = repack_if_can(sympify(unpack_if_can(variable)))
@@ -61,7 +62,7 @@ class Exist(BooleanFunction):
 
         if evaluate:
             return Exist.eval(variable, expr)
-        return BooleanFunction.__new__(cls, variable, expr, **kwargs)
+        return Application.__new__(cls, variable, expr, **kwargs)
 
     @staticmethod
     def eval(variable, expr):
