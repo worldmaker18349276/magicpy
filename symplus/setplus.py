@@ -1,6 +1,6 @@
 import operator
 from functools import reduce
-from sympy.core import S, Basic, Symbol, sympify, Ne, Eq, Gt, Ge, Lt, Le, oo, symbols, Dummy
+from sympy.core import S, Basic, Symbol, sympify, Ne, Eq, Gt, Ge, Lt, Le, oo, symbols
 from sympy.core.function import Application
 from sympy.core.evaluate import global_evaluate
 from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent, to_dnf
@@ -425,7 +425,7 @@ class AbstractSet(Set):
         return self.is_equivalent(other)
 
 
-class SetBuilder:
+class SetBuilder(object):
     def __getitem__(self, zets):
         """
         >>> from sympy import *
@@ -509,7 +509,7 @@ def as_abstract(zet):
 
     else:
         x = Symbol('x', real=True)
-        x, = rename_variables_in((x,), free_symbols(zet))
+        x = rename_variables_in(x, free_symbols(zet))
         expr = zet.contains(x)
         return AbstractSet(x, expr)
 
@@ -644,6 +644,15 @@ class Image(Set):
         expr = self.contains(x)
         return AbstractSet(x, expr)
 
+    @property
+    def is_open(self):
+        return is_open(self.set)
+
+    @property
+    def is_closed(self):
+        return is_closed(self.set)
+
+
 class Contains(Application, Boolean):
     @classmethod
     def eval(cls, x, zet):
@@ -656,20 +665,21 @@ class Contains(Application, Boolean):
         if not isinstance(ret, Contains):
             return ret
 
-def simplify_set(zet, form='dnf', deep=True):
+def simplify_set(zet, variable=Symbol("x", real=True), form='dnf', deep=False):
     """
     >>> from sympy import *
     >>> A = Set("A")
     >>> B = Set("B")
     >>> C = Set("C")
-    >>> simplify_set(B & (A | C), deep=False)
+    >>> simplify_set(B & (A | C))
     Intersection(Set(A), Set(B)) U Intersection(Set(B), Set(C))
-    >>> simplify_set((A & B) | (A - B) | (B & C) | (C - B), deep=False)
+    >>> simplify_set((A & B) | (A - B) | (B & C) | (C - B))
     Set(A) U Set(C)
-    >>> simplify_set(AbsoluteComplement(A+B+C) | (C-A-B), deep=False)
+    >>> simplify_set(AbsoluteComplement(A+B+C) | (C-A-B))
     Intersection(AbsoluteComplement(Set(A)), AbsoluteComplement(Set(B)))
     """
-    x = Dummy()
+    x = rename_variables_in(variable, free_symbols(zet))
+
     def containx(zet):
         if isinstance(zet, Union):
             return Or(*map(containx, zet.args))
@@ -747,7 +757,7 @@ def is_open(zet):
         else:
             return Eq(Intersection(zet, zet.boundary), S.EmptySet)
     except NotImplementedError:
-        raise NotImplementedError
+        raise NotImplementedError(zet)
 
 def is_closed(zet):
     """

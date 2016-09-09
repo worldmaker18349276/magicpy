@@ -5,7 +5,7 @@ python test.py [module_name_regex] [module_path_regex]
 import sys, os, re, doctest, importlib
 
 default_name = r'.*'
-default_path = r'symplus|magicpy'
+default_path = r'(symplus|magicpy).*'
 name = sys.argv[1] if len(sys.argv) >= 2 else default_name
 name_pattern = re.compile(r'^(%s)\.py$' % name)
 path = sys.argv[2] if len(sys.argv) >= 3 else default_path

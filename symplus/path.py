@@ -111,7 +111,7 @@ class Path(Functor):
 
     def as_lambda(self):
         t = Symbol('t')
-        t = rename_variables_in((t,), free_symbols(self))
+        t = rename_variables_in(t, free_symbols(self))
         return Lambda(t, self(t))
 
 class IdentityPath(Path):

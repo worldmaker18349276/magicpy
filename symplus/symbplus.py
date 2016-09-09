@@ -1,6 +1,7 @@
 from sympy.core import Symbol, Basic
 from sympy.core.core import BasicMeta
 from sympy.matrices import MatrixSymbol
+from symplus.typlus import is_Tuple
 
 
 def free_symbols(func):
@@ -12,6 +13,8 @@ def free_symbols(func):
         return set()
 
 def rename_variables_in(variables, varspace):
+    if not is_Tuple(variables):
+        return rename_variables_in((variables,), varspace)[0]
     names = [v.name for v in variables]
     namespace = {v.name for v in varspace}
     for i in range(len(names)):

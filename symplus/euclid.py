@@ -2,7 +2,7 @@ from sympy.core import Basic, S, sympify, symbols
 from sympy.core.compatibility import with_metaclass
 from sympy.core.singleton import Singleton
 from sympy.simplify import simplify
-from sympy.logic import true
+from sympy.logic import false, true
 from sympy.sets import Set, Intersection, Union, Complement
 from sympy.matrices import eye
 from symplus.typlus import is_Tuple
@@ -932,8 +932,12 @@ class Box(BoundedEuclideanSpace):
         return self.args[3]
 
     def _sympystr(self, printer):
-        orientation = list(list(self.orientation[i,j] for j in range(self.orientation.shape[1]))
-                                                      for i in range(self.orientation.shape[0]))
+        if self.orientation == eye(3):
+            orientation = "eye(3)"
+        else:
+            orientation = list(list(self.orientation[i,j]
+                                    for j in range(self.orientation.shape[1]))
+                                    for i in range(self.orientation.shape[0]))
         return "%s(%s, %s, %s, %s)"%(
             type(self).__name__,
             printer.doprint(list(self.size)),

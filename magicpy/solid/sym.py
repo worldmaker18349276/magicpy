@@ -1,5 +1,6 @@
+from sympy import S
 from sympy.sets import Intersection, Union, Complement, EmptySet
-from symplus.setplus import Image, AbsoluteComplement
+from symplus.setplus import Image, AbsoluteComplement, simplify_set
 from magicpy.solid.general import SolidEngine
 
 
@@ -33,16 +34,13 @@ class SymbolicSolidEngine(SolidEngine):
         return AbsoluteComplement(zet)
 
     def transform(self, zet, trans):
-            return Image(trans, zet, evaluate=False)
+        return Image(trans, zet, evaluate=True)
 
     def is_null(self, zet):
         return zet == EmptySet()
 
     def simp(self, zet):
-        return simplify(zet.doit(deep=True))
-
-    # def to_nnf(self, zet):
-    #     raise NotImplementedError
+        return simplify_set(zet)
 
 
 class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
@@ -83,7 +81,10 @@ class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
         cols = [map(self._cvrt, col) for col in cols]
         return self.subengine.no_cross_collision(cols)
 
-    def simp(self, zet, ran=None):
+    def simp(self, zet):
+        return self._volalgo(simplify_set(zet))
+
+    def _volalgo(self, zet, ran=None):
         if zet.subs(self.variables) in (S.EmptySet, S.UniversalSet):
             return zet
 
@@ -113,7 +114,7 @@ class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
                 args.discard(arg)
                 remaining = self._cvrt(self.common(args))
                 ran_ = self.subengine.common([ran, remaining])
-                args.add(self.simp(arg, ran_))
+                args.add(self._volalgo(arg, ran_))
             return self.common(args)
 
         elif isinstance(zet, Union):
@@ -130,7 +131,7 @@ class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
                 args.discard(arg)
                 remaining = self._cvrt(self.fuse(args))
                 ran_ = self.subengine.cut(ran, remaining)
-                args.add(self.simp(arg, ran_))
+                args.add(self._volalgo(arg, ran_))
             return self.fuse(args)
 
         else:

@@ -437,7 +437,7 @@ class SelectiveOperation(WrappedOperation, tuple):
         interpreted = []
         for elem in pzl:
             for sel, act in self:
-                if pzl.elem_filter(elem, sel):
+                if self.elem_filter(elem, sel):
                     interpreted.append(act)
                     break
             else:

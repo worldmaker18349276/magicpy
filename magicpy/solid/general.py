@@ -5,7 +5,7 @@ from symplus.path import IdentityPath
 from magicpy.util import map, filterfalse
 
 
-class SolidEngine:
+class SolidEngine(object):
     def is_null(self, obj):
         raise NotImplementedError
 

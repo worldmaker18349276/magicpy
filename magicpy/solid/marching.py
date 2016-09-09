@@ -4,7 +4,7 @@ from operator import and_, or_
 from sympy.core.compatibility import lru_cache
 from sympy.sets import Set, Intersection, Union, Complement
 from sympy.utilities import lambdify
-from symplus.setplus import AbstractSet
+from symplus.setplus import AbstractSet, as_abstract
 from magicpy.solid.general import SolidEngine
 from magicpy.util import map, range
 
@@ -33,7 +33,7 @@ def bitmap(func, voxels):
         t <<= 1
     return bits
 
-class Voxels:
+class Voxels(object):
     def __init__(self, iter_gen, length, dv):
         self._iter_gen = iter_gen
         self.length = length
@@ -72,16 +72,15 @@ class VoxelEngine(SolidEngine):
 
     @lru_cache(maxsize=128)
     def _construct(self, zet):
-        if isinstance(zet, AbstractSet):
-            var = zet.variables
-            expr = zet.expr
-            func = lambdify(var, expr)
-            if len(var) == 1:
-                return bitmap(func, self)
-            else:
-                return bitmap(lambda v: func(*v), self)
+        if not isinstance(zet, AbstractSet):
+            zet = as_abstract(zet)
+        var = zet.variables
+        expr = zet.expr
+        func = lambdify(var, expr)
+        if len(var) == 1:
+            return bitmap(func, self.voxels)
         else:
-            return bitmap(zet.__contains__, self)
+            return bitmap(lambda v: func(*v), self.voxels)
 
     def common(self, objs):
         return reduce(and_, objs)
