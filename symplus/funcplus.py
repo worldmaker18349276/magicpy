@@ -58,19 +58,21 @@ def is_inverse_of(func1, func2):
 class FunctionCompose(Functor):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> FunctionCompose(exp, sin)
-    FunctionCompose(exp, sin)
+    (exp o sin)
     >>> x, y = symbols('x y')
     >>> FunctionCompose(exp, Lambda(x, x+1))
-    FunctionCompose(exp, Lambda(x, x + 1))
+    (exp o (x |-> x + 1))
     >>> FunctionCompose(Lambda(x, x/2), Lambda(x, x+1))
-    Lambda(x, x/2 + 1/2)
+    (x |-> x/2 + 1/2)
     >>> FunctionCompose(exp, Id)
     exp
     >>> FunctionCompose(exp, FunctionInverse(exp))
-    Lambda(_x, _x)
+    (_x |-> _x)
     >>> FunctionCompose(exp, FunctionCompose(sin, log))
-    FunctionCompose(exp, sin, log)
+    (exp o sin o log)
     >>> FunctionCompose(exp, sin)(pi/3)
     exp(sqrt(3)/2)
     >>> FunctionCompose(Lambda((x,y), x+y), Lambda(x, (x, x-2)))(3)
@@ -139,22 +141,27 @@ class FunctionCompose(Functor):
     def free_symbols(self):
         return {sym for func in self.functions for sym in free_symbols(func)}
 
+    def _mathstr(self, printer):
+        return '(' + ' o '.join(map(printer._print, self.functions)) + ')'
+
 class FunctionInverse(Functor):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> x = symbols('x')
     >>> FunctionInverse(Lambda(x, x+1))
-    Lambda(a0, a0 - 1)
+    (a0 |-> a0 - 1)
     >>> FunctionInverse(sin)
     asin
     >>> FunctionInverse(FunctionCompose(exp, Lambda(x, x+1)))
-    FunctionCompose(Lambda(a0, a0 - 1), log)
+    ((a0 |-> a0 - 1) o log)
     >>> FunctionInverse(FunctionInverse(Lambda(x, exp(x)+sin(x))))
-    Lambda(x, exp(x) + sin(x))
+    (x |-> exp(x) + sin(x))
     >>> FunctionCompose(FunctionInverse(Lambda(x, x+1)), Lambda(x, x+1))
-    Lambda(_x, _x)
+    (_x |-> _x)
     >>> FunctionInverse(Lambda(x, x+sin(x)))(3)
-    Apply(FunctionInverse(Lambda(x, x + sin(x))), 3)
+    (x |-> x + sin(x))`\'(3)
     """
     def __new__(cls, function, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
@@ -219,20 +226,25 @@ class FunctionInverse(Functor):
     def free_symbols(self):
         return free_symbols(self.function)
 
+    def _mathstr(self, printer):
+        return '{0}`\''.format(printer._print(self.function))
+
 class Apply(Function):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> Apply(sin, pi)
-    Apply(sin, pi)
+    sin(pi)
     >>> Apply(exp, Apply(sin, pi))
-    Apply(FunctionCompose(exp, sin), pi)
+    (exp o sin)(pi)
     >>> Apply(FunctionInverse(sin), Apply(sin, pi))
     pi
     >>> Apply(sin, pi).doit()
     0
     >>> x, y = symbols('x y')
     >>> Apply(Lambda((x,y), x+y), (1,2))
-    Apply(Lambda((x, y), x + y), (1, 2))
+    (x, y |-> x + y)(1, 2)
     >>> _.doit()
     3
     """
@@ -274,6 +286,14 @@ class Apply(Function):
         self = Basic.doit(self, **hints)
         return self.function(*self.arguments)
 
+    def _mathstr(self, printer):
+        funcstr = printer._print(self.function)
+        if len(self.arguments) == 1:
+            varstr = '({0})'.format(printer._print(self.arguments[0]))
+        else:
+            varstr = printer._print(self.arguments)
+        return funcstr+varstr
+
 compose = FunctionCompose
 inverse = FunctionInverse
 
@@ -302,13 +322,15 @@ def solve_inv(func, *args):
 def as_lambda(func):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> as_lambda(exp)
-    Lambda(a0, exp(a0))
+    (a0 |-> exp(a0))
     >>> as_lambda(FunctionCompose(exp, sin))
-    Lambda(a0, exp(sin(a0)))
+    (a0 |-> exp(sin(a0)))
     >>> x = symbols('x')
     >>> as_lambda(FunctionInverse(Lambda(x, sin(x)+exp(x))))
-    Lambda(a0, Apply(FunctionInverse(Lambda(x, exp(x) + sin(x))), a0))
+    (a0 |-> Apply(FunctionInverse(Lambda(x, exp(x) + sin(x))), a0))
     """
     if isinstance(func, Lambda):
         return func

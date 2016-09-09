@@ -1,12 +1,25 @@
 from sympy.printing.str import StrPrinter
-from sympy.core import Atom
+from sympy.printing.precedence import precedence
+from sympy.interactive.printing import init_printing
+from sympy.core import Atom, Basic
 from sympy.logic import Not, And, Xor, Or, Implies, Equivalent
 from sympy.sets import Complement, Intersection, Union, Contains, Interval
-from symplus.funcplus import Apply
-from symplus.setplus import AbstractSet, Image
 
 
 class MathPrinter(StrPrinter):
+    printmethod = "_mathstr"
+
+    def emptyPrinter(self, expr):
+        if isinstance(expr, str):
+            return expr
+        elif isinstance(expr, Basic):
+            if hasattr(expr, "_sympystr"):
+                return expr._sympystr()
+            else:
+                return repr(expr)
+        else:
+            return str(expr)
+
     def _print_Not(self, expr):
         if isinstance(expr.args[0], (Atom, Not)):
             return '~'+self._print(expr.args[0])
@@ -58,7 +71,7 @@ class MathPrinter(StrPrinter):
                 argstr.append(self._print(a))
             else:
                 argstr.append('(%s)'%self._print(a))
-        return ' == '.join(sorted(argstr))
+        return ' <=> '.join(sorted(argstr))
 
     def is_ComposedSet(self, expr):
         return isinstance(expr, (Complement, Intersection, Union))
@@ -92,23 +105,6 @@ class MathPrinter(StrPrinter):
                 argstr.append('(%s)'%self._print(a))
         return ' u '.join(sorted(argstr))
 
-    def _print_AbstractSet(self, expr):
-        return '{{{0} | {1}}}'.format(*[self._print(arg) for arg in expr.args])
-
-    def _print_ImageSet(self, expr):
-        if isinstance(expr.args[1], AbstractSet):
-            varstr = self._print(expr.args[0](*expr.args[1].variables))
-            exprstr = self._print(expr.args[1].expr)
-            return '{%s | %s}'%(varstr, exprstr)
-        else:
-            if len(expr.args[0].variables) == 1:
-                varstr = self._print(expr.args[0].variables[0])
-            else:
-                varstr = self._print(expr.args[0].variables)
-            elemstr = self._print(expr.args[0].expr)
-            setstr = self._print(expr.args[1])
-            return '{%s | %s in %s}'%(elemstr, varstr, setstr)
-
     def _print_Contains(self, expr):
         return '%s in %s'%(expr.args[0], expr.args[1])
 
@@ -127,37 +123,10 @@ class MathPrinter(StrPrinter):
             arg_string = ', '.join(self._print(arg) for arg in args)
             return '(%s |-> %s)'%(arg_string, expr)
 
-    def _print_FunctionCompose(self, expr):
-        return '(' + ' o '.join(map(self._print, expr.functions)) + ')'
-
-    def _print_FunctionInverse(self, expr):
-        return '%s.inv'%(self._print(expr.function),)
-
-    def _print_Apply(self, expr):
-        funcstr = self._print(expr.function)
-        if len(expr.arguments) == 1:
-            varstr = '(%s)' % self._print(expr.arguments[0])
-        else:
-                varstr = self._print(expr.arguments)
-        return '%s%s'%(funcstr, varstr)
-
-    def _print_Image(self, expr):
-        if isinstance(expr.set, AbstractSet):
-            funcstr = self._print(expr.function)
-            if len(expr.set.variables) == 1:
-                varstr = '(%s)' % self._print(expr.set.variables[0])
-            else:
-                varstr = self._print(expr.set.variables)
-            exprstr = self._print(expr.set.expr)
-            return '{%s%s | %s}'%(funcstr, varstr, exprstr)
-        else:
-            if len(expr.function.variables) == 1:
-                varstr = self._print(expr.function.variables[0])
-            else:
-                varstr = self._print(expr.function.variables)
-            elemstr = self._print(expr.function.expr)
-            setstr = self._print(expr.set)
-            return '{%s | %s in %s}'%(elemstr, varstr, setstr)
+    def _print_Piecewise(self, expr):
+        return "({0})".format("; ".join(
+            "{0} if {1}".format(self._print(val), self._print(cond))
+            for val, cond in expr.args))
 
     def _print_MatrixBase(self, expr):
         from sympy import eye
@@ -180,6 +149,23 @@ class MathPrinter(StrPrinter):
         _print_ImmutableMatrix = \
         _print_ImmutableDenseMatrix = \
         _print_MatrixBase
+
+    def _print_Equality(self, expr):
+        return ' == '.join(sorted(map(self._print, expr.args)))
+
+    def _print_Unequality(self, expr):
+        return ' =/= '.join(sorted(map(self._print, expr.args)))
+
+    def _print_LessThan(self, expr):
+        return '{0} =< {1}'.format(
+            self.parenthesize(expr.lhs, precedence(expr)),
+            self.parenthesize(expr.rhs, precedence(expr)))
+
+    def _print_Abs(self, expr):
+        return '|{0}|'.format(self._print(expr.args[0]))
+
+    def _print_Determinant(self, expr):
+        return '||{0}||'.format(self._print(expr.args[0]))
 
 pr = MathPrinter()
 def mprint(expr):
@@ -207,15 +193,15 @@ def mprint(expr):
     [-1, 1] u {x | x > 0}
     >>> mprint(St({x : x<1}) - S.Reals)
     {x | x < 1} \ (-oo, oo)
-    >>> mprint(imageset(Lambda(x, x**2), St({x : x>y})))
+    >>> mprint(Image(Lambda(x, x**2), St({x : x>y}), evaluate=False))
     {x**2 | x > y}
-    >>> mprint(imageset(Lambda(x, x*y), S.Naturals))
+    >>> mprint(Image(Lambda(x, x*y), S.Naturals))
     {x*y | x in Naturals()}
     >>> from symplus.funcplus import *
     >>> mprint(FunctionCompose(exp, sin))
     (exp o sin)
     >>> mprint(Image(FunctionCompose(exp, sin), St({x : x>y}), evaluate=False))
-    {(exp o sin)(x) | x > y}
+    {exp(sin(x)) | x > y}
     >>> mprint(Apply(Lambda(x, x*y), 3))
     (x |-> x*y)(3)
     """
@@ -223,4 +209,7 @@ def mprint(expr):
 
 def mstr(expr):
     return pr.doprint(expr)
+
+def init_mprinting():
+    init_printing(pretty_print=False, str_printer=mstr)
 

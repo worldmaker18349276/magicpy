@@ -49,6 +49,11 @@ class Forall(Application, Boolean):
     def _hashable_content(self):
         return (self.expr.xreplace(self.canonical_variables),)
 
+    def _mathstr(self, printer):
+        return "A. {0} st {1}".format(
+            ", ".join(map(printer._print, self.variables)),
+            printer._print(self.expr))
+
 class Exist(Application, Boolean):
     def __new__(cls, variable, expr, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
@@ -88,4 +93,9 @@ class Exist(Application, Boolean):
 
     def _hashable_content(self):
         return (self.expr.xreplace(self.canonical_variables),)
+
+    def _mathstr(self, printer):
+        return "E. {0} st {1}".format(
+            ", ".join(map(printer._print, self.variables)),
+            printer._print(self.expr))
 

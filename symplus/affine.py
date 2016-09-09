@@ -38,18 +38,20 @@ def rquat(th, axis):
 def qmult(q1, q2):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> q1 = rquat(pi/2, i)
     >>> q2 = rquat(pi/3, j)
     >>> rquat2rmat(q1) * rquat2rmat(q2)
-    Matrix([
-    [      1/2, 0, sqrt(3)/2],
-    [sqrt(3)/2, 0,      -1/2],
-    [        0, 1,         0]])
+    <BLANKLINE>
+    [      1/2 0 sqrt(3)/2]
+    [sqrt(3)/2 0      -1/2]
+    [        0 1         0]
     >>> rquat2rmat(qmult(q1, q2))
-    Matrix([
-    [      1/2, 0, sqrt(3)/2],
-    [sqrt(3)/2, 0,      -1/2],
-    [        0, 1,         0]])
+    <BLANKLINE>
+    [      1/2 0 sqrt(3)/2]
+    [sqrt(3)/2 0      -1/2]
+    [        0 1         0]
     """
     w1 = q1[0]
     xyz1 = Mat(q1[1:])
@@ -62,35 +64,33 @@ def qmult(q1, q2):
 def qinv(q):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> q = rquat(pi/3, j)
     >>> rquat2rmat(q).inv()
-    Matrix([
-    [      1/2, 0, -sqrt(3)/2],
-    [        0, 1,          0],
-    [sqrt(3)/2, 0,        1/2]])
+    <BLANKLINE>
+    [      1/2 0 -sqrt(3)/2]
+    [        0 1          0]
+    [sqrt(3)/2 0        1/2]
     >>> rquat2rmat(qinv(q))
-    Matrix([
-    [      1/2, 0, -sqrt(3)/2],
-    [        0, 1,          0],
-    [sqrt(3)/2, 0,        1/2]])
+    <BLANKLINE>
+    [      1/2 0 -sqrt(3)/2]
+    [        0 1          0]
+    [sqrt(3)/2 0        1/2]
     """
     return Mat([q[0], -q[1], -q[2], -q[3]]) # assume norm(q) == 1
 
 def qrotate(q, v):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> q = rquat(pi/3, j)
     >>> v = Mat([1,sqrt(2),3])
     >>> simplify(qrotate(q, v))
-    Matrix([
-    [1/2 + 3*sqrt(3)/2],
-    [          sqrt(2)],
-    [ -sqrt(3)/2 + 3/2]])
+    [1/2 + 3*sqrt(3)/2 sqrt(2) -sqrt(3)/2 + 3/2]'
     >>> rquat2rmat(q)*v
-    Matrix([
-    [1/2 + 3*sqrt(3)/2],
-    [          sqrt(2)],
-    [ -sqrt(3)/2 + 3/2]])
+    [1/2 + 3*sqrt(3)/2 sqrt(2) -sqrt(3)/2 + 3/2]'
     """
     v = Mat([0, v[0], v[1], v[2]])
     v_ = qmult(q, qmult(v, qinv(q)))
@@ -99,22 +99,24 @@ def qrotate(q, v):
 def rquat2rmat(rquat):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> t = Symbol('t', positive=True)
     >>> simplify(rquat2rmat(rquat(pi/3, i+j)))
-    Matrix([
-    [       3/4,       1/4,  sqrt(6)/4],
-    [       1/4,       3/4, -sqrt(6)/4],
-    [-sqrt(6)/4, sqrt(6)/4,        1/2]])
+    <BLANKLINE>
+    [       3/4       1/4  sqrt(6)/4]
+    [       1/4       3/4 -sqrt(6)/4]
+    [-sqrt(6)/4 sqrt(6)/4        1/2]
     >>> simplify(rquat2rmat(rquat(t, i)))
-    Matrix([
-    [1,      0,       0],
-    [0, cos(t), -sin(t)],
-    [0, sin(t),  cos(t)]])
+    <BLANKLINE>
+    [1      0       0]
+    [0 cos(t) -sin(t)]
+    [0 sin(t)  cos(t)]
     >>> simplify(rquat2rmat(rquat(t, i+k)))
-    Matrix([
-    [     cos(t/2)**2, -sqrt(2)*sin(t)/2,       sin(t/2)**2],
-    [sqrt(2)*sin(t)/2,            cos(t), -sqrt(2)*sin(t)/2],
-    [     sin(t/2)**2,  sqrt(2)*sin(t)/2,       cos(t/2)**2]])
+    <BLANKLINE>
+    [     cos(t/2)**2 -sqrt(2)*sin(t)/2       sin(t/2)**2]
+    [sqrt(2)*sin(t)/2            cos(t) -sqrt(2)*sin(t)/2]
+    [     sin(t/2)**2  sqrt(2)*sin(t)/2       cos(t/2)**2]
     """
     w = rquat[0]
     xyz = Mat(rquat[1:])
@@ -123,19 +125,21 @@ def rquat2rmat(rquat):
 def rmat2rquat(rmat):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> t = Symbol('t', positive=True)
-    >>> list(rquat(pi/3, i+j))
-    [sqrt(3)/2, sqrt(2)/4, sqrt(2)/4, 0]
-    >>> list(simplify(rmat2rquat(rquat2rmat(rquat(pi/3, i+j)))))
-    [sqrt(3)/2, sqrt(2)/4, sqrt(2)/4, 0]
-    >>> list(rquat(t, i))
-    [cos(t/2), sin(t/2), 0, 0]
-    >>> list(simplify(rmat2rquat(rquat2rmat(rquat(t, i)))))
-    [Abs(cos(t/2)), sin(t)/(2*Abs(cos(t/2))), 0, 0]
-    >>> list(rquat(t, i+k))
-    [cos(t/2), sqrt(2)*sin(t/2)/2, 0, sqrt(2)*sin(t/2)/2]
-    >>> list(simplify(rmat2rquat(rquat2rmat(rquat(t, i+k)))))
-    [Abs(cos(t/2)), sqrt(2)*sin(t)/(4*Abs(cos(t/2))), 0, sqrt(2)*sin(t)/(4*Abs(cos(t/2)))]
+    >>> rquat(pi/3, i+j)
+    [sqrt(3)/2 sqrt(2)/4 sqrt(2)/4 0]'
+    >>> simplify(rmat2rquat(rquat2rmat(rquat(pi/3, i+j))))
+    [sqrt(3)/2 sqrt(2)/4 sqrt(2)/4 0]'
+    >>> rquat(t, i)
+    [cos(t/2) sin(t/2) 0 0]'
+    >>> simplify(rmat2rquat(rquat2rmat(rquat(t, i))))
+    [|cos(t/2)| sin(t)/(2*|cos(t/2)|) 0 0]'
+    >>> rquat(t, i+k)
+    [cos(t/2) sqrt(2)*sin(t/2)/2 0 sqrt(2)*sin(t/2)/2]'
+    >>> simplify(rmat2rquat(rquat2rmat(rquat(t, i+k))))
+    [|cos(t/2)| sqrt(2)*sin(t)/(4*|cos(t/2)|) 0 sqrt(2)*sin(t)/(4*|cos(t/2)|)]'
     """
     w = sqrt(1+trace(rmat))/2
     if w != 0:
@@ -153,30 +157,36 @@ def rmat2rquat(rmat):
 def zfac2zmat(zfac):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> zfac2zmat([5,2,sqrt(3)])
-    Matrix([
-    [5, 0,       0],
-    [0, 2,       0],
-    [0, 0, sqrt(3)]])
+    <BLANKLINE>
+    [5 0       0]
+    [0 2       0]
+    [0 0 sqrt(3)]
     """
     return Mat(diag(*zfac))
 
 def zmat2zfac(zmat):
     """
     >>> from sympy import *
-    >>> list(zmat2zfac(zfac2zmat([5,2,sqrt(3)])))
-    [5, 2, sqrt(3)]
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
+    >>> zmat2zfac(zfac2zmat([5,2,sqrt(3)]))
+    [5 2 sqrt(3)]'
     """
     return Mat([zmat[0,0], zmat[1,1], zmat[2,2]])
 
 def stri2smat(stri):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> stri2smat([5,2,sqrt(3)])
-    Matrix([
-    [1, 5,       2],
-    [0, 1, sqrt(3)],
-    [0, 0,       1]])
+    <BLANKLINE>
+    [1 5       2]
+    [0 1 sqrt(3)]
+    [0 0       1]
     """
     return Mat([[1, stri[0], stri[1]],
                 [0, 1      , stri[2]],
@@ -185,8 +195,10 @@ def stri2smat(stri):
 def smat2stri(smat):
     """
     >>> from sympy import *
-    >>> list(smat2stri(stri2smat([5,2,sqrt(3)])))
-    [5, 2, sqrt(3)]
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
+    >>> smat2stri(stri2smat([5,2,sqrt(3)]))
+    [5 2 sqrt(3)]'
     """
     return Mat([smat[0,1], smat[0,2], smat[1,2]])
 
@@ -210,19 +222,21 @@ def aff2trpzs(affmat):
 def fvec2fmat(fvec):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> fvec2fmat(i)
-    Matrix([
-    [-1, 0, 0],
-    [ 0, 1, 0],
-    [ 0, 0, 1]])
+    <BLANKLINE>
+    [-1 0 0]
+    [ 0 1 0]
+    [ 0 0 1]
     >>> fvec2fmat(i-sqrt(2)*j)
-    Matrix([
-    [        1/3, 2*sqrt(2)/3, 0],
-    [2*sqrt(2)/3,        -1/3, 0],
-    [          0,           0, 1]])
+    <BLANKLINE>
+    [        1/3 2*sqrt(2)/3 0]
+    [2*sqrt(2)/3        -1/3 0]
+    [          0           0 1]
     >>> t,r,p,z,s = aff2trpzs(augment(m=_))
-    >>> list(r)
-    [0, sqrt(3)/3, -sqrt(6)/3, 0]
+    >>> r
+    [0 sqrt(3)/3 -sqrt(6)/3 0]'
     >>> p
     -1
     """
@@ -232,23 +246,25 @@ def fvec2fmat(fvec):
 def mn2smat(mvec, nvec):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> mn2smat(i,j)
-    Matrix([
-    [1, 1, 0],
-    [0, 1, 0],
-    [0, 0, 1]])
+    <BLANKLINE>
+    [1 1 0]
+    [0 1 0]
+    [0 0 1]
     >>> mn2smat(i-j+2*k,2*j+k)
-    Matrix([
-    [1,  2,  1],
-    [0, -1, -1],
-    [0,  4,  3]])
+    <BLANKLINE>
+    [1  2  1]
+    [0 -1 -1]
+    [0  4  3]
     >>> t,r,p,z,s = aff2trpzs(augment(m=_))
-    >>> list(simplify(r))
-    [sqrt(-34*sqrt(17) + 578)/34, 2*sqrt(2)/sqrt(-sqrt(17) + 17), 0, 0]
-    >>> list(simplify(z))
-    [1, sqrt(17), sqrt(17)/17]
-    >>> list(simplify(s))
-    [2, 1, 13/17]
+    >>> simplify(r)
+    [sqrt(-34*sqrt(17) + 578)/34 2*sqrt(2)/sqrt(-sqrt(17) + 17) 0 0]'
+    >>> simplify(z)
+    [1 sqrt(17) sqrt(17)/17]'
+    >>> simplify(s)
+    [2 1 13/17]'
     """
     mvec = Mat(mvec)
     nvec = Mat(nvec)
@@ -258,23 +274,25 @@ def mn2smat(mvec, nvec):
 def zvec2zmat(zvec):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> zvec2zmat(j*3)
-    Matrix([
-    [1, 0, 0],
-    [0, 3, 0],
-    [0, 0, 1]])
+    <BLANKLINE>
+    [1 0 0]
+    [0 3 0]
+    [0 0 1]
     >>> zvec2zmat(i-j)
-    Matrix([
-    [ 1/2 + sqrt(2)/2, -sqrt(2)/2 + 1/2, 0],
-    [-sqrt(2)/2 + 1/2,  1/2 + sqrt(2)/2, 0],
-    [               0,                0, 1]])
+    <BLANKLINE>
+    [ 1/2 + sqrt(2)/2 -sqrt(2)/2 + 1/2 0]
+    [-sqrt(2)/2 + 1/2  1/2 + sqrt(2)/2 0]
+    [               0                0 1]
     >>> t,r,p,z,s = aff2trpzs(augment(m=_))
-    >>> list(simplify(r))
-    [2**(1/4)*3**(3/4)*sqrt(1 + sqrt(2) + sqrt(6))/6, 0, 0, (-6**(3/4) + 54**(1/4))/(6*sqrt(1 + sqrt(2) + sqrt(6)))]
-    >>> list(simplify(z))
-    [sqrt(6)/2, 2*sqrt(3)/3, 1]
-    >>> list(simplify(s))
-    [-1/3, 0, 0]
+    >>> simplify(r)
+    [2**(1/4)*3**(3/4)*sqrt(1 + sqrt(2) + sqrt(6))/6 0 0 (-6**(3/4) + 54**(1/4))/(6*sqrt(1 + sqrt(2) + sqrt(6)))]'
+    >>> simplify(z)
+    [sqrt(6)/2 2*sqrt(3)/3 1]'
+    >>> simplify(s)
+    [-1/3 0 0]'
     """
     zvec = Mat(zvec)
     nvec = normalize(zvec)
@@ -323,23 +341,18 @@ class Transformation(Functor):
     def transform(self, st):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> m = translation([2,3,5])
         >>> m.transform((1,2,3))
         (3, 5, 8)
         >>> s = shearing(2*j,sqrt(3)*i)
         >>> m.transform(s)
-        AffineTransformation([[1, 0, 0], [2*sqrt(3), 1, 0], [0, 0, 1]], [0, -4*sqrt(3), 0])
+        AffineTransformation([1 0 0; 2*sqrt(3) 1 0; 0 0 1], [0 -4*sqrt(3) 0]')
         >>> import symplus.setplus
         >>> x, y, z = symbols('x,y,z')
         >>> m.transform(AbstractSet((x,y,z), x**2+y**2+z**2<1))
-        Image(EuclideanTransformation(Matrix([
-        [2],
-        [3],
-        [5]]), Matrix([
-        [1],
-        [0],
-        [0],
-        [0]]), 1), AbstractSet((x, y, z), x**2 + y**2 + z**2 < 1))
+        {(x + 2, y + 3, z + 5) | x**2 + y**2 + z**2 < 1}
         """
         if is_Tuple(st) and len(st) == 3:
             return self(*st)
@@ -378,6 +391,18 @@ class AffineTransformation(Transformation):
             type(self).__name__,
             printer.doprint(matrix),
             printer.doprint(list(self.vector)))
+
+    def _mathstr(self, printer):
+        if self.matrix == eye(3):
+            matrixstr = "eye(3)"
+        else:
+            matrixstr = "[%s]"%"; ".join(" ".join(printer.doprint(self.matrix[i,j])
+                                    for j in range(self.matrix.shape[1]))
+                                    for i in range(self.matrix.shape[0]))
+        return "%s(%s, %s)"%(
+            type(self).__name__,
+            matrixstr,
+            printer.doprint(self.vector))
 
     @classmethod
     def from_augmented_matrix(cls, augmat):
@@ -434,6 +459,13 @@ class EuclideanTransformation(AffineTransformation):
             printer.doprint(list(self.rquat)),
             printer.doprint(self.parity))
 
+    def _mathstr(self, printer):
+        return "%s(%s, %s, %s)"%(
+            type(self).__name__,
+            printer.doprint(self.tvec),
+            printer.doprint(self.rquat),
+            printer.doprint(self.parity))
+
     @property
     def matrix(self):
         return rquat2rmat(self.rquat) * self.parity
@@ -473,22 +505,24 @@ class EuclideanTransformation(AffineTransformation):
     def _image(self, zet):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> t = EuclideanTransformation([0,1,-1], rquat(pi/3, [1,0,1]))
         >>> t._image(WholeSpace())
         WholeSpace()
         >>> t._image(Halfspace(2, [2,1,4]))
-        Halfspace(-sqrt(21)/7 - 3*sqrt(14)/28 + 2, [-sqrt(14)/28 + 5*sqrt(21)/42,\
- -sqrt(14)/14 + sqrt(21)/42, sqrt(14)/28 + sqrt(21)/6], False)
+        Halfspace(-sqrt(21)/7 - 3*sqrt(14)/28 + 2, [-sqrt(14)/28 + 5*sqrt(21)/42\
+ -sqrt(14)/14 + sqrt(21)/42 sqrt(14)/28 + sqrt(21)/6]', False)
         >>> t._image(Sphere(3, [2,0,1]))
-        Sphere(3, [7/4, sqrt(6)/4 + 1, 1/4], False)
+        Sphere(3, [7/4 sqrt(6)/4 + 1 1/4]', False)
         >>> t._image(InfiniteCylinder(3, [1,1,0], [0,1,4]))
-        InfiniteCylinder(3, [-27*sqrt(6)/136 + 99/136, 27*sqrt(6)/136 + 75/68,\
- -3/8 + 67*sqrt(6)/136], [-sqrt(102)/68 + sqrt(17)/17, -sqrt(102)/17 + sqrt(17)/34,\
- sqrt(102)/68 + 3*sqrt(17)/17], False)
+        InfiniteCylinder(3, [-27*sqrt(6)/136 + 99/136 27*sqrt(6)/136 + 75/68\
+ -3/8 + 67*sqrt(6)/136]', [-sqrt(102)/68 + sqrt(17)/17 -sqrt(102)/17 + sqrt(17)/34\
+ sqrt(102)/68 + 3*sqrt(17)/17]', False)
         >>> t._image(InfiniteCone(1, [2,1,0], [2,3,1]))
-        InfiniteCone(1, [-sqrt(6)/4 + 3/2, sqrt(6)/2 + 3/2, -1/2 + sqrt(6)/4],\
- [-sqrt(14)/8 + 3*sqrt(21)/28, -3*sqrt(14)/28 - sqrt(21)/28, -3*sqrt(21)/28\
- - 5*sqrt(14)/56], False)
+        InfiniteCone(1, [-sqrt(6)/4 + 3/2 sqrt(6)/2 + 3/2 -1/2 + sqrt(6)/4]',\
+ [-sqrt(14)/8 + 3*sqrt(21)/28 -3*sqrt(14)/28 - sqrt(21)/28 -3*sqrt(21)/28\
+ - 5*sqrt(14)/56]', False)
         """
         if isinstance(zet, WholeSpace):
             return zet
@@ -596,18 +630,36 @@ class TransformationGroup(with_metaclass(Singleton, Set)):
     def is_subset(self, other):
         return issubclass(type(other), type(self))
 
+    def __str__(self):
+        return "Trans"
+
+    def _sympystr(self, printer):
+        return self.__str__()
+
+    def _mathstr(self, printer):
+        return self.__str__()
+
 class AffineGroup(TransformationGroup):
     def _contains(self, other):
         return isinstance(other, AffineTransformation)
+
+    def __str__(self):
+        return "Aff4"
 
 class EuclideanGroup(AffineGroup):
     def _contains(self, other):
         return isinstance(other, EuclideanTransformation)
 
+    def __str__(self):
+        return "E3"
+
 class SpecialEuclideanGroup(EuclideanGroup):
     def _contains(self, other):
         return (isinstance(other, EuclideanTransformation) and
                 other.parity == 1)
+
+    def __str__(self):
+        return "SE3"
 
 class RotationGroup(SpecialEuclideanGroup):
     def _contains(self, other):
@@ -615,11 +667,17 @@ class RotationGroup(SpecialEuclideanGroup):
                 other.parity == 1 and
                 other.tvec == zeros3)
 
+    def __str__(self):
+        return "SO3"
+
 class TranslationGroup(SpecialEuclideanGroup):
     def _contains(self, other):
         return (isinstance(other, EuclideanTransformation) and
                 other.parity == 1 and
                 other.rquat == Mat([1,0,0,0]))
+
+    def __str__(self):
+        return "T3"
 
 Trans = TransformationGroup()
 Aff4 = AffineGroup()

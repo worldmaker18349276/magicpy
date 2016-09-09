@@ -1,6 +1,6 @@
 import operator
 from functools import reduce
-from sympy.core import S, Basic, Symbol, sympify, Ne, Eq, Gt, Ge, Lt, Le, oo, symbols
+from sympy.core import S, Basic, Atom, Symbol, sympify, Ne, Eq, Gt, Ge, Lt, Le, oo, symbols
 from sympy.core.function import Application
 from sympy.core.evaluate import global_evaluate
 from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent, to_dnf
@@ -19,24 +19,26 @@ class AbstractSet(Set):
         """create AbstractSet by variable and expression
 
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1)
-        AbstractSet(x, Abs(x) > 1)
+        {x | |x| > 1}
         >>> AbstractSet((x,), abs(x)>1)
-        AbstractSet(x, Abs(x) > 1)
+        {x | |x| > 1}
         >>> AbstractSet((x, y), abs(x-y)>1)
-        AbstractSet((x, y), Abs(x - y) > 1)
+        {(x, y) | |x - y| > 1}
         >>> AbstractSet([x, y], abs(x-y)>1)
-        AbstractSet((x, y), Abs(x - y) > 1)
+        {(x, y) | |x - y| > 1}
         >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))
-        AbstractSet(m, Eq(m[0, 0] + m[1, 1], 0))
+        {m | 0 == m[0, 0] + m[1, 1]}
         >>> AbstractSet((m, x), Eq(det(m),x))
-        AbstractSet((m, x), Eq(Determinant(m), x))
+        {(m, x) | x == ||m||}
         >>> AbstractSet(x, (x>1)&(x<3))
-        AbstractSet(x, And(x < 3, x > 1))
+        {x | (x < 3) /\ (x > 1)}
         >>> AbstractSet(x, x>y)
-        AbstractSet(x, x > y)
+        {x | x > y}
         >>> AbstractSet(1, x>y)
         Traceback (most recent call last):
             ...
@@ -60,6 +62,8 @@ class AbstractSet(Set):
         """get variable of set builder
 
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1).variable
         x
@@ -77,6 +81,8 @@ class AbstractSet(Set):
         """get variable with tuple of set builder
 
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1).variables
         (x,)
@@ -94,13 +100,15 @@ class AbstractSet(Set):
         """get expression of set builder
 
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1).expr
-        Abs(x) > 1
+        |x| > 1
         >>> AbstractSet((x,), abs(x)>1).expr
-        Abs(x) > 1
+        |x| > 1
         >>> AbstractSet((x,y), abs(x-y)>1).expr
-        Abs(x - y) > 1
+        |x - y| > 1
         >>> AbstractSet(x, x>y).expr
         x > y
         """
@@ -111,6 +119,8 @@ class AbstractSet(Set):
         """get free symbols of set builder
 
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1).free_symbols
         set()
@@ -130,21 +140,23 @@ class AbstractSet(Set):
         """intersect two set builder
 
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet(y, abs(y)<3))
-        AbstractSet(x, And(Abs(x) < 3, Abs(x) > 1))
+        {x | (|x| < 3) /\ (|x| > 1)}
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet((x,y), abs(x-y)>1))
-        EmptySet()
+        (/)
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet(y, y<x))
-        AbstractSet(x_, And(Abs(x_) > 1, x_ < x))
+        {x_ | (x_ < x) /\ (|x_| > 1)}
         >>> x2 = symbols('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._intersect(AbstractSet(x2, x2<y))
-        AbstractSet(x, And(Abs(x) > 1, x < y))
+        {x | (x < y) /\ (|x| > 1)}
         >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._intersect(AbstractSet(n, Eq(det(n),0)))
-        AbstractSet(m, And(Eq(Determinant(m), 0), Eq(m[0, 0] + m[1, 1], 0)))
+        {m | (0 == m[0, 0] + m[1, 1]) /\ (0 == ||m||)}
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._intersect(AbstractSet(x, abs(x)>1))
-        EmptySet()
+        (/)
         >>> AbstractSet(x, abs(x)>1)._intersect(Interval(1,2))
         """
         if isinstance(other, AbstractSet):
@@ -162,18 +174,20 @@ class AbstractSet(Set):
         """union two set builder
 
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet(y, abs(y)<3))
-        AbstractSet(x, Or(Abs(x) < 3, Abs(x) > 1))
+        {x | (|x| < 3) \/ (|x| > 1)}
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet((x,y), abs(x-y)>1))
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet(y, y<x))
-        AbstractSet(x_, Or(Abs(x_) > 1, x_ < x))
+        {x_ | (x_ < x) \/ (|x_| > 1)}
         >>> x2 = symbols('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._union(AbstractSet(x2, x2<y))
-        AbstractSet(x, Or(Abs(x) > 1, x < y))
+        {x | (x < y) \/ (|x| > 1)}
         >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._union(AbstractSet(n, Eq(det(n),0)))
-        AbstractSet(m, Or(Eq(Determinant(m), 0), Eq(m[0, 0] + m[1, 1], 0)))
+        {m | (0 == m[0, 0] + m[1, 1]) \/ (0 == ||m||)}
         >>> AbstractSet(m, Eq(m[0,0]+m[1,1],0))._union(AbstractSet(x, abs(x)>1))
         >>> AbstractSet(x, abs(x)>1)._union(Interval(1,2))
         """
@@ -192,21 +206,23 @@ class AbstractSet(Set):
         """complement two set builder
 
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(y, abs(y)<=3)._complement(AbstractSet(x, abs(x)>1))
-        AbstractSet(y, And(Abs(y) > 1, Abs(y) > 3))
+        {y | (|y| > 1) /\ (|y| > 3)}
         >>> AbstractSet((x,y), abs(x-y)>1)._complement(AbstractSet(x, abs(x)>1))
-        AbstractSet(x, Abs(x) > 1)
+        {x | |x| > 1}
         >>> AbstractSet(y, y<=x)._complement(AbstractSet(x, abs(x)>1))
-        AbstractSet(y, And(Abs(y) > 1, y > x))
+        {y | (y > x) /\ (|y| > 1)}
         >>> x2 = symbols('x2', positive=True)
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(x2, x2<=y))
-        AbstractSet(x, And(Abs(x) <= 1, x <= y))
+        {x | (x =< y) /\ (|x| =< 1)}
         >>> m, n = MatrixSymbol('m', 2, 2), MatrixSymbol('n', 2, 2)
         >>> AbstractSet(n, Eq(det(n),0))._complement(AbstractSet(m, Eq(m[0,0]+m[1,1],0)))
-        AbstractSet(n, And(Eq(n[0, 0] + n[1, 1], 0), Ne(Determinant(n), 0)))
+        {n | (0 =/= ||n||) /\ (0 == n[0, 0] + n[1, 1])}
         >>> AbstractSet(x, abs(x)>1)._complement(AbstractSet(m, Eq(m[0,0]+m[1,1],0)))
-        AbstractSet(m, Eq(m[0, 0] + m[1, 1], 0))
+        {m | 0 == m[0, 0] + m[1, 1]}
         >>> AbstractSet(x, abs(x)>1)._complement(Interval(1,2))
         """
         if isinstance(other, AbstractSet):
@@ -233,6 +249,8 @@ class AbstractSet(Set):
     def _contains(self, other):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y, z = symbols('x y z')
         >>> AbstractSet(x, abs(x)>1)._contains(2)
         True
@@ -254,13 +272,15 @@ class AbstractSet(Set):
     def is_subset(self, other):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, x-y>1).is_subset(AbstractSet(x, (x-y>1)|(x+y>1)))
         True
         >>> AbstractSet((x,y), x-y>1).is_subset(AbstractSet((x,y), abs(x-y)>1))
-        Forall((x, y), Implies(x - y > 1, Abs(x - y) > 1))
+        A. x, y st (x - y > 1) => (|x - y| > 1)
         >>> AbstractSet(x, abs(x)>1).is_subset(Interval(1,2))
-        Forall(x, Implies(Abs(x) > 1, And(x <= 2, x >= 1)))
+        A. x st (|x| > 1) => (x =< 2) /\ (x >= 1)
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -281,13 +301,15 @@ class AbstractSet(Set):
     def is_disjoint(self, other):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, x-y>1).is_disjoint(AbstractSet(x, (x-y<=1)&(x+y>1)))
         True
         >>> AbstractSet((x,y), x-y>1).is_disjoint(AbstractSet((x,y), abs(x-y)<1))
-        Forall((x, y), Not(And(Abs(x - y) < 1, x - y > 1)))
+        A. x, y st ~((x - y > 1) /\ (|x - y| < 1))
         >>> AbstractSet(x, abs(x)>1).is_disjoint(Interval(1,2))
-        Forall(x, Not(And(Abs(x) > 1, x <= 2, x >= 1)))
+        A. x st ~((x =< 2) /\ (x >= 1) /\ (|x| > 1))
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -308,13 +330,15 @@ class AbstractSet(Set):
     def is_equivalent(self, other):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, x-y>1).is_equivalent(AbstractSet(x, x-y>1))
         True
         >>> AbstractSet(x, x<1).is_equivalent(AbstractSet(x, x-1<0))
-        Forall(x, Equivalent(x < 1, x - 1 < 0))
+        A. x st (x - 1 < 0) <=> (x < 1)
         >>> AbstractSet(x, abs(x)>1).is_equivalent(Interval(1,2))
-        Forall(x, Equivalent(Abs(x) > 1, And(x <= 2, x >= 1)))
+        A. x st (x =< 2) /\ (x >= 1) <=> (|x| > 1)
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -335,11 +359,13 @@ class AbstractSet(Set):
     def is_proper_subset(self, other):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, x-y>1).is_proper_subset(AbstractSet(x, x-y>1))
         False
         >>> AbstractSet(x, x-y>1).is_proper_subset(AbstractSet(x, (x-y>1)|(x+y>1)))
-        Not(Forall(x, Equivalent(x - y > 1, Or(x + y > 1, x - y > 1))))
+        ~(A. x st (x + y > 1) \/ (x - y > 1) <=> (x - y > 1))
         """
         if isinstance(other, AbstractSet):
             return And(Not(self.is_equivalent(other)), self.is_subset(other))
@@ -349,13 +375,15 @@ class AbstractSet(Set):
     def is_empty(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, false).is_empty()
         True
         >>> AbstractSet(x, (x>0)&(x<0))
-        AbstractSet(x, And(x < 0, x > 0))
+        {x | (x < 0) /\ (x > 0)}
         >>> _.is_empty()
-        Forall(x, Not(And(x < 0, x > 0)))
+        A. x st ~((x < 0) /\ (x > 0))
         """
         return Forall(self.variables, Not(self.expr))
 
@@ -371,15 +399,17 @@ class AbstractSet(Set):
     def expand(self, depth=-1):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, (x>0)&(x<0))
-        AbstractSet(x, And(x < 0, x > 0))
+        {x | (x < 0) /\ (x > 0)}
         >>> _.expand()
-        Intersection(AbstractSet(x, x > 0), AbstractSet(x, x < 0))
+        {x | x < 0} n {x | x > 0}
         >>> AbstractSet((x,y), (x>0)>>(y>1))
-        AbstractSet((x, y), Implies(x > 0, y > 1))
+        {(x, y) | (x > 0) => (y > 1)}
         >>> _.expand()
-        AbstractSet((x, y), x <= 0) U AbstractSet((x, y), y > 1)
+        {(x, y) | x =< 0} u {(x, y) | y > 1}
         """
         def expand0(var, expr, dp):
             if dp == 0:
@@ -404,11 +434,13 @@ class AbstractSet(Set):
     def _eval_product(self, other):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> AbstractSet(x, abs(x)>1)._eval_product(AbstractSet(y, y<x))
-        AbstractSet((x, y), And(Abs(x) > 1, y < x))
+        {(x, y) | (y < x) /\ (|x| > 1)}
         >>> AbstractSet(x, abs(x)>1)._eval_product(AbstractSet((x,y), abs(x-y)>1))
-        AbstractSet((x, x_, y), And(Abs(x) > 1, Abs(x_ - y) > 1))
+        {(x, x_, y) | (|x_ - y| > 1) /\ (|x| > 1)}
         """
         if isinstance(other, AbstractSet):
             vars1 = self.variables
@@ -424,20 +456,25 @@ class AbstractSet(Set):
     def _eval_Eq(self, other):
         return self.is_equivalent(other)
 
+    def _mathstr(self, printer):
+        return '{{{0} | {1}}}'.format(*map(printer._print, self.args))
+
 
 class SetBuilder(object):
     def __getitem__(self, zets):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> St[x : abs(x)>1]
-        AbstractSet(x, Abs(x) > 1)
+        {x | |x| > 1}
         >>> St[(x, y) : abs(x-y)>1]
-        AbstractSet((x, y), Abs(x - y) > 1)
+        {(x, y) | |x - y| > 1}
         >>> St[x : x-y>1, x : x<1]
-        AbstractSet(x, And(x - y > 1, x < 1))
+        {x | (x - y > 1) /\ (x < 1)}
         >>> St[S.Reals, x : x<1]
-        Intersection((-oo, oo), AbstractSet(x, x < 1))
+        (-oo, oo) n {x | x < 1}
         """
         zets = zets if isinstance(zets, tuple) else (zets,)
         sts = []
@@ -461,15 +498,17 @@ class SetBuilder(object):
     def __call__(self, *zets, **kwargs):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> x, y = symbols('x y')
         >>> St({x : abs(x)>1})
-        AbstractSet(x, Abs(x) > 1)
+        {x | |x| > 1}
         >>> St({(x, y) : abs(x-y)>1})
-        AbstractSet((x, y), Abs(x - y) > 1)
+        {(x, y) | |x - y| > 1}
         >>> St({x : x-y>1}, {x : x<1})
-        AbstractSet(x, And(x - y > 1, x < 1))
+        {x | (x - y > 1) /\ (x < 1)}
         >>> St(S.Reals, {x : x<1})
-        Intersection((-oo, oo), AbstractSet(x, x < 1))
+        (-oo, oo) n {x | x < 1}
         """
         evaluate = kwargs.pop("evaluate", True)
         sts = []
@@ -517,24 +556,26 @@ def as_abstract(zet):
 class Image(Set):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> from symplus.funcplus import *
     >>> Image(sin, Interval(0, pi/2))
-    Image(sin, [0, pi/2])
+    {sin(a0) | a0 in [0, pi/2]}
     >>> Image(exp, Image(sin, Interval(0, pi/2)))
-    Image(FunctionCompose(exp, sin), [0, pi/2])
+    {exp(sin(a0)) | a0 in [0, pi/2]}
     >>> Image(FunctionInverse(sin), Image(sin, Interval(0, pi/2)))
     [0, pi/2]
     >>> Image(cos, S.EmptySet)
-    EmptySet()
+    (/)
     >>> x, y = symbols('x y')
     >>> Image(cos, AbstractSet(x, x > 0))
-    AbstractSet(a0, acos(a0) > 0)
+    {a0 | acos(a0) > 0}
     >>> Image(cos, Intersection(AbstractSet(x, x > 0), AbstractSet(x, x < 0), evaluate=False))
-    Intersection(AbstractSet(a0, acos(a0) > 0), AbstractSet(a0, acos(a0) < 0))
+    {a0 | acos(a0) < 0} n {a0 | acos(a0) > 0}
     >>> Image(Lambda(x, x+1), Interval(-1, 1)).contains(1)
     True
     >>> Image(Lambda(x, sin(x)+x), Interval(-1, 1)).contains(1)
-    And(Apply(FunctionInverse(Lambda(x, x + sin(x))), 1) <= 1, Apply(FunctionInverse(Lambda(x, x + sin(x))), 1) >= -1)
+    ((x |-> x + sin(x))`'(1) =< 1) /\ ((x |-> x + sin(x))`'(1) >= -1)
     >>> f = Lambda((x, y), (x*cos(y), x*sin(y)))
     >>> f_inv = FunctionInverse(f, evaluate=False)
     >>> f_inv(*f(1, pi/4))
@@ -542,7 +583,7 @@ class Image(Set):
     >>> Image(f, ProductSet(Interval(0,1), Interval(-pi,pi))).contains(f(1, pi/4))
     True
     >>> Image(Lambda(x, x+1), Interval(-1, 1)).as_abstract()
-    AbstractSet(x0, And(x0 - 1 <= 1, x0 - 1 >= -1))
+    {x0 | (x0 - 1 =< 1) /\ (x0 - 1 >= -1)}
     >>> g = Lambda((x, y), (x+exp(y), x+sin(y)))
     >>> Image(g, ProductSet(Interval(-1,1), Interval(-1,1))).contains(g(1,2))
     False
@@ -652,6 +693,20 @@ class Image(Set):
     def is_closed(self):
         return is_closed(self.set)
 
+    def _mathstr(self, printer):
+        if isinstance(self.set, AbstractSet):
+            varstr = printer._print(self.function(*self.set.variables))
+            exprstr = printer._print(self.set.expr)
+            return '{{{0} | {1}}}'.format(varstr, exprstr)
+        else:
+            func = as_lambda(self.function)
+            if len(func.variables) == 1:
+                varstr = printer._print(func.variables[0])
+            else:
+                varstr = printer._print(func.variables)
+            elemstr = printer._print(func.expr)
+            setstr = printer._print(self.set)
+            return '{{{0} | {1} in {2}}}'.format(elemstr, varstr, setstr)
 
 class Contains(Application, Boolean):
     @classmethod
@@ -668,15 +723,17 @@ class Contains(Application, Boolean):
 def simplify_set(zet, variable=Symbol("x", real=True), form='dnf', deep=False):
     """
     >>> from sympy import *
-    >>> A = Set("A")
-    >>> B = Set("B")
-    >>> C = Set("C")
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
+    >>> A = Set(symbols("A"))
+    >>> B = Set(symbols("B"))
+    >>> C = Set(symbols("C"))
     >>> simplify_set(B & (A | C))
-    Intersection(Set(A), Set(B)) U Intersection(Set(B), Set(C))
+    Set(A) n Set(B) u Set(B) n Set(C)
     >>> simplify_set((A & B) | (A - B) | (B & C) | (C - B))
-    Set(A) U Set(C)
+    Set(A) u Set(C)
     >>> simplify_set(AbsoluteComplement(A+B+C) | (C-A-B))
-    Intersection(AbsoluteComplement(Set(A)), AbsoluteComplement(Set(B)))
+    -(Set(A)) n -(Set(B))
     """
     x = rename_variables_in(variable, free_symbols(zet))
 
@@ -710,7 +767,8 @@ def simplify_set(zet, variable=Symbol("x", real=True), form='dnf', deep=False):
 def is_open(zet):
     """
     >>> from sympy import *
-    >>> from symplus.setplus import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> is_open(Interval(0,1, True, True))
     True
     >>> is_open(Interval(1,2, True, False))
@@ -762,7 +820,8 @@ def is_open(zet):
 def is_closed(zet):
     """
     >>> from sympy import *
-    >>> from symplus.setplus import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> is_closed(Interval(0,1, False, False))
     True
     >>> is_closed(Interval(1,2, True, False))
@@ -823,22 +882,23 @@ class AbsoluteComplement(Set):
     def eval(zet):
         """
         >>> from sympy import *
-        >>> from symplus.setplus import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AbsoluteComplement(Interval(0,1, False, False))
-        (-oo, 0) U (1, oo)
+        (-oo, 0) u (1, oo)
         >>> AbsoluteComplement(Interval(1,2, True, False))
-        (-oo, 1] U (2, oo)
+        (-oo, 1] u (2, oo)
         >>> AbsoluteComplement(Interval(1,oo, False, False))
         (-oo, 1)
         >>> AbsoluteComplement(Interval(1,2, False, False) * Interval(0,1, False, False))
-        AbsoluteComplement([1, 2] x [0, 1])
+        -([1, 2] x [0, 1])
         >>> x,y = symbols('x y')
         >>> AbsoluteComplement(AbstractSet(x, x**2<1))
-        AbstractSet(x, x**2 >= 1)
+        {x | x**2 >= 1}
         >>> AbsoluteComplement(AbstractSet(x, (x<4)|(x>=6)))
-        AbstractSet(x, Not(Or(x < 4, x >= 6)))
+        {x | ~((x < 4) \/ (x >= 6))}
         >>> AbsoluteComplement(AbstractSet((x,y), x<=y))
-        AbstractSet((x, y), x > y)
+        {(x, y) | x > y}
         """
         if isinstance(zet, Interval):
             return zet.complement(S.Reals)
@@ -872,6 +932,12 @@ class AbsoluteComplement(Set):
     def _absolute_complement(self):
         return self.set
 
+    def _mathstr(self, printer):
+        if isinstance(self.args[0], (Atom, AbsoluteComplement)):
+            return '-'+printer._print(self.args[0])
+        else:
+            return '-({0})'.format(printer._print(self.args[0]))
+
 class Interior(Set):
     def __new__(cls, set, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
@@ -885,7 +951,8 @@ class Interior(Set):
     def eval(zet):
         """
         >>> from sympy import *
-        >>> from symplus.setplus import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> Interior(Interval(0,1, False, False))
         (0, 1)
         >>> Interior(Interval(1,2, True, False))
@@ -896,11 +963,11 @@ class Interior(Set):
         (1, 2) x (0, 1)
         >>> x,y = symbols('x y')
         >>> Interior(AbstractSet(x, x**2<1))
-        AbstractSet(x, x**2 < 1)
+        {x | x**2 < 1}
         >>> Interior(AbstractSet(x, (x<6)&(x>=4)))
-        AbstractSet(x, And(x < 6, x > 4))
+        {x | (x < 6) /\ (x > 4)}
         >>> Interior(AbstractSet((x,y), x<=y))
-        AbstractSet((x, y), x < y)
+        {(x, y) | x < y}
         """
         if isinstance(zet, Interior):
             return zet
@@ -967,7 +1034,8 @@ class Closure(Set):
     def eval(zet):
         """
         >>> from sympy import *
-        >>> from symplus.setplus import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> Closure(Interval(0,1, False, False))
         [0, 1]
         >>> Closure(Interval(1,2, True, False))
@@ -978,11 +1046,11 @@ class Closure(Set):
         [1, 2] x [0, 1]
         >>> x,y = symbols('x y')
         >>> Closure(AbstractSet(x, x**2<1))
-        AbstractSet(x, x**2 <= 1)
+        {x | x**2 =< 1}
         >>> Closure(AbstractSet(x, (x<4)|(x>=6)))
-        AbstractSet(x, Or(x <= 4, x >= 6))
+        {x | (x =< 4) \/ (x >= 6)}
         >>> Closure(AbstractSet((x,y), x<=y))
-        AbstractSet((x, y), x <= y)
+        {(x, y) | x =< y}
         """
         if isinstance(zet, Closure):
             return zet
@@ -1100,7 +1168,8 @@ class Topology(Set):
 class DiscreteTopology(Topology):
     """
     >>> from sympy import *
-    >>> from symplus.setplus import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> t = DiscreteTopology(Interval(-3,3))
     >>> t.contains(Interval(0,1, True, True))
     True
@@ -1147,7 +1216,8 @@ class DiscreteTopology(Topology):
 class NaturalTopology(Topology):
     """
     >>> from sympy import *
-    >>> from symplus.setplus import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> t = NaturalTopology(Interval(-3,3))
     >>> t.contains(Interval(0,1, True, True))
     True

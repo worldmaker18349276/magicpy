@@ -71,10 +71,12 @@ class Halfspace(AlgebraicEuclideanSpace):
     def __new__(cls, offset=0, direction=[0,0,1], closed=False, **kwargs):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> Halfspace()
-        Halfspace(0, [0, 0, 1], False)
+        Halfspace(0, [0 0 1]', False)
         >>> Halfspace(3, [1,2,0])
-        Halfspace(3, [sqrt(5)/5, 2*sqrt(5)/5, 0], False)
+        Halfspace(3, [sqrt(5)/5 2*sqrt(5)/5 0]', False)
         >>> Halfspace().contains((1,2,3))
         True
         >>> Halfspace(3, [1,2,0]).contains((1,2,3))
@@ -121,10 +123,12 @@ class Halfspace(AlgebraicEuclideanSpace):
     def as_abstract(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> Halfspace().as_abstract()
-        AbstractSet((x, y, z), z > 0)
+        {(x, y, z) | z > 0}
         >>> Halfspace(3, [1,2,0]).as_abstract()
-        AbstractSet((x, y, z), sqrt(5)*x/5 + 2*sqrt(5)*y/5 > 3)
+        {(x, y, z) | sqrt(5)*x/5 + 2*sqrt(5)*y/5 > 3}
         """
         if self.closed:
             expr = dot(r, self.direction) >= self.offset
@@ -135,10 +139,12 @@ class Halfspace(AlgebraicEuclideanSpace):
     def _absolute_complement(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AbsoluteComplement(Halfspace())
-        Halfspace(0, [0, 0, -1], True)
+        Halfspace(0, [0 0 -1]', True)
         >>> AbsoluteComplement(Halfspace(3, [1,2,0]))
-        Halfspace(-3, [-sqrt(5)/5, -2*sqrt(5)/5, 0], True)
+        Halfspace(-3, [-sqrt(5)/5 -2*sqrt(5)/5 0]', True)
         >>> AbsoluteComplement(Halfspace()).contains((1,2,3))
         False
         >>> AbsoluteComplement(Halfspace(3, [1,2,0])).contains((1,2,3))
@@ -178,10 +184,12 @@ class Sphere(AlgebraicEuclideanSpace, BoundedEuclideanSpace):
     def __new__(cls, radius=1, center=[0,0,0], closed=False, **kwargs):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> Sphere()
-        Sphere(1, [0, 0, 0], False)
+        Sphere(1, [0 0 0]', False)
         >>> Sphere(3, [1,0,2])
-        Sphere(3, [1, 0, 2], False)
+        Sphere(3, [1 0 2]', False)
         >>> Sphere().contains((1,1,1))
         False
         >>> Sphere(3, [1,0,2]).contains((1,1,1))
@@ -224,10 +232,12 @@ class Sphere(AlgebraicEuclideanSpace, BoundedEuclideanSpace):
     def as_abstract(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> Sphere().as_abstract()
-        AbstractSet((x, y, z), x**2 + y**2 + z**2 < 1)
+        {(x, y, z) | x**2 + y**2 + z**2 < 1}
         >>> Sphere(3, [1,0,2]).as_abstract()
-        AbstractSet((x, y, z), y**2 + (x - 1)**2 + (z - 2)**2 < 9)
+        {(x, y, z) | y**2 + (x - 1)**2 + (z - 2)**2 < 9}
         """
         if self.closed:
             expr = norm(r-self.center)**2 <= self.radius**2
@@ -238,10 +248,12 @@ class Sphere(AlgebraicEuclideanSpace, BoundedEuclideanSpace):
     def _absolute_complement(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AbsoluteComplement(Sphere())
-        AntiSphere(1, [0, 0, 0], True)
+        AntiSphere(1, [0 0 0]', True)
         >>> AbsoluteComplement(Sphere(3, [1,0,2]))
-        AntiSphere(3, [1, 0, 2], True)
+        AntiSphere(3, [1 0 2]', True)
         >>> AbsoluteComplement(Sphere()).contains((1,1,1))
         True
         >>> AbsoluteComplement(Sphere(3, [1,0,2])).contains((1,1,1))
@@ -281,10 +293,12 @@ class AntiSphere(AlgebraicEuclideanSpace):
     def __new__(cls, radius=1, center=[0,0,0], closed=False, **kwargs):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AntiSphere()
-        AntiSphere(1, [0, 0, 0], False)
+        AntiSphere(1, [0 0 0]', False)
         >>> AntiSphere(3, [1,0,2])
-        AntiSphere(3, [1, 0, 2], False)
+        AntiSphere(3, [1 0 2]', False)
         >>> AntiSphere().contains((1,1,1))
         True
         >>> AntiSphere(3, [1,0,2]).contains((1,1,1))
@@ -327,10 +341,12 @@ class AntiSphere(AlgebraicEuclideanSpace):
     def as_abstract(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AntiSphere().as_abstract()
-        AbstractSet((x, y, z), x**2 + y**2 + z**2 > 1)
+        {(x, y, z) | x**2 + y**2 + z**2 > 1}
         >>> AntiSphere(3, [1,0,2]).as_abstract()
-        AbstractSet((x, y, z), y**2 + (x - 1)**2 + (z - 2)**2 > 9)
+        {(x, y, z) | y**2 + (x - 1)**2 + (z - 2)**2 > 9}
         """
         if self.closed:
             expr = norm(r-self.center)**2 >= self.radius**2
@@ -341,10 +357,12 @@ class AntiSphere(AlgebraicEuclideanSpace):
     def _absolute_complement(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AbsoluteComplement(AntiSphere())
-        Sphere(1, [0, 0, 0], True)
+        Sphere(1, [0 0 0]', True)
         >>> AbsoluteComplement(AntiSphere(3, [1,0,2]))
-        Sphere(3, [1, 0, 2], True)
+        Sphere(3, [1 0 2]', True)
         >>> AbsoluteComplement(AntiSphere()).contains((1,1,1))
         False
         >>> AbsoluteComplement(AntiSphere(3, [1,0,2])).contains((1,1,1))
@@ -384,10 +402,12 @@ class InfiniteCylinder(AlgebraicEuclideanSpace):
     def __new__(cls, radius=1, center=[0,0,0], direction=[0,0,1], closed=False, **kwargs):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> InfiniteCylinder()
-        InfiniteCylinder(1, [0, 0, 0], [0, 0, 1], False)
+        InfiniteCylinder(1, [0 0 0]', [0 0 1]', False)
         >>> InfiniteCylinder(2, [0,0,0], [0,1,1])
-        InfiniteCylinder(2, [0, 0, 0], [0, sqrt(2)/2, sqrt(2)/2], False)
+        InfiniteCylinder(2, [0 0 0]', [0 sqrt(2)/2 sqrt(2)/2]', False)
         >>> InfiniteCylinder().contains((1,1,1))
         False
         >>> InfiniteCylinder(2, [0,0,0], [0,1,1]).contains((1,1,1))
@@ -444,10 +464,12 @@ class InfiniteCylinder(AlgebraicEuclideanSpace):
     def as_abstract(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> InfiniteCylinder().as_abstract()
-        AbstractSet((x, y, z), x**2 + y**2 < 1)
+        {(x, y, z) | x**2 + y**2 < 1}
         >>> InfiniteCylinder(2, [0,0,0], [0,1,1]).as_abstract()
-        AbstractSet((x, y, z), x**2 + (sqrt(2)*y/2 - sqrt(2)*z/2)**2 < 4)
+        {(x, y, z) | x**2 + (sqrt(2)*y/2 - sqrt(2)*z/2)**2 < 4}
         """
         p = r - self.center
         if self.closed:
@@ -459,10 +481,12 @@ class InfiniteCylinder(AlgebraicEuclideanSpace):
     def _absolute_complement(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AbsoluteComplement(InfiniteCylinder())
-        AntiInfiniteCylinder(1, [0, 0, 0], [0, 0, 1], True)
+        AntiInfiniteCylinder(1, [0 0 0]', [0 0 1]', True)
         >>> AbsoluteComplement(InfiniteCylinder(2, [0,0,0], [0,1,1]))
-        AntiInfiniteCylinder(2, [0, 0, 0], [0, sqrt(2)/2, sqrt(2)/2], True)
+        AntiInfiniteCylinder(2, [0 0 0]', [0 sqrt(2)/2 sqrt(2)/2]', True)
         >>> AbsoluteComplement(InfiniteCylinder()).contains((1,1,1))
         True
         >>> AbsoluteComplement(InfiniteCylinder(2, [0,0,0], [0,1,1])).contains((1,1,1))
@@ -505,10 +529,12 @@ class AntiInfiniteCylinder(AlgebraicEuclideanSpace):
     def __new__(cls, radius=1, center=[0,0,0], direction=[0,0,1], closed=False, **kwargs):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AntiInfiniteCylinder()
-        AntiInfiniteCylinder(1, [0, 0, 0], [0, 0, 1], False)
+        AntiInfiniteCylinder(1, [0 0 0]', [0 0 1]', False)
         >>> AntiInfiniteCylinder(2, [0,0,0], [0,1,1])
-        AntiInfiniteCylinder(2, [0, 0, 0], [0, sqrt(2)/2, sqrt(2)/2], False)
+        AntiInfiniteCylinder(2, [0 0 0]', [0 sqrt(2)/2 sqrt(2)/2]', False)
         >>> AntiInfiniteCylinder().contains((1,1,1))
         True
         >>> AntiInfiniteCylinder(2, [0,0,0], [0,1,1]).contains((1,1,1))
@@ -565,10 +591,12 @@ class AntiInfiniteCylinder(AlgebraicEuclideanSpace):
     def as_abstract(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AntiInfiniteCylinder().as_abstract()
-        AbstractSet((x, y, z), x**2 + y**2 > 1)
+        {(x, y, z) | x**2 + y**2 > 1}
         >>> AntiInfiniteCylinder(2, [0,0,0], [0,1,1]).as_abstract()
-        AbstractSet((x, y, z), x**2 + (sqrt(2)*y/2 - sqrt(2)*z/2)**2 > 4)
+        {(x, y, z) | x**2 + (sqrt(2)*y/2 - sqrt(2)*z/2)**2 > 4}
         """
         p = r - self.center
         if self.closed:
@@ -580,10 +608,12 @@ class AntiInfiniteCylinder(AlgebraicEuclideanSpace):
     def _absolute_complement(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AbsoluteComplement(AntiInfiniteCylinder())
-        InfiniteCylinder(1, [0, 0, 0], [0, 0, 1], True)
+        InfiniteCylinder(1, [0 0 0]', [0 0 1]', True)
         >>> AbsoluteComplement(AntiInfiniteCylinder(2, [0,0,0], [0,1,1]))
-        InfiniteCylinder(2, [0, 0, 0], [0, sqrt(2)/2, sqrt(2)/2], True)
+        InfiniteCylinder(2, [0 0 0]', [0 sqrt(2)/2 sqrt(2)/2]', True)
         >>> AbsoluteComplement(AntiInfiniteCylinder()).contains((1,1,1))
         False
         >>> AbsoluteComplement(AntiInfiniteCylinder(2, [0,0,0], [0,1,1])).contains((1,1,1))
@@ -626,10 +656,12 @@ class InfiniteCone(AlgebraicEuclideanSpace):
     def __new__(cls, slope=1, center=[0,0,0], direction=[0,0,1], closed=False, **kwargs):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> InfiniteCone()
-        InfiniteCone(1, [0, 0, 0], [0, 0, 1], False)
+        InfiniteCone(1, [0 0 0]', [0 0 1]', False)
         >>> InfiniteCone(5, [0,0,0], [3,4,0])
-        InfiniteCone(5, [0, 0, 0], [3/5, 4/5, 0], False)
+        InfiniteCone(5, [0 0 0]', [3/5 4/5 0]', False)
         >>> InfiniteCone().contains((-1,0,1))
         False
         >>> InfiniteCone(5, [0,0,0], [3,4,0]).contains((-1,0,1))
@@ -684,10 +716,12 @@ class InfiniteCone(AlgebraicEuclideanSpace):
     def as_abstract(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> InfiniteCone().as_abstract()
-        AbstractSet((x, y, z), x**2 + y**2 < z**2)
+        {(x, y, z) | x**2 + y**2 < z**2}
         >>> InfiniteCone(5, [0,0,0], [3,4,0]).as_abstract()
-        AbstractSet((x, y, z), z**2 + (4*x/5 - 3*y/5)**2 < (3*x + 4*y)**2)
+        {(x, y, z) | z**2 + (4*x/5 - 3*y/5)**2 < (3*x + 4*y)**2}
         """
         p = r - self.center
         if self.closed:
@@ -699,10 +733,12 @@ class InfiniteCone(AlgebraicEuclideanSpace):
     def _absolute_complement(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AbsoluteComplement(InfiniteCone())
-        AntiInfiniteCone(1, [0, 0, 0], [0, 0, 1], True)
+        AntiInfiniteCone(1, [0 0 0]', [0 0 1]', True)
         >>> AbsoluteComplement(InfiniteCone(5, [0,0,0], [3,4,0]))
-        AntiInfiniteCone(5, [0, 0, 0], [3/5, 4/5, 0], True)
+        AntiInfiniteCone(5, [0 0 0]', [3/5 4/5 0]', True)
         >>> AbsoluteComplement(InfiniteCone()).contains((-1,0,1))
         True
         >>> AbsoluteComplement(InfiniteCone(5, [0,0,0], [3,4,0])).contains((-1,0,1))
@@ -745,12 +781,14 @@ class AntiInfiniteCone(AlgebraicEuclideanSpace):
     def __new__(cls, slope=1, center=[0,0,0], direction=[0,0,1], closed=False, **kwargs):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AntiInfiniteCone()
-        AntiInfiniteCone(1, [0, 0, 0], [0, 0, 1], False)
+        AntiInfiniteCone(1, [0 0 0]', [0 0 1]', False)
         >>> AntiInfiniteCone(5, [0,0,0], [3,4,0])
-        AntiInfiniteCone(5, [0, 0, 0], [3/5, 4/5, 0], False)
+        AntiInfiniteCone(5, [0 0 0]', [3/5 4/5 0]', False)
         >>> AntiInfiniteCone().contains((-1,0,1))
-        True
+        False
         >>> AntiInfiniteCone(5, [0,0,0], [3,4,0]).contains((-1,0,1))
         False
         """
@@ -803,10 +841,12 @@ class AntiInfiniteCone(AlgebraicEuclideanSpace):
     def as_abstract(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AntiInfiniteCone().as_abstract()
-        AbstractSet((x, y, z), x**2 + y**2 > z**2)
+        {(x, y, z) | x**2 + y**2 > z**2}
         >>> AntiInfiniteCone(5, [0,0,0], [3,4,0]).as_abstract()
-        AbstractSet((x, y, z), z**2 + (4*x/5 - 3*y/5)**2 > (3*x + 4*y)**2)
+        {(x, y, z) | z**2 + (4*x/5 - 3*y/5)**2 > (3*x + 4*y)**2}
         """
         p = r - self.center
         if self.closed:
@@ -818,12 +858,14 @@ class AntiInfiniteCone(AlgebraicEuclideanSpace):
     def _absolute_complement(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> AbsoluteComplement(AntiInfiniteCone())
-        InfiniteCone(1, [0, 0, 0], [0, 0, 1], True)
+        InfiniteCone(1, [0 0 0]', [0 0 1]', True)
         >>> AbsoluteComplement(AntiInfiniteCone(5, [0,0,0], [3,4,0]))
-        InfiniteCone(5, [0, 0, 0], [3/5, 4/5, 0], True)
+        InfiniteCone(5, [0 0 0]', [3/5 4/5 0]', True)
         >>> AbsoluteComplement(AntiInfiniteCone()).contains((-1,0,1))
-        False
+        True
         >>> AbsoluteComplement(AntiInfiniteCone(5, [0,0,0], [3,4,0])).contains((-1,0,1))
         True
         """
@@ -898,10 +940,12 @@ class Revolution(AlgebraicEuclideanSpace):
     def as_abstract(self):
         """
         >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
         >>> Revolution(lambda h, s: h**2<s**2).as_abstract()
-        AbstractSet((x, y, z), z**2 < x**2 + y**2)
+        {(x, y, z) | z**2 < x**2 + y**2}
         >>> Revolution(lambda h, s: h+1<s**2, [0,0,0], [3,4,0]).as_abstract()
-        AbstractSet((x, y, z), 3*x/5 + 4*y/5 + 1 < z**2 + (4*x/5 - 3*y/5)**2)
+        {(x, y, z) | 3*x/5 + 4*y/5 + 1 < z**2 + (4*x/5 - 3*y/5)**2}
         """
         p = r - self.center
         expr = self.func(dot(p, self.direction), norm(cross(p, self.direction)))
@@ -943,6 +987,20 @@ class Box(BoundedEuclideanSpace):
             printer.doprint(list(self.size)),
             printer.doprint(list(self.center)),
             printer.doprint(orientation),
+            printer.doprint(self.closed))
+
+    def _mathstr(self, printer):
+        if self.orientation == eye(3):
+            orientationstr = "eye(3)"
+        else:
+            orientationstr = "[%s]"%"; ".join(" ".join(printer.doprint(self.orientation[i,j])
+                                    for j in range(self.orientation.shape[1]))
+                                    for i in range(self.orientation.shape[0]))
+        return "%s(%s, %s, %s, %s)"%(
+            type(self).__name__,
+            printer.doprint(self.size),
+            printer.doprint(self.center),
+            orientationstr,
             printer.doprint(self.closed))
 
     def as_algebraic(self):
@@ -1208,6 +1266,15 @@ class EuclideanTopology(with_metaclass(Singleton, NaturalTopology)):
         return Set.__new__(cls)
 
     space = WholeSpace()
+
+    def __str__(self):
+        return "T_RR3"
+
+    def _sympystr(self, printer):
+        return self.__str__()
+
+    def _mathstr(self, printer):
+        return self.__str__()
 
 T_RR3 = EuclideanTopology()
 

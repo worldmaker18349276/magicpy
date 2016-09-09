@@ -124,6 +124,12 @@ class IdentityPath(Path):
     def nres(self):
         return self.args[0]
 
+    def _sympystr(self, printer):
+        return "Id"
+
+    def _mathstr(self, printer):
+        return "1^0"
+
 class SlicedPath(Path):
     def __new__(cls, path, start, stop, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
@@ -178,6 +184,15 @@ class SlicedPath(Path):
 
     def _slice(self, start, stop):
         return SlicedPath(self.path, self.start+start, self.start+stop)
+
+    def _sympystr(self, printer):
+        return "{0}[{1}:{2}]".format(
+            printer._print(self.path),
+            printer._print(self.start),
+            printer._print(self.stop))
+
+    def _mathstr(self, printer):
+        return self._sympystr(printer)
 
 class ConcatenatedPath(Path):
     def __new__(cls, *paths, **kwargs):
@@ -248,6 +263,12 @@ class ConcatenatedPath(Path):
             stop = stop - pth.length
         return ConcatenatedPath(*paths)
 
+    def _sympystr(self, printer):
+        return " + ".join(map(printer._print, self.paths))
+
+    def _mathstr(self, printer):
+        return self._sympystr(printer)
+
 class TensorPath(Path):
     def __new__(cls, *paths, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
@@ -307,6 +328,12 @@ class TensorPath(Path):
         t = rename_variables_in(t, free_symbols(lambdas))
         return Lambda(t, tuple(f(*t) for f in lambdas))
 
+    def _sympystr(self, printer):
+        return " * ".join(map(printer._print, self.paths))
+
+    def _mathstr(self, printer):
+        return self._sympystr(printer)
+
 class LambdaPath(Path):
     def __new__(cls, flen, variable, expr):
         flen = sympify(flen)
@@ -360,32 +387,40 @@ class LambdaPath(Path):
             expr = self.base_decompose(self(start+t), self(start))
             return self.func(stop-start, t, expr)
 
+    def _mathstr(self, printer):
+        return "[{0} ~ {1} |-> {2}]".format(
+            printer._print(self.variable),
+            printer._print(self.length),
+            printer._print(self.expr))
+
 class MultiplicativePath(LambdaPath):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> t = Symbol('t', positive=True)
     >>> pth1 = MultiplicativePath(10, t, t**2+1); pth1
-    MultiplicativePath(10, t, t**2 + 1)
+    [t ~ 10 |-> t**2 + 1]
     >>> pth2 = MultiplicativePath(10, t, exp(t)); pth2
-    MultiplicativePath(10, t, exp(t))
+    [t ~ 10 |-> exp(t)]
     >>> pth1(2)
     5
     >>> len(pth1)
     10
     >>> pth1+pth2
-    MultiplicativePath(20, t, Piecewise((t**2 + 1, t <= 10), (101*exp(t - 10), True)))
+    [t ~ 20 |-> (t**2 + 1 if t =< 10; 101*exp(t - 10) if True)]
     >>> pth2[2:5]
-    MultiplicativePath(3, t, exp(-2)*exp(t + 2))
+    [t ~ 3 |-> exp(-2)*exp(t + 2)]
     >>> pth12 = pth1 * pth2; pth12
-    TensorPath(MultiplicativePath(10, t, t**2 + 1), MultiplicativePath(10, t, exp(t)))
+    [t ~ 10 |-> t**2 + 1] * [t ~ 10 |-> exp(t)]
     >>> pth12.as_lambda()
-    Lambda(t, (t**2 + 1, exp(t)))
+    (t |-> (t**2 + 1, exp(t)))
     >>> pth12.length
     10
     >>> (pth12 + pth12).as_lambda().expr
-    (Piecewise((t**2 + 1, t <= 10), (101*(t - 10)**2 + 101, True)), Piecewise((exp(t), t <= 10), (exp(10)*exp(t - 10), True)))
+    ((t**2 + 1 if t =< 10; 101*(t - 10)**2 + 101 if True), (exp(t) if t =< 10; exp(10)*exp(t - 10) if True))
     >>> pth12[2:7]
-    TensorPath(MultiplicativePath(5, t, (t + 2)**2/5 + 1/5), MultiplicativePath(5, t, exp(-2)*exp(t + 2)))
+    [t ~ 5 |-> (t + 2)**2/5 + 1/5] * [t ~ 5 |-> exp(-2)*exp(t + 2)]
     """
     @staticmethod
     def base_compose(action1, action2):
@@ -401,29 +436,31 @@ class MultiplicativePath(LambdaPath):
 class AdditivePath(LambdaPath):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> t = Symbol('t', positive=True)
     >>> pth1 = AdditivePath(10, t, t**2+1); pth1
-    AdditivePath(10, t, t**2 + 1)
+    [t ~ 10 |-> t**2 + 1]
     >>> pth2 = AdditivePath(10, t, exp(t)); pth2
-    AdditivePath(10, t, exp(t))
+    [t ~ 10 |-> exp(t)]
     >>> pth1(2)
     5
     >>> len(pth1)
     10
     >>> pth1+pth2
-    AdditivePath(20, t, Piecewise((t**2 + 1, t <= 10), (exp(t - 10) + 101, True)))
+    [t ~ 20 |-> (t**2 + 1 if t =< 10; exp(t - 10) + 101 if True)]
     >>> pth2[2:5]
-    AdditivePath(3, t, exp(t + 2) - exp(2))
+    [t ~ 3 |-> exp(t + 2) - exp(2)]
     >>> pth12 = pth1 * pth2; pth12
-    TensorPath(AdditivePath(10, t, t**2 + 1), AdditivePath(10, t, exp(t)))
+    [t ~ 10 |-> t**2 + 1] * [t ~ 10 |-> exp(t)]
     >>> pth12.as_lambda()
-    Lambda(t, (t**2 + 1, exp(t)))
+    (t |-> (t**2 + 1, exp(t)))
     >>> pth12.length
     10
     >>> (pth12 + pth12).as_lambda().expr
-    (Piecewise((t**2 + 1, t <= 10), ((t - 10)**2 + 102, True)), Piecewise((exp(t), t <= 10), (exp(t - 10) + exp(10), True)))
+    ((t**2 + 1 if t =< 10; (t - 10)**2 + 102 if True), (exp(t) if t =< 10; exp(t - 10) + exp(10) if True))
     >>> pth12[2:7]
-    TensorPath(AdditivePath(5, t, (t + 2)**2 - 4), AdditivePath(5, t, exp(t + 2) - exp(2)))
+    [t ~ 5 |-> (t + 2)**2 - 4] * [t ~ 5 |-> exp(t + 2) - exp(2)]
     """
     @staticmethod
     def base_compose(action1, action2):
@@ -436,30 +473,32 @@ class AdditivePath(LambdaPath):
 class TransformationPath(LambdaPath):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> t = Symbol('t', positive=True)
     >>> x = Symbol('x')
     >>> pth1 = TransformationPath(10, t, Lambda(x, t*x)); pth1
-    TransformationPath(10, t, Lambda(x, t*x))
+    [t ~ 10 |-> (x |-> t*x)]
     >>> pth2 = TransformationPath(10, t, Lambda(x, t+x)); pth2
-    TransformationPath(10, t, Lambda(x, t + x))
+    [t ~ 10 |-> (x |-> t + x)]
     >>> pth1(2)
-    Lambda(x, 2*x)
+    (x |-> 2*x)
     >>> len(pth1)
     10
     >>> pth1+pth2
-    TransformationPath(20, t, Piecewise((Lambda(x, t*x), t <= 10), (Lambda(x, t + 10*x - 10), True)))
+    [t ~ 20 |-> ((x |-> t*x) if t =< 10; (x |-> t + 10*x - 10) if True)]
     >>> pth2[2:5]
-    TransformationPath(3, t, Lambda(a0, a0 + t))
+    [t ~ 3 |-> (a0 |-> a0 + t)]
     >>> pth12 = pth1 * pth2; pth12
-    TensorPath(TransformationPath(10, t, Lambda(x, t*x)), TransformationPath(10, t, Lambda(x, t + x)))
+    [t ~ 10 |-> (x |-> t*x)] * [t ~ 10 |-> (x |-> t + x)]
     >>> pth12.as_lambda()
-    Lambda(t, (Lambda(x, t*x), Lambda(x, t + x)))
+    (t |-> (Lambda(x, t*x), Lambda(x, t + x)))
     >>> pth12.length
     10
     >>> (pth12 + pth12).as_lambda().expr
-    (Piecewise((Lambda(x, t*x), t <= 10), (Lambda(x, 10*x*(t - 10)), True)), Lambda(x, t + x))
+    (((x |-> t*x) if t =< 10; (x |-> 10*x*(t - 10)) if True), (x |-> t + x))
     >>> pth12[2:7]
-    TensorPath(TransformationPath(5, t, Lambda(a0, a0*(t + 2)/2)), TransformationPath(5, t, Lambda(a0, a0 + t)))
+    [t ~ 5 |-> (a0 |-> a0*(t + 2)/2)] * [t ~ 5 |-> (a0 |-> a0 + t)]
     """
     @staticmethod
     def base_compose(action1, action2):
@@ -520,4 +559,9 @@ class PathMonoid(Set):
         if any(not isinstance(pmnd, PathMonoid) for pmnd in pmnds):
             return ProductSet(pmnds)
         return PathMonoid(ProductSet(*[pmnd.base for pmnd in pmnds]))
+
+    def _mathstr(self, printer):
+        from sympy.printing.precedence import PRECEDENCE
+        return "%s^*" % printer.parenthesize(self.base, PRECEDENCE["Pow"])
+
 

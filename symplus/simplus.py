@@ -13,6 +13,8 @@ from symplus.typlus import is_Matrix
 def sqrtsimp(expr):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> expand((2+sqrt(3))**2)
     4*sqrt(3) + 7
     >>> sqrtsimp(sqrt(_))
@@ -279,11 +281,13 @@ def canonicalize_polyeq(eq):
 def polyrelsimp(expr):
     """expand (polynomial) equation/inequation and canonicalize it
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> x, y, z = symbols('x, y, z')
     >>> Eq(x**2+y, 2*y-1)
-    x**2 + y == 2*y - 1
+    2*y - 1 == x**2 + y
     >>> polyrelsimp(_)
-    x**2 - y + 1 == 0
+    0 == x**2 - y + 1
     >>> -x**2+x+1 > 0
     -x**2 + x + 1 > 0
     >>> polyrelsimp(_)
@@ -299,7 +303,7 @@ def polyrelsimp(expr):
     >>> x**4+3*x**2*y**3 > 0
     x**4 + 3*x**2*y**3 > 0
     >>> polyrelsimp(_)
-    And(x != 0, x**2 + 3*y**3 > 0)
+    (0 =/= x) /\ (x**2 + 3*y**3 > 0)
     >>> (x**2+1)*(2*x-y) > 0
     (2*x - y)*(x**2 + 1) > 0
     >>> polyrelsimp(_)
@@ -307,7 +311,7 @@ def polyrelsimp(expr):
     >>> eq = Gt((x**2+y**2)*(2*x-y), 0); eq
     (2*x - y)*(x**2 + y**2) > 0
     >>> polyrelsimp(eq)
-    And(x != 0, x - y/2 > 0, y != 0)
+    (0 =/= x) /\ (0 =/= y) /\ (x - y/2 > 0)
     >>> polyrelsimp(Gt(1,1, evaluate=False))
     False
     """
@@ -318,17 +322,19 @@ def polyrelsimp(expr):
 def logicrelsimp(expr, form='dnf', deep=True):
     """ logically simplify relations using totality (WARNING: it is unstable)
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> x, y, z = symbols('x y z')
     >>> logicrelsimp((x>0) >> ((x<=0)&(y<0)))
-    x <= 0
+    x =< 0
     >>> logicrelsimp((x>0) >> (x>=0))
     True
     >>> logicrelsimp((x<0) & (x>0))
     False
     >>> logicrelsimp(((x<0) | (y>0)) & ((x>0) | (y<0)))
-    Or(And(x < 0, y < 0), And(x > 0, y > 0))
+    (x < 0) /\ (y < 0) \/ (x > 0) /\ (y > 0)
     >>> logicrelsimp(((x<0) & (y>0)) | ((x>0) & (y<0)))
-    Or(And(x < 0, y > 0), And(x > 0, y < 0))
+    (x < 0) /\ (y > 0) \/ (x > 0) /\ (y < 0)
     """
     from sympy.core.symbol import Wild
     from sympy.core import sympify
@@ -407,28 +413,30 @@ def do_indexing(expr):
 def matsimp(expr):
     """do indexing, Trace, Determinant and expand matrix equation
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> A = ImmutableMatrix(2, 2, symbols('A(:2)(:2)'))
     >>> B = ImmutableMatrix(2, 2, symbols('B(:2)(:2)'))
     >>> C = ImmutableMatrix(2, 2, symbols('C(:2)(:2)'))
     >>> M = MatrixSymbol('M', 2, 2)
     >>> M[1,1].xreplace({M: B*C})
-    Matrix([
-    [B00*C00 + B01*C10, B00*C01 + B01*C11],
-    [B10*C00 + B11*C10, B10*C01 + B11*C11]])[1, 1]
+    <BLANKLINE>
+    [B00*C00 + B01*C10 B00*C01 + B01*C11]
+    [B10*C00 + B11*C10 B10*C01 + B11*C11][1, 1]
     >>> matsimp(_)
     B10*C01 + B11*C11
     >>> Eq(Trace(B+C), 0)
-    Trace(Matrix([
-    [B00 + C00, B01 + C01],
-    [B10 + C10, B11 + C11]])) == 0
+    0 == Trace(
+    [B00 + C00 B01 + C01]
+    [B10 + C10 B11 + C11])
     >>> matsimp(_)
-    B00 + B11 + C00 + C11 == 0
+    0 == B00 + B11 + C00 + C11
     >>> Eq(A.T-A, ZeroMatrix(2,2))
-    Matrix([
-    [        0, -A01 + A10],
-    [A01 - A10,          0]]) == 0
+    <BLANKLINE>
+    [        0 -A01 + A10]
+    [A01 - A10          0] == 0
     >>> matsimp(_)
-    And(-A01 + A10 == 0, A01 - A10 == 0)
+    (-A01 + A10 == 0) /\ (0 == A01 - A10)
     """
     from sympy.simplify.simplify import bottom_up
 
@@ -465,16 +473,19 @@ def matsimp(expr):
 def with_matsym(*simplifies):
     """expand MatrixSymbol as MatrixElement and simplify it
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> A = MatrixSymbol('A', 2, 2)
     >>> Eq(det(A), 0)
-    Determinant(A) == 0
+    0 == ||A||
     >>> with_matsym(matsimp)(_)
-    A[0, 0]*A[1, 1] - A[0, 1]*A[1, 0] == 0
+    0 == A[0, 0]*A[1, 1] - A[0, 1]*A[1, 0]
     >>> Eq(A.T*A, Identity(2))
     A'*A == I
     >>> with_matsym(matsimp)(_)
-    And(A[0, 0]**2 + A[1, 0]**2 == 1, A[0, 0]*A[0, 1] + A[1, 0]*A[1, 1] == 0, A[0, 1]**2 + A[1, 1]**2 == 1)
+    (0 == A[0, 0]*A[0, 1] + A[1, 0]*A[1, 1]) /\ (1 == A[0, 0]**2 + A[1, 0]**2) /\ (1 == A[0, 1]**2 + A[1, 1]**2)
     """
+    from sympy.matrices import MatrixSymbol
     from symplus.setplus import AbstractSet
     def simplify_with_matsym(expr, *args, **kwargs):
         # expand MatrixSymbol as Matrix: A -> [ A[0,0] ,..]

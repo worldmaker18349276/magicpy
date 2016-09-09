@@ -94,6 +94,9 @@ class SymbolicPhysicalPuzzle(PhysicalPuzzle):
                                               mstr(self.states),
                                               mstr(self.actions))
 
+    def __repr__(self):
+        return self.__str__()
+
 class SymbolicPhysicalOperation(PhysicalOperation):
     @property
     def engine(self):
