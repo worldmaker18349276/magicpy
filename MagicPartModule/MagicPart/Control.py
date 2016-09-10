@@ -1,7 +1,7 @@
 import FreeCAD, FreeCADGui
 from MagicPart.Features.Utilities import *
 from MagicPart.Features.ViewBox import isBounded
-from MagicPart.Features.BooleanTracing import outOf, outFaceLinksOf
+from MagicPart.Features.SubObject import outOf, outFaceLinksOf
 
 
 def hideAllUnbounded():

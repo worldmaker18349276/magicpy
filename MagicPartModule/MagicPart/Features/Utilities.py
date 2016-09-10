@@ -269,29 +269,3 @@ def addObject(TypeId, name, rep="Shape", doc=None, cached=False, args={}):
 
     return obj
 
-
-# SubObject
-
-def subFaceLinksOf(obj):
-    return [(obj, "Face%s"%(i+1)) for i in range(len(obj.Shape.Faces))]
-
-def subShapeOf(link):
-    if link is None:
-        return None
-
-    if link[1].startswith("Face") or link[1].startswith("Edge") or link[1].startswith("Vertex"):
-        return getattr(link[0].Shape, link[1])
-    elif link[1] == "Shape":
-        return link[0].Shape
-    else:
-        raise TypeError
-
-def subColorOf(link, default=(0.8,0.8,0.8,0.0)):
-    if link is None:
-        return default
-
-    if link[1].startswith("Face"):
-        return diffuseColorOf(link[0])[int(link[1][4:])-1]
-    else:
-        raise TypeError
-

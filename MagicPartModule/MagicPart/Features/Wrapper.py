@@ -3,7 +3,7 @@ from MagicPart.Basic import P
 from MagicPart.Features.Utilities import *
 from MagicPart.Features.ViewBox import getViewBox
 from MagicPart.Features.Operation import Compound, DerivedFeatureViewProxy
-from MagicPart.Features.BooleanTracing import trace
+from MagicPart.Features.SubObject import subFaceLinksOf, trace
 from MagicPart import Shapes, Meshes
 
 

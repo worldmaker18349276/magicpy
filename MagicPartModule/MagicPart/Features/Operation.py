@@ -5,7 +5,7 @@ from MagicPart.Basic import fuzzyCompare, spstr2spexpr, spexpr2spstr, spexpr2fce
 from MagicPart.Features.Utilities import *
 from MagicPart.Features.ViewBox import getViewBox
 from MagicPart.Features.Primitive import WholeSpace
-from MagicPart.Features.BooleanTracing import trace, outFaceLinksOf
+from MagicPart.Features.SubObject import subFaceLinksOf, subColorOf, trace, outFaceLinksOf
 from MagicPart import Shapes, Meshes
 
 
