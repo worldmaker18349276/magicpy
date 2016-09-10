@@ -9,6 +9,7 @@ from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
 from sympy.functions import cos, sin, acos, sign, sqrt
 from symplus.typlus import is_Tuple, is_Function
 from symplus.symbplus import free_symbols
+from symplus.strplus import mstr_inline_Matrix
 from symplus.funcplus import Functor, compose, inverse
 from symplus.setplus import AbstractSet, Image
 from symplus.matplus import Mat, norm, normalize, dot, cross, project, i, j, k, x, y, z, r
@@ -385,23 +386,15 @@ class AffineTransformation(Transformation):
         return self.args[1]
 
     def _sympystr(self, printer):
-        matrix = list(list(self.matrix[i,j] for j in range(self.matrix.shape[1]))
-                                            for i in range(self.matrix.shape[0]))
         return "%s(%s, %s)"%(
             type(self).__name__,
-            printer.doprint(matrix),
+            mstr_inline_Matrix(self.matrix, printer=printer, aslist=True),
             printer.doprint(list(self.vector)))
 
     def _mathstr(self, printer):
-        if self.matrix == eye(3):
-            matrixstr = "eye(3)"
-        else:
-            matrixstr = "[%s]"%"; ".join(" ".join(printer.doprint(self.matrix[i,j])
-                                    for j in range(self.matrix.shape[1]))
-                                    for i in range(self.matrix.shape[0]))
         return "%s(%s, %s)"%(
             type(self).__name__,
-            matrixstr,
+            mstr_inline_Matrix(self.matrix, printer=printer),
             printer.doprint(self.vector))
 
     @classmethod

@@ -1,4 +1,5 @@
 from MagicPart.Meshes.Utilities import remesh, orientation
+import OpenSCADUtils
 
 
 def complement(mesh, remeshed=False):
@@ -38,7 +39,6 @@ def common(meshes):
     # else:
     #     return mesh1.difference(mesh2)
 
-    import OpenSCADUtils
     mesh1 = None
     if len(meshes1) > 1:
         mesh1 = OpenSCADUtils.meshoptempfile('intersection', meshes1)
@@ -59,7 +59,7 @@ def common(meshes):
     else:
         return OpenSCADUtils.meshoptempfile('difference', [mesh1, mesh2])
 
-def fuse_all(meshes):
+def fuse(meshes):
     meshes1 = []
     meshes2 = []
     for mesh in meshes:
@@ -88,7 +88,6 @@ def fuse_all(meshes):
     # else:
     #     return complement(mesh2.difference(mesh1))
 
-    import OpenSCADUtils
     mesh1 = None
     if len(meshes1) > 1:
         mesh1 = OpenSCADUtils.meshoptempfile('union', meshes1)

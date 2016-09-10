@@ -213,3 +213,25 @@ def mstr(expr):
 def init_mprinting():
     init_printing(pretty_print=False, str_printer=mstr)
 
+def mstr_inline_Matrix(expr, printer=pr, aslist=False, aligned=False):
+    if expr.rows == expr.cols and expr == eye(expr.cols):
+        return "eye(%s)"%expr.cols
+
+    elif aslist:
+        if aligned:
+            return '[%s]'%expr.table(printer, colsep=', ', rowsep=', ')
+        else:
+            return printer.doprint(list(list(expr[i,j]
+                                for j in range(expr.cols))
+                                for i in range(expr.rows)))
+
+    else:
+        if aligned:
+            return '[%s]'%expr.table(printer, rowstart='', rowend='', colsep=' ', rowsep='; ')
+        else:
+            return "[%s]"%"; ".join(" ".join(printer.doprint(expr[i,j])
+                                    for j in range(expr.cols))
+                                    for i in range(expr.rows))
+
+
+

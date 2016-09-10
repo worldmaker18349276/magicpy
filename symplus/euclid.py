@@ -6,6 +6,7 @@ from sympy.logic import false, true
 from sympy.sets import Set, Intersection, Union, Complement
 from sympy.matrices import eye
 from symplus.typlus import is_Tuple
+from symplus.strplus import mstr_inline_Matrix
 from symplus.setplus import AbstractSet, as_abstract, NaturalTopology, AbsoluteComplement, Exterior
 from symplus.matplus import Mat, norm, normalize, dot, cross, project, i, j, k, x, y, z, r
 
@@ -976,31 +977,19 @@ class Box(BoundedEuclideanSpace):
         return self.args[3]
 
     def _sympystr(self, printer):
-        if self.orientation == eye(3):
-            orientation = "eye(3)"
-        else:
-            orientation = list(list(self.orientation[i,j]
-                                    for j in range(self.orientation.shape[1]))
-                                    for i in range(self.orientation.shape[0]))
         return "%s(%s, %s, %s, %s)"%(
             type(self).__name__,
             printer.doprint(list(self.size)),
             printer.doprint(list(self.center)),
-            printer.doprint(orientation),
+            mstr_inline_Matrix(self.orientation, printer=printer, aslist=True),
             printer.doprint(self.closed))
 
     def _mathstr(self, printer):
-        if self.orientation == eye(3):
-            orientationstr = "eye(3)"
-        else:
-            orientationstr = "[%s]"%"; ".join(" ".join(printer.doprint(self.orientation[i,j])
-                                    for j in range(self.orientation.shape[1]))
-                                    for i in range(self.orientation.shape[0]))
         return "%s(%s, %s, %s, %s)"%(
             type(self).__name__,
             printer.doprint(self.size),
             printer.doprint(self.center),
-            orientationstr,
+            mstr_inline_Matrix(self.orientation, printer=printer),
             printer.doprint(self.closed))
 
     def as_algebraic(self):

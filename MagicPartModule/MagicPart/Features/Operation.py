@@ -153,13 +153,13 @@ class FeatureUnionProxy(DerivedFeatureProxy):
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
-            obj.Shape = Shapes.fuse_all(s.Shape for s in obj.Sources)
+            obj.Shape = Shapes.fuse(s.Shape for s in obj.Sources)
             obj.Placement = FreeCAD.Placement()
 
             obj.Outfaces = trace(obj) if P.autotrace else []
 
         elif isDerivedFrom(obj, "Mesh::FeaturePython"):
-            obj.Mesh = Meshes.fuse_all(meshOf(s) for s in obj.Sources)
+            obj.Mesh = Meshes.fuse(meshOf(s) for s in obj.Sources)
             obj.Placement = FreeCAD.Placement()
 
         else:
@@ -493,11 +493,11 @@ def noCollision(ftrs):
     shps = []
     for ftr in ftrs:
         if isDerivedFrom(ftr, ("Part::Compound", Compound)):
-            shps.append(Shapes.fuse_all(outftr.Shape for outftr in ftrlist(ftr.OutList)))
+            shps.append(Shapes.fuse(outftr.Shape for outftr in ftrlist(ftr.OutList)))
         else:
             shps.append(ftr.Shape)
     vol_sum = sum(shp.Volume for shp in shps)
-    vol_fus = Shapes.fuse_all(shps).Volume
+    vol_fus = Shapes.fuse(shps).Volume
     return fuzzyCompare(vol_sum, vol_fus)
 
 

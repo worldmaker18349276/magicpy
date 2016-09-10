@@ -42,10 +42,8 @@ def common(shps):
     else:
         return shp1.cut(shp2)
 
-def fuse_all(shps):
-    shps = list(shps)
-    if any(shp.isNull() for shp in shps):
-        return Part.Shape()
+def fuse(shps):
+    shps = list(shp for shp in shps if not shp.isNull())
 
     shps1 = [shp for shp in shps if shp.Orientation == "Forward"]
     shps2 = [complement(shp) for shp in shps if shp.Orientation == "Reversed"]
