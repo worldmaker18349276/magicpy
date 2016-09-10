@@ -46,16 +46,16 @@ def primitive(zet, mbb, margin=1e-03):
         shape.Placement = placement
         return shape
 
-    elif isinstance(zet, (euclid.InfiniteCylinder, euclid.AntiInfiniteCylinder)):
+    elif isinstance(zet, euclid.InfiniteCylinder):
         direction = spexpr2fcexpr(zet.direction)
         center = spexpr2fcexpr(zet.center)
         dist = mbb.Center.distanceToLine(center, direction)
         radius = spexpr2fcexpr(zet.radius)
         mbb_radius = mbb.DiagonalLength/2
         if radius + mbb_radius < dist:
-            return isinstance(zet, euclid.AntiInfiniteCylinder)
+            return False
         elif radius - mbb_radius > dist:
-            return isinstance(zet, euclid.InfiniteCylinder)
+            return True
 
         rot = rmat_k2d(zet.direction)
         placement = spexpr2fcexpr(AffineTransformation(matrix=rot, vector=zet.center))
@@ -65,46 +65,37 @@ def primitive(zet, mbb, margin=1e-03):
         bottom = FreeCAD.Vector(0, 0, mbb_.ZMin-margin)
         shape = makeConicalFrustum(radius, radius, height, bottom)
         shape.Placement = placement
-        if isinstance(zet, euclid.AntiInfiniteCylinder):
-            shape.complement()
         return shape
 
-    elif isinstance(zet, (euclid.InfiniteCone, euclid.AntiInfiniteCone)):
+    elif isinstance(zet, euclid.SemiInfiniteCone):
         pnt = mbb.Center - spexpr2fcexpr(zet.center)
         mbb_radius = mbb.DiagonalLength/2
         if pnt.Length > mbb_radius:
             direction = spexpr2fcexpr(zet.direction)
-            ang = abs(math.acos(direction*pnt/pnt.Length))
+            ang = math.acos(direction*pnt/pnt.Length)
             ang_cone = math.atan(spexpr2fcexpr(zet.slope))
             ang_ball = math.asin(mbb_radius/pnt.Length)
             if ang_cone + ang_ball < ang:
-                return isinstance(zet, euclid.AntiInfiniteCone)
+                return False
             elif ang_cone - ang_ball > ang:
-                return isinstance(zet, euclid.InfiniteCone)
+                return True
 
         rot = rmat_k2d(zet.direction)
         placement = spexpr2fcexpr(AffineTransformation(matrix=rot, vector=zet.center))
 
         mbb_ = mbb.transformed(placement.inverse().toMatrix())
-        slope = spexpr2fcexpr(zet.slope)
-        radius1 = (mbb_.ZMin-margin)*slope
-        radius2 = (mbb_.ZMax+margin)*slope
-        height = mbb_.ZLength + 2*margin
-        bottom = FreeCAD.Vector(0, 0, mbb_.ZMin-margin)
-        shape = makeConicalFrustum(radius1, radius2, height, bottom)
+        height = mbb_.ZMax+margin
+        radius = height*spexpr2fcexpr(zet.slope)
+        shape = makeConicalFrustum(0, radius, height)
         shape.Placement = placement
-        if isinstance(zet, euclid.AntiInfiniteCone):
-            shape.complement()
         return shape
 
-    elif isinstance(zet, (euclid.Sphere, euclid.AntiSphere)):
+    elif isinstance(zet, euclid.Sphere):
         radius = spexpr2fcexpr(zet.radius)
         shape = Part.makeSphere(radius)
 
         placement = spexpr2fcexpr(AffineTransformation(vector=zet.center))
         shape.Placement = placement
-        if isinstance(zet, euclid.AntiSphere):
-            shape.complement()
         return shape
 
     elif isinstance(zet, euclid.Box):

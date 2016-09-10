@@ -22,6 +22,6 @@
         <file>icons/MagicPart_sphere.png</file>
         <file>icons/MagicPart_halfspace.png</file>
         <file>icons/MagicPart_infinite_cylinder.png</file>
-        <file>icons/MagicPart_infinite_cone.png</file>
+        <file>icons/MagicPart_semi_infinite_cone.png</file>
     </qresource>
 </RCC>

@@ -14,7 +14,7 @@ from symplus.funcplus import Functor, compose, inverse
 from symplus.setplus import AbstractSet, Image
 from symplus.matplus import Mat, norm, normalize, dot, cross, project, i, j, k, x, y, z, r
 from symplus.path import PathMonoid, TransformationPath
-from symplus.euclid import (WholeSpace, Halfspace, Sphere, InfiniteCylinder, InfiniteCone,
+from symplus.euclid import (WholeSpace, Halfspace, Sphere, InfiniteCylinder, SemiInfiniteCone,
                             Revolution, Box, Cylinder, Cone)
 
 
@@ -512,8 +512,8 @@ class EuclideanTransformation(AffineTransformation):
         InfiniteCylinder(3, [-27*sqrt(6)/136 + 99/136 27*sqrt(6)/136 + 75/68\
  -3/8 + 67*sqrt(6)/136]', [-sqrt(102)/68 + sqrt(17)/17 -sqrt(102)/17 + sqrt(17)/34\
  sqrt(102)/68 + 3*sqrt(17)/17]', False)
-        >>> t._image(InfiniteCone(1, [2,1,0], [2,3,1]))
-        InfiniteCone(1, [-sqrt(6)/4 + 3/2 sqrt(6)/2 + 3/2 -1/2 + sqrt(6)/4]',\
+        >>> t._image(SemiInfiniteCone(1, [2,1,0], [2,3,1]))
+        SemiInfiniteCone(1, [-sqrt(6)/4 + 3/2 sqrt(6)/2 + 3/2 -1/2 + sqrt(6)/4]',\
  [-sqrt(14)/8 + 3*sqrt(21)/28 -3*sqrt(14)/28 - sqrt(21)/28 -3*sqrt(21)/28\
  - 5*sqrt(14)/56]', False)
         """
@@ -553,12 +553,12 @@ class EuclideanTransformation(AffineTransformation):
                 closed=closed,
                 normalization=False)
 
-        elif isinstance(zet, InfiniteCone):
+        elif isinstance(zet, SemiInfiniteCone):
             slope = zet.slope
             center = self.call(*zet.center)
             direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
             closed = zet.closed
-            return InfiniteCone(
+            return SemiInfiniteCone(
                 slope=slope,
                 center=center,
                 direction=direction,

@@ -159,8 +159,8 @@ class SymbolicPrimitiveInfiniteCylinderProxy(SymbolicPrimitiveProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveInfiniteConeProxy(SymbolicPrimitiveProxy):
-    SymPyType = euclid.InfiniteCone
+class SymbolicPrimitiveSemiInfiniteConeProxy(SymbolicPrimitiveProxy):
+    SymPyType = euclid.SemiInfiniteCone
 
     def onChanged(self, obj, p):
         if p == "Proxy":
@@ -246,7 +246,7 @@ WholeSpace = SymbolicPrimitiveWholeSpaceProxy
 Halfspace = SymbolicPrimitiveHalfspaceProxy
 Sphere = SymbolicPrimitiveSphereProxy
 InfiniteCylinder = SymbolicPrimitiveInfiniteCylinderProxy
-InfiniteCone = SymbolicPrimitiveInfiniteConeProxy
+SemiInfiniteCone = SymbolicPrimitiveSemiInfiniteConeProxy
 Box = SymbolicPrimitiveBoxProxy
 Cylinder = SymbolicPrimitiveCylinderProxy
 Cone = SymbolicPrimitiveConeProxy

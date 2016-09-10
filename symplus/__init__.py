@@ -23,7 +23,7 @@ from symplus.path import (Word, FreeMonoid, Path, IdentityPath, SlicedPath,
     ConcatenatedPath, TensorPath, LambdaPath, MultiplicativePath, AdditivePath,
     TransformationPath, PathMonoid)
 from symplus.euclid import (EuclideanSpace, WholeSpace, Halfspace, Sphere, InfiniteCylinder,
-    InfiniteCone, Revolution, Box, Cylinder, Cone, T_RR3)
+    SemiInfiniteCone, Revolution, Box, Cylinder, Cone, T_RR3)
 from symplus.affine import (rquat, Transformation, AffineTransformation,
     EuclideanTransformation, Trans, Aff4, E3, SE3, SO3, T3, SE3_star, SO3_star, T3_star,
     translation, rotation, reflection, scaling, shearing, translate, rotate)

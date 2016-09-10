@@ -5,7 +5,7 @@ from MagicPart.Control import viewAllBounded, recompute
 from MagicPart.Features.Utilities import *
 from MagicPart.Features.ViewBox import getViewBox, fitFeatures, fitBounded
 from MagicPart.Features.Primitive import (WholeSpace, Halfspace, Sphere, InfiniteCylinder,
-    InfiniteCone, Box, Cylinder, Cone)
+    SemiInfiniteCone, Box, Cylinder, Cone)
 
 
 class AdjustViewBoxCommand(object):
@@ -177,22 +177,22 @@ class CreateInfiniteCylinderCommand(object):
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None
 
-class CreateInfiniteConeCommand(object):
+class CreateSemiInfiniteConeCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/MagicPart_infinite_cone.png",
-                "MenuText": "infinite cone",
-                "ToolTip" : "create an infinite cone"}
+        return {"Pixmap"  : ":/icons/MagicPart_semi_infinite_cone.png",
+                "MenuText": "semi-infinite cone",
+                "ToolTip" : "create a semi-infinite cone"}
 
     def Activated(self):
         if P.incmdline:
-            FreeCADGui.doCommand("_ftr = MagicPart.addObject(MagicPart.InfiniteCone, 'InfiniteCone', rep=%r, cached=False)"%P.rep)
+            FreeCADGui.doCommand("_ftr = MagicPart.addObject(MagicPart.SemiInfiniteCone, 'SemiInfiniteCone', rep=%r, cached=False)"%P.rep)
             FreeCADGui.doCommand("_ftr.ViewObject.Transparency = 50")
             FreeCADGui.doCommand("MagicPart.recompute([_ftr])")
             if P.autosel:
                 FreeCADGui.doCommand("MagicPart.select([_ftr])")
 
         else:
-            ftr = addObject(InfiniteCone, "InfiniteCone", rep=P.rep, cached=False)
+            ftr = addObject(SemiInfiniteCone, "SemiInfiniteCone", rep=P.rep, cached=False)
             ftr.ViewObject.Transparency = 50
             recompute([ftr])
             if P.autosel:
@@ -233,7 +233,7 @@ FreeCADGui.addCommand("MagicPart_cone", CreateConeCommand())
 FreeCADGui.addCommand("MagicPart_sphere", CreateSphereCommand())
 FreeCADGui.addCommand("MagicPart_halfspace", CreateHalfspaceCommand())
 FreeCADGui.addCommand("MagicPart_infinite_cylinder", CreateInfiniteCylinderCommand())
-FreeCADGui.addCommand("MagicPart_infinite_cone", CreateInfiniteConeCommand())
+FreeCADGui.addCommand("MagicPart_semi_infinite_cone", CreateSemiInfiniteConeCommand())
 FreeCADGui.addCommand("MagicPart_whole_space", WholeSpaceCommand())
 
 objlist = ["MagicPart_adjust_viewbox",
@@ -243,6 +243,6 @@ objlist = ["MagicPart_adjust_viewbox",
            "MagicPart_cone",
            "MagicPart_halfspace",
            "MagicPart_infinite_cylinder",
-           "MagicPart_infinite_cone",
+           "MagicPart_semi_infinite_cone",
            "MagicPart_whole_space"]
 
