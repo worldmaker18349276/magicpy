@@ -1,8 +1,10 @@
 import math
 from symplus.affine import AffineTransformation, rmat_k2d
+from symplus.setplus import Intersection, Union, Complement, AbsoluteComplement, Image
 import symplus.euclid as euclid
 import FreeCAD, Part
 from MagicPart.Basic import fuzzyCompare, spexpr2fcexpr
+from MagicPart.Shapes.Operation import complement, common, fuse, transform
 
 
 def makeConicalFrustum(radius1, radius2, height, pnt=FreeCAD.Vector()):
@@ -22,8 +24,29 @@ def makeConicalFrustum(radius1, radius2, height, pnt=FreeCAD.Vector()):
         shape = shape1.fuse(shape2)
         return shape
 
-def primitive(zet, mbb, margin=1e-03):
-    if isinstance(zet, euclid.WholeSpace):
+def construct(zet, mbb, margin=1e-03):
+    if zet is None:
+        return Part.Shape()
+
+    elif isinstance(zet, Intersection):
+        return common(construct(arg, mbb, margin) for arg in zet.args)
+
+    elif isinstance(zet, Union):
+        return fuse(construct(arg, mbb, margin) for arg in zet.args)
+
+    elif isinstance(zet, Complement):
+        return common([construct(zet.arg[0], mbb, margin),
+                       complement(construct(zet.arg[1], mbb, margin))])
+
+    elif isinstance(zet, AbsoluteComplement):
+        return complement(construct(zet.arg[0], mbb, margin))
+
+    elif isinstance(zet, Image):
+        placement = spexpr2fcexpr(zet.function)
+        mbb_ = mbb.transformed(placement.inverse().toMatrix())
+        return transform(construct(zet.set, mbb_, margin), zet.function)
+
+    elif isinstance(zet, euclid.WholeSpace):
         shape = Part.makeSphere(mbb.DiagonalLength/2 + margin, mbb.Center)
         return shape
 
@@ -53,9 +76,9 @@ def primitive(zet, mbb, margin=1e-03):
         radius = spexpr2fcexpr(zet.radius)
         mbb_radius = mbb.DiagonalLength/2
         if radius + mbb_radius < dist:
-            return False
+            return Part.Shape()
         elif radius - mbb_radius > dist:
-            return True
+            return construct(euclid.WholeSpace(), mbb, margin)
 
         rot = rmat_k2d(zet.direction)
         placement = spexpr2fcexpr(AffineTransformation(matrix=rot, vector=zet.center))
@@ -76,9 +99,9 @@ def primitive(zet, mbb, margin=1e-03):
             ang_cone = math.atan(spexpr2fcexpr(zet.slope))
             ang_ball = math.asin(mbb_radius/pnt.Length)
             if ang_cone + ang_ball < ang:
-                return False
+                return Part.Shape()
             elif ang_cone - ang_ball > ang:
-                return True
+                return construct(euclid.WholeSpace(), mbb, margin)
 
         rot = rmat_k2d(zet.direction)
         placement = spexpr2fcexpr(AffineTransformation(matrix=rot, vector=zet.center))

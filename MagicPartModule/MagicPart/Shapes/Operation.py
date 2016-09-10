@@ -1,4 +1,5 @@
 import Part
+from MagicPart.Basic import spexpr2fcexpr
 from MagicPart.Shapes.Utilities import reshape
 
 
@@ -78,4 +79,9 @@ def compound(shps):
         return Part.Shape()
     else:
         return Part.Compound(shps)
+
+def transform(shp, trans):
+    shp = reshape(shp)
+    shp.Placement = spexpr2fcexpr(trans)
+    return shp
 

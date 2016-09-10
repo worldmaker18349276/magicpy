@@ -214,6 +214,7 @@ def init_mprinting():
     init_printing(pretty_print=False, str_printer=mstr)
 
 def mstr_inline_Matrix(expr, printer=pr, aslist=False, aligned=False):
+    from sympy import eye
     if expr.rows == expr.cols and expr == eye(expr.cols):
         return "eye(%s)"%expr.cols
 

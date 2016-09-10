@@ -2,7 +2,7 @@ import math
 from symplus.affine import AffineTransformation, rmat_k2d
 import symplus.euclid as euclid
 import FreeCAD, Part, Mesh, BuildRegularGeoms
-from MagicPart.Basic import spstr2spexpr, spexpr2spstr
+from MagicPart.Basic import spstr2spexpr, spexpr2spstr, P
 from MagicPart.Features.Utilities import *
 from MagicPart.Features.ViewBox import getViewBox
 from MagicPart import Shapes, Meshes
@@ -30,7 +30,7 @@ class SymbolicPrimitiveViewProxy(object):
                     clrs[i] = clrs[i][:3]+tr
                 view.DiffuseColor = clrs
 
-class SymbolicPrimitiveProxy(FeaturePythonProxy):
+class SymbolicPrimitiveSolidProxy(FeaturePythonProxy):
     @classmethod
     def featurePropertiesOf(clazz, obj=None, args={}):
         prop = {}
@@ -39,7 +39,8 @@ class SymbolicPrimitiveProxy(FeaturePythonProxy):
         if obj is not None:
             SymPyExpression = obj.Proxy.getSymPyExpression(obj)
         else:
-            SymPyExpression = clazz.SymPyType()
+            SymPyExpression = clazz.SymPyType() if hasattr(clazz, "SymPyType") else None
+
         prop["SymPyExpression"] = args.get("SymPyExpression", SymPyExpression)
 
         return prop
@@ -48,16 +49,36 @@ class SymbolicPrimitiveProxy(FeaturePythonProxy):
         return [p for p in obj.PropertiesList if obj.getGroupOfProperty(p) == "SymPyExpression"]
 
     def getSymPyExpression(self, obj, normalization=True):
-        kwargs = {"normalization": normalization}
-        for p in self.getSymPyPropertiesList(obj):
-            kwargs[p.lower()] = spstr2spexpr(obj.getPropertyByName(p))
-        return self.SymPyType(**kwargs)
+        if hasattr(self, "SymPyType"):
+            kwargs = {"normalization": normalization}
+            for p in self.getSymPyPropertiesList(obj):
+                kwargs[p.lower()] = spstr2spexpr(obj.getPropertyByName(p))
+            return self.SymPyType(**kwargs)
+
+        else:
+            return obj.SymPyExpression
 
     def setSymPyExpression(self, obj, expr):
-        if not isinstance(expr, self.SymPyType):
-            raise TypeError
-        for p in self.getSymPyPropertiesList(obj):
-            setattr(obj, p, spexpr2spstr(getattr(expr, p.lower())))
+        if hasattr(self, "SymPyType"):
+            if not isinstance(expr, self.SymPyType):
+                raise TypeError
+            for p in self.getSymPyPropertiesList(obj):
+                setattr(obj, p, spexpr2spstr(getattr(expr, p.lower())))
+
+        else:
+            obj.SymPyExpression = expr
+
+    def onChanged(self, obj, p):
+        if p == "Proxy":
+            if "ViewBox" not in obj.PropertiesList:
+                obj.addProperty("App::PropertyLink", "ViewBox")
+                obj.setEditorMode("ViewBox", 2)
+                obj.ViewBox = getViewBox(obj.Document)
+            if "SymPyExpression" not in obj.PropertiesList:
+                obj.addProperty("App::PropertyPythonObject", "SymPyExpression")
+            obj.setEditorMode("Placement", 2)
+            if FreeCAD.GuiUp:
+                obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
     def execute(self, obj):
         V = getattr(obj, "ViewBox", None)
@@ -65,24 +86,12 @@ class SymbolicPrimitiveProxy(FeaturePythonProxy):
         expr = self.getSymPyExpression(obj)
 
         if isDerivedFrom(obj, "Part::FeaturePython"):
-            shape = Shapes.primitive(expr, mbb)
-
-            if shape is True:
-                obj.Shape = Shapes.primitive(euclid.WholeSpace(), mbb)
-            elif shape is False:
-                obj.Shape = Part.Shape()
-            else:
-                obj.Shape = Shapes.reshape(shape)
+            shape = Shapes.construct(expr, mbb)
+            obj.Shape = Shapes.reshape(shape)
 
         elif isDerivedFrom(obj, "Mesh::FeaturePython"):
-            mesh = Meshes.primitive(expr, mbb)
-
-            if mesh is True:
-                obj.Mesh = Meshes.primitive(euclid.WholeSpace(), mbb)
-            elif mesh is False:
-                obj.Mesh = Mesh.Mesh()
-            else:
-                obj.Mesh = Meshes.remesh(mesh)
+            mesh = Meshes.construct(expr, mbb)
+            obj.Mesh = Meshes.remesh(mesh)
 
         else:
             raise TypeError
@@ -90,7 +99,7 @@ class SymbolicPrimitiveProxy(FeaturePythonProxy):
     def _trace(self, obj):
         return [None]*len(obj.Shape.Faces)
 
-class SymbolicPrimitiveWholeSpaceProxy(SymbolicPrimitiveProxy):
+class SymbolicPrimitiveWholeSpaceProxy(SymbolicPrimitiveSolidProxy):
     SymPyType = euclid.WholeSpace
 
     def onChanged(self, obj, p):
@@ -103,7 +112,7 @@ class SymbolicPrimitiveWholeSpaceProxy(SymbolicPrimitiveProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveHalfspaceProxy(SymbolicPrimitiveProxy):
+class SymbolicPrimitiveHalfspaceProxy(SymbolicPrimitiveSolidProxy):
     SymPyType = euclid.Halfspace
 
     def onChanged(self, obj, p):
@@ -122,7 +131,7 @@ class SymbolicPrimitiveHalfspaceProxy(SymbolicPrimitiveProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveSphereProxy(SymbolicPrimitiveProxy):
+class SymbolicPrimitiveSphereProxy(SymbolicPrimitiveSolidProxy):
     SymPyType = euclid.Sphere
 
     def onChanged(self, obj, p):
@@ -137,7 +146,7 @@ class SymbolicPrimitiveSphereProxy(SymbolicPrimitiveProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveInfiniteCylinderProxy(SymbolicPrimitiveProxy):
+class SymbolicPrimitiveInfiniteCylinderProxy(SymbolicPrimitiveSolidProxy):
     SymPyType = euclid.InfiniteCylinder
 
     def onChanged(self, obj, p):
@@ -159,7 +168,7 @@ class SymbolicPrimitiveInfiniteCylinderProxy(SymbolicPrimitiveProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveSemiInfiniteConeProxy(SymbolicPrimitiveProxy):
+class SymbolicPrimitiveSemiInfiniteConeProxy(SymbolicPrimitiveSolidProxy):
     SymPyType = euclid.SemiInfiniteCone
 
     def onChanged(self, obj, p):
@@ -181,7 +190,7 @@ class SymbolicPrimitiveSemiInfiniteConeProxy(SymbolicPrimitiveProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveBoxProxy(SymbolicPrimitiveProxy):
+class SymbolicPrimitiveBoxProxy(SymbolicPrimitiveSolidProxy):
     SymPyType = euclid.Box
 
     def onChanged(self, obj, p):
@@ -199,7 +208,7 @@ class SymbolicPrimitiveBoxProxy(SymbolicPrimitiveProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveCylinderProxy(SymbolicPrimitiveProxy):
+class SymbolicPrimitiveCylinderProxy(SymbolicPrimitiveSolidProxy):
     SymPyType = euclid.Cylinder
 
     def onChanged(self, obj, p):
@@ -220,7 +229,7 @@ class SymbolicPrimitiveCylinderProxy(SymbolicPrimitiveProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveConeProxy(SymbolicPrimitiveProxy):
+class SymbolicPrimitiveConeProxy(SymbolicPrimitiveSolidProxy):
     SymPyType = euclid.Cone
 
     def onChanged(self, obj, p):
@@ -242,6 +251,7 @@ class SymbolicPrimitiveConeProxy(SymbolicPrimitiveProxy):
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
 
+Solid = SymbolicPrimitiveSolidProxy
 WholeSpace = SymbolicPrimitiveWholeSpaceProxy
 Halfspace = SymbolicPrimitiveHalfspaceProxy
 Sphere = SymbolicPrimitiveSphereProxy
@@ -250,4 +260,13 @@ SemiInfiniteCone = SymbolicPrimitiveSemiInfiniteConeProxy
 Box = SymbolicPrimitiveBoxProxy
 Cylinder = SymbolicPrimitiveCylinderProxy
 Cone = SymbolicPrimitiveConeProxy
+
+
+def show(expr):
+    from MagicPart.Control import recompute, viewAllBounded
+    ftr = addObject(Solid, "Solid",
+        rep=P.rep, cached=P.cached, args=dict(SymPyExpression=expr))
+    recompute([ftr])
+    viewAllBounded()
+    return ftr
 

@@ -1,8 +1,10 @@
 import math
 from symplus.affine import AffineTransformation, rmat_k2d
+from symplus.setplus import Intersection, Union, Complement, AbsoluteComplement, Image
 import symplus.euclid as euclid
 import FreeCAD, Mesh
 from MagicPart.Basic import fuzzyCompare, spexpr2fcexpr
+from MagicPart.Meshes.Operation import complement, common, fuse, transform
 
 
 def createConicalFrustum(radius1, radius2, height, pnt=FreeCAD.Vector(), fn=50):
@@ -29,8 +31,29 @@ def createConicalFrustum(radius1, radius2, height, pnt=FreeCAD.Vector(), fn=50):
         mesh = mesh1.unite(mesh2)
         return mesh
 
-def primitive(zet, mbb, margin=1e-03, fn=50):
-    if isinstance(zet, euclid.WholeSpace):
+def construct(zet, mbb, margin=1e-03, fn=50):
+    if zet is None:
+        return Mesh.Mesh()
+
+    elif isinstance(zet, Intersection):
+        return common(construct(arg, mbb, margin, fn) for arg in zet.args)
+
+    elif isinstance(zet, Union):
+        return fuse(construct(arg, mbb, margin, fn) for arg in zet.args)
+
+    elif isinstance(zet, Complement):
+        return common([construct(zet.arg[0], mbb, margin, fn),
+                       complement(construct(zet.arg[1], mbb, margin, fn))])
+
+    elif isinstance(zet, AbsoluteComplement):
+        return complement(construct(zet.arg[0], mbb, margin, fn))
+
+    elif isinstance(zet, Image):
+        placement = spexpr2fcexpr(zet.function)
+        mbb_ = mbb.transformed(placement.inverse().toMatrix())
+        return transform(construct(zet.set, mbb_, margin, fn), zet.function)
+
+    elif isinstance(zet, euclid.WholeSpace):
         mesh = Mesh.createSphere(mbb.DiagonalLength/2 + margin, int(fn))
         mesh.translate(*mbb.Center)
         return mesh

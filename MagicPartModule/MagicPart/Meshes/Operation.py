@@ -1,3 +1,4 @@
+from MagicPart.Basic import spexpr2fcexpr
 from MagicPart.Meshes.Utilities import remesh, orientation
 import OpenSCADUtils
 
@@ -113,4 +114,9 @@ def compound(meshes):
     for mesh in meshes:
         comp.addMesh(remesh(mesh))
     return comp
+
+def transform(mesh, trans):
+    mesh = remesh(mesh)
+    mesh.Placement = spexpr2fcexpr(trans)
+    return mesh
 
