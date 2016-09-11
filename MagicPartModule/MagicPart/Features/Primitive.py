@@ -1,8 +1,11 @@
 import symplus.euclid as euclid
+import symplus.setplus as setplus
 import FreeCAD
 from MagicPart.Basic import spstr2spexpr, spexpr2spstr, P
 from MagicPart.Features.Utilities import *
 from MagicPart.Features.ViewBox import getViewBox, viewAllBounded
+from MagicPart.Features.Operation import (Intersection, Union, AbsoluteComplement, Image,
+    complement, common, fuse, cut, transform)
 from MagicPart import Shapes, Meshes
 
 
@@ -96,6 +99,15 @@ class SymbolicPrimitiveSolidProxy(FeaturePythonProxy):
 
     def _trace(self, obj):
         return [None]*len(obj.Shape.Faces)
+
+class SymbolicPrimitiveEmptySpaceProxy(SymbolicPrimitiveSolidProxy):
+    SymPyType = euclid.EmptySpace
+
+    def onChanged(self, obj, p):
+        if p == "Proxy":
+            obj.setEditorMode("Placement", 2)
+            if FreeCAD.GuiUp:
+                obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
 class SymbolicPrimitiveWholeSpaceProxy(SymbolicPrimitiveSolidProxy):
     SymPyType = euclid.WholeSpace
@@ -250,6 +262,7 @@ class SymbolicPrimitiveConeProxy(SymbolicPrimitiveSolidProxy):
 
 
 Solid = SymbolicPrimitiveSolidProxy
+EmptySpace = SymbolicPrimitiveEmptySpaceProxy
 WholeSpace = SymbolicPrimitiveWholeSpaceProxy
 Halfspace = SymbolicPrimitiveHalfspaceProxy
 Sphere = SymbolicPrimitiveSphereProxy
@@ -266,4 +279,91 @@ def show(expr):
     recompute([ftr])
     viewAllBounded()
     return ftr
+
+def construct(expr):
+    if expr is None:
+        return Part.Shape()
+
+    elif isinstance(expr, setplus.Intersection):
+        return common(construct(arg) for arg in expr.args)
+
+    elif isinstance(expr, setplus.Union):
+        return fuse(construct(arg) for arg in expr.args)
+
+    elif isinstance(expr, setplus.Complement):
+        return cut(construct(expr.arg[0]), construct(expr.arg[1]))
+
+    elif isinstance(expr, setplus.AbsoluteComplement):
+        return complement(construct(expr.arg[0]))
+
+    elif isinstance(expr, setplus.Image):
+        return transform(construct(expr.set), expr.function)
+
+    elif isinstance(expr, euclid.EmptySpace):
+        return addObject(EmptySpace, "EmptySpace", rep=P.rep, cached=P.cached)
+
+    elif isinstance(expr, euclid.WholeSpace):
+        return addObject(WholeSpace, "WholeSpace", rep=P.rep, cached=P.cached)
+
+    elif isinstance(expr, euclid.Halfspace):
+        return addObject(Halfspace, "Halfspace",
+            rep=P.rep, cached=P.cached, args=dict(SymPyExpression=expr))
+
+    elif isinstance(expr, euclid.InfiniteCylinder):
+        return addObject(InfiniteCylinder, "InfiniteCylinder",
+            rep=P.rep, cached=P.cached, args=dict(SymPyExpression=expr))
+
+    elif isinstance(expr, euclid.SemiInfiniteCone):
+        return addObject(SemiInfiniteCone, "SemiInfiniteCone",
+            rep=P.rep, cached=P.cached, args=dict(SymPyExpression=expr))
+
+    elif isinstance(expr, euclid.Sphere):
+        return addObject(Sphere, "Sphere",
+            rep=P.rep, cached=P.cached, args=dict(SymPyExpression=expr))
+
+    elif isinstance(expr, euclid.Box):
+        return addObject(Box, "Box",
+            rep=P.rep, cached=P.cached, args=dict(SymPyExpression=expr))
+
+    elif isinstance(expr, euclid.Cylinder):
+        return addObject(Cylinder, "Cylinder",
+            rep=P.rep, cached=P.cached, args=dict(SymPyExpression=expr))
+
+    elif isinstance(expr, euclid.Cone):
+        return addObject(Cone, "Cone",
+            rep=P.rep, cached=P.cached, args=dict(SymPyExpression=expr))
+
+    else:
+        raise TypeError
+
+def SymPyExpressionOf(ftr):
+    if ftr is None:
+        return euclid.EmptySpace()
+
+    elif isDerivedFrom(ftr, "MutliCommon"):
+        return setplus.Intersection(*[SymPyExpressionOf(outftr) for outftr in ftr.Shapes])
+
+    elif isDerivedFrom(ftr, Intersection):
+        return setplus.Intersection(*[SymPyExpressionOf(outftr) for outftr in ftr.Sources])
+
+    elif isDerivedFrom(ftr, "MultiFuse"):
+        return setplus.Union(*[SymPyExpressionOf(outftr) for outftr in ftr.Shapes])
+
+    elif isDerivedFrom(ftr, Union):
+        return setplus.Union(*[SymPyExpressionOf(outftr) for outftr in ftr.Sources])
+
+    elif isDerivedFrom(ftr, "Cut"):
+        return setplus.Complement(SymPyExpressionOf(ftr.Base), SymPyExpressionOf(ftr.Tool))
+
+    elif isDerivedFrom(ftr, AbsoluteComplement):
+        return setplus.AbsoluteComplement(SymPyExpressionOf(ftr.Source))
+
+    elif isDerivedFrom(ftr, Image):
+        return setplus.Image(SymPyExpressionOf(ftr.Source), ftr.Proxy.getSymPyTransformation(ftr))
+
+    elif isDerivedFrom(ftr, Solid):
+        return ftr.Proxy.getSymPyExpression(ftr)
+
+    else:
+        raise TypeError
 

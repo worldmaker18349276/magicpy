@@ -221,6 +221,30 @@ class WholeSpaceCommand(object):
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None
 
+class EmptySpaceCommand(object):
+    def GetResources(self):
+        return {"Pixmap"  : ":/icons/MagicPart_empty_space.png",
+                "MenuText": "empty space",
+                "ToolTip" : "create a empty space"}
+
+    def Activated(self):
+        if P.incmdline:
+            FreeCADGui.doCommand("_ftr = MagicPart.addObject(MagicPart.EmptySpace, 'EmptySpace', rep=%r, cached=False)"%P.rep)
+            FreeCADGui.doCommand("_ftr.ViewObject.Transparency = 50")
+            FreeCADGui.doCommand("MagicPart.recompute([_ftr])")
+            if P.autosel:
+                FreeCADGui.doCommand("MagicPart.select([_ftr])")
+
+        else:
+            ftr = addObject(EmptySpace, "EmptySpace", rep=P.rep, cached=False)
+            ftr.ViewObject.Transparency = 50
+            recompute([ftr])
+            if P.autosel:
+                select([ftr])
+
+    def IsActive(self):
+        return FreeCAD.ActiveDocument is not None
+
 
 FreeCADGui.addCommand("MagicPart_adjust_viewbox", AdjustViewBoxCommand())
 FreeCADGui.addCommand("MagicPart_box", CreateBoxCommand())
@@ -231,6 +255,7 @@ FreeCADGui.addCommand("MagicPart_halfspace", CreateHalfspaceCommand())
 FreeCADGui.addCommand("MagicPart_infinite_cylinder", CreateInfiniteCylinderCommand())
 FreeCADGui.addCommand("MagicPart_semi_infinite_cone", CreateSemiInfiniteConeCommand())
 FreeCADGui.addCommand("MagicPart_whole_space", WholeSpaceCommand())
+FreeCADGui.addCommand("MagicPart_empty_space", EmptySpaceCommand())
 
 objlist = ["MagicPart_adjust_viewbox",
            "MagicPart_box",
@@ -240,5 +265,6 @@ objlist = ["MagicPart_adjust_viewbox",
            "MagicPart_halfspace",
            "MagicPart_infinite_cylinder",
            "MagicPart_semi_infinite_cone",
-           "MagicPart_whole_space"]
+           "MagicPart_whole_space",
+           "MagicPart_empty_space"]
 

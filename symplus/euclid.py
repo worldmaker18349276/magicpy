@@ -3,7 +3,7 @@ from sympy.core.compatibility import with_metaclass
 from sympy.core.singleton import Singleton
 from sympy.simplify import simplify
 from sympy.logic import false, true
-from sympy.sets import Set, Intersection, Union, Complement
+from sympy.sets import Set, Intersection, Union, Complement, EmptySet
 from sympy.matrices import eye
 from symplus.typlus import is_Tuple
 from symplus.strplus import mstr_inline_Matrix
@@ -807,6 +807,7 @@ class Cone(BoundedEuclideanSpace):
     def is_closed(self):
         return self.closed
 
+EmptySpace = EmptySet
 
 def as_algebraic(zet):
     if isinstance(zet, (Intersection, Union, Complement)):

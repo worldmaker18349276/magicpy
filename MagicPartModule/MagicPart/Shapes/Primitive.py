@@ -46,6 +46,9 @@ def construct(zet, mbb, margin=1e-03):
         mbb_ = mbb.transformed(placement.inverse().toMatrix())
         return transform(construct(zet.set, mbb_, margin), zet.function)
 
+    elif isinstance(zet, euclid.EmptySpace):
+        return Part.Shape()
+
     elif isinstance(zet, euclid.WholeSpace):
         shape = Part.makeSphere(mbb.DiagonalLength/2 + margin, mbb.Center)
         return shape

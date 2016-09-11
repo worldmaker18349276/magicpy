@@ -53,6 +53,9 @@ def construct(zet, mbb, margin=1e-03, fn=50):
         mbb_ = mbb.transformed(placement.inverse().toMatrix())
         return transform(construct(zet.set, mbb_, margin, fn), zet.function)
 
+    elif isinstance(zet, euclid.EmptySpace):
+        return Mesh.Mesh()
+
     elif isinstance(zet, euclid.WholeSpace):
         mesh = Mesh.createSphere(mbb.DiagonalLength/2 + margin, int(fn))
         mesh.translate(*mbb.Center)
