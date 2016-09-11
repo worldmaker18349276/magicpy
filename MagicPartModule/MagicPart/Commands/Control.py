@@ -1,7 +1,7 @@
 import FreeCAD, FreeCADGui
 import MagicPartResources
 from MagicPart.Basic import P
-from MagicPart.Control import *
+from MagicPart.Features import *
 
 
 class ToggleTransparencyCommand(object):

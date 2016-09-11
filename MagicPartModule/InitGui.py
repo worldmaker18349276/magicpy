@@ -29,7 +29,8 @@ class MagicPartWorkbench(Workbench):
             """
 
     def Initialize(self):
-        import MagicPart, MagicPartPrimitiveCommand, MagicPartOperationCommand, MagicPartControlCommand
+        import MagicPart
+        import MagicPart.Commands
         Gui.doCommand("import MagicPart")
         Gui.activateWorkbench("PartWorkbench")
         Gui.activateWorkbench("MeshWorkbench")
@@ -52,9 +53,9 @@ class MagicPartWorkbench(Workbench):
                          "OpenSCAD_AddOpenSCADElement",
                          "OpenSCAD_MeshBoolean",
                          ]
-        self.objlist = MagicPartPrimitiveCommand.objlist
-        self.oplist = MagicPartOperationCommand.oplist
-        self.ctrllist = MagicPartControlCommand.ctrllist
+        self.objlist = MagicPart.Commands.objlist
+        self.oplist = MagicPart.Commands.oplist
+        self.ctrllist = MagicPart.Commands.ctrllist
 
         self.appendToolbar("Part", self.partlist)
         self.appendToolbar("Mesh", self.meshlist)
@@ -76,5 +77,6 @@ class MagicPartWorkbench(Workbench):
 
     def GetClassName(self): 
         return "Gui::PythonWorkbench"
-       
+
 Gui.addWorkbench(MagicPartWorkbench())
+

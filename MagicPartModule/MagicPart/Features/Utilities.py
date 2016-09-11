@@ -1,12 +1,7 @@
-import math
-from sympy import sympify, eye
-from symplus.typlus import is_Matrix, is_Number
-from symplus.matplus import Mat
-from symplus.affine import EuclideanTransformation, AffineTransformation, augment
-from Draft import select
 import FreeCAD, Units, Part, Mesh
 from MagicPart.Basic import fuzzyCompare
 from MagicPart import Shapes, Meshes
+from Draft import select
 
 
 # Property
@@ -268,4 +263,66 @@ def addObject(TypeId, name, rep="Shape", doc=None, cached=False, args={}):
             getattr(obj.Proxy, "set"+k)(obj, v)
 
     return obj
+
+
+# Control
+
+def forceTouch(obj):
+    bop = ("Part::Fuse", "Part::Common", "Part::Cut", "Part::MultiFuse", "Part::MultiCommon")
+    plink = ["App::PropertyLink", "App::PropertyLinkList"]
+    if isDerivedFrom(obj, bop):
+        for p in obj.PropertiesList:
+            if obj.getTypeIdOfProperty(p) in plink:
+                setattr(obj, p, getattr(obj, p))
+                break
+        else:
+            raise RuntimeError("can't touch %s"%obj.Name)
+    else:
+        obj.touch()
+
+def retouch(objs):
+    for obj in objs:
+        if isTouched(obj):
+            forceTouch(obj)
+
+
+def weakRecomputable(obj, forced=False):
+    if isTouched(obj) or forced:
+        if not isDerivedFrom(obj, ("Part::FeaturePython", "Mesh::FeaturePython")):
+            return False
+        if not all(weakRecomputable(outobj, forced=forced) for outobj in ftrlist(obj.OutList)):
+            return False
+    return True
+
+def weakRecompute(obj, forced=False):
+    if isTouched(obj) or forced:
+        for outobj in ftrlist(obj.OutList):
+            weakRecompute(outobj, forced=forced)
+        obj.Proxy.execute(obj)
+        obj.purgeTouched()
+
+def recompute(targets, forced=False):
+    targets = list(targets)
+    if len(targets) == 0:
+        return
+
+    elif all(weakRecomputable(target, forced=forced) for target in targets):
+        retouch(targets[0].Document.Objects)
+        for target in targets:
+            weakRecompute(target, forced=forced)
+
+    else:
+        untouched = []
+        for obj in FreeCAD.ActiveDocument.Objects:
+            if "Touched" in obj.State:
+                if not any(isDependOn(target, obj) for target in targets):
+                    untouched.append(obj)
+                    obj.purgeTouched()
+                elif forced:
+                    obj.touch()
+
+        FreeCAD.ActiveDocument.recompute()
+
+        for obj in untouched:
+            obj.touch()
 

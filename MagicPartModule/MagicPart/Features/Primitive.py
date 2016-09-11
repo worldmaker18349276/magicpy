@@ -1,10 +1,8 @@
-import math
-from symplus.affine import AffineTransformation, rmat_k2d
 import symplus.euclid as euclid
-import FreeCAD, Part, Mesh, BuildRegularGeoms
+import FreeCAD
 from MagicPart.Basic import spstr2spexpr, spexpr2spstr, P
 from MagicPart.Features.Utilities import *
-from MagicPart.Features.ViewBox import getViewBox
+from MagicPart.Features.ViewBox import getViewBox, viewAllBounded
 from MagicPart import Shapes, Meshes
 
 
@@ -263,7 +261,6 @@ Cone = SymbolicPrimitiveConeProxy
 
 
 def show(expr):
-    from MagicPart.Control import recompute, viewAllBounded
     ftr = addObject(Solid, "Solid",
         rep=P.rep, cached=P.cached, args=dict(SymPyExpression=expr))
     recompute([ftr])

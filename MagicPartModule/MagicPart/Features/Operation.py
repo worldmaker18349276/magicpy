@@ -1,10 +1,8 @@
 from itertools import product, imap, starmap, islice
-import FreeCAD, Part
+import FreeCAD
 from symplus.affine import EuclideanTransformation
 from MagicPart.Basic import fuzzyCompare, spstr2spexpr, spexpr2spstr, spexpr2fcexpr, P
 from MagicPart.Features.Utilities import *
-from MagicPart.Features.ViewBox import getViewBox
-from MagicPart.Features.Primitive import WholeSpace
 from MagicPart.Features.SubObject import subFaceLinksOf, subColorOf, trace, outFaceLinksOf
 from MagicPart import Shapes, Meshes
 

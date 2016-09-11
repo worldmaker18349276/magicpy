@@ -125,3 +125,38 @@ def outOf(link):
         raise ValueError
     return outlinks[int(link[1][4:])-1]
 
+
+def getSubSelection():
+    import FreeCADGui
+    sobjs = FreeCADGui.Selection.getSelectionEx()
+    subsel = []
+    for sobj in sobjs:
+        if sobj.HasSubObjects:
+            for field in sobj.SubElementNames:
+                subsel.append((sobj.Object, field))
+
+        else:
+            subsel.append((sobj.Object, "Shape"))
+    return subsel
+
+def shiftToChildren():
+    import FreeCADGui
+    sobjs = FreeCADGui.Selection.getSelectionEx()
+    FreeCADGui.Selection.clearSelection()
+    for sobj in sobjs:
+        if sobj.HasSubObjects:
+            no_children = True
+            for field, v in zip(sobj.SubElementNames, sobj.PickedPoints):
+                outlink = outOf((sobj.Object, field))
+                if outlink is not None:
+                    no_children = False
+                    FreeCADGui.Selection.addSelection(outlink[0], outlink[1], v.x, v.y, v.z)
+            if no_children:
+                FreeCADGui.Selection.addSelection(sobj.Object)
+
+        else:
+            if len(sobj.Object.OutList) == 0:
+                FreeCADGui.Selection.addSelection(sobj.Object)
+            for outobj in sobj.Object.OutList:
+                FreeCADGui.Selection.addSelection(outobj)
+

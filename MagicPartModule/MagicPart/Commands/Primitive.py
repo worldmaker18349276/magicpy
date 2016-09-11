@@ -1,11 +1,7 @@
 import FreeCAD, FreeCADGui, Draft
 import MagicPartResources
 from MagicPart.Basic import P
-from MagicPart.Control import viewAllBounded, recompute
-from MagicPart.Features.Utilities import *
-from MagicPart.Features.ViewBox import getViewBox, fitFeatures, fitBounded
-from MagicPart.Features.Primitive import (WholeSpace, Halfspace, Sphere, InfiniteCylinder,
-    SemiInfiniteCone, Box, Cylinder, Cone)
+from MagicPart.Features import *
 
 
 class AdjustViewBoxCommand(object):

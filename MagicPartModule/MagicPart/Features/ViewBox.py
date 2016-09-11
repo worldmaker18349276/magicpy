@@ -1,4 +1,4 @@
-import FreeCAD, Part
+import FreeCAD
 from MagicPart.Features.Utilities import *
 
 
@@ -65,4 +65,36 @@ def fitFeatures(vb, ftrs, enlarged=True, margin=1e-03):
         bb.add(boundBoxOf(ftr))
     bb.enlarge(margin)
     return setMaxBoundBox(vb, bb, enlarged=enlarged)
+
+
+def hideAllUnbounded():
+    for obj in FreeCAD.ActiveDocument.Objects:
+        if not isBounded(obj):
+            obj.ViewObject.hide()
+
+def viewAllBounded():
+    import FreeCADGui
+    unbounded = set()
+    for obj in FreeCAD.ActiveDocument.Objects:
+        if obj.ViewObject.Visibility and not isBounded(obj):
+            unbounded.add(obj)
+
+    for obj in unbounded:
+        obj.ViewObject.hide()
+    FreeCADGui.SendMsgToActiveView("ViewFit")
+    for obj in unbounded:
+        obj.ViewObject.show()
+
+def viewBoundedSelections():
+    import FreeCADGui
+    unbounded = set()
+    for obj in set(FreeCADGui.Selection.getSelection()):
+        if obj.ViewObject.Visibility and not isBounded(obj):
+            unbounded.add(obj)
+
+    for obj in unbounded:
+        obj.ViewObject.hide()
+    FreeCADGui.SendMsgToActiveView("ViewSelection")
+    for obj in unbounded:
+        obj.ViewObject.show()
 

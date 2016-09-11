@@ -1,13 +1,7 @@
 import FreeCAD, FreeCADGui, Draft
 import MagicPartResources
 from MagicPart.Basic import P
-from MagicPart.Control import recompute, getSubSelection
-from MagicPart.Features.SubObject import outOf
-from MagicPart.Features.Utilities import *
-from MagicPart.Features.ViewBox import isBounded
-from MagicPart.Features.Operation import (common, fuse, cut, complement, transform,
-    compound, compoundFuse, compoundTransform, partition, fragment, slice, Compound)
-from MagicPart.Features.Wrapper import apart, mask
+from MagicPart.Features import *
 
 
 class CommonCommand(object):
