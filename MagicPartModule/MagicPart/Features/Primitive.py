@@ -31,7 +31,7 @@ class SymbolicPrimitiveViewProxy(object):
                     clrs[i] = clrs[i][:3]+tr
                 view.DiffuseColor = clrs
 
-class SymbolicPrimitiveSolidProxy(FeaturePythonProxy):
+class SymbolicPrimitiveProxy(FeaturePythonProxy):
     @classmethod
     def featurePropertiesOf(clazz, obj=None, args={}):
         prop = {}
@@ -100,7 +100,7 @@ class SymbolicPrimitiveSolidProxy(FeaturePythonProxy):
     def _trace(self, obj):
         return [None]*len(obj.Shape.Faces)
 
-class SymbolicPrimitiveEmptySpaceProxy(SymbolicPrimitiveSolidProxy):
+class SymbolicPrimitiveEmptySpaceProxy(SymbolicPrimitiveProxy):
     SymPyType = euclid.EmptySpace
 
     def onChanged(self, obj, p):
@@ -109,7 +109,7 @@ class SymbolicPrimitiveEmptySpaceProxy(SymbolicPrimitiveSolidProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveWholeSpaceProxy(SymbolicPrimitiveSolidProxy):
+class SymbolicPrimitiveWholeSpaceProxy(SymbolicPrimitiveProxy):
     SymPyType = euclid.WholeSpace
 
     def onChanged(self, obj, p):
@@ -122,7 +122,7 @@ class SymbolicPrimitiveWholeSpaceProxy(SymbolicPrimitiveSolidProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveHalfspaceProxy(SymbolicPrimitiveSolidProxy):
+class SymbolicPrimitiveHalfspaceProxy(SymbolicPrimitiveProxy):
     SymPyType = euclid.Halfspace
 
     def onChanged(self, obj, p):
@@ -141,7 +141,7 @@ class SymbolicPrimitiveHalfspaceProxy(SymbolicPrimitiveSolidProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveSphereProxy(SymbolicPrimitiveSolidProxy):
+class SymbolicPrimitiveSphereProxy(SymbolicPrimitiveProxy):
     SymPyType = euclid.Sphere
 
     def onChanged(self, obj, p):
@@ -156,7 +156,7 @@ class SymbolicPrimitiveSphereProxy(SymbolicPrimitiveSolidProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveInfiniteCylinderProxy(SymbolicPrimitiveSolidProxy):
+class SymbolicPrimitiveInfiniteCylinderProxy(SymbolicPrimitiveProxy):
     SymPyType = euclid.InfiniteCylinder
 
     def onChanged(self, obj, p):
@@ -178,7 +178,7 @@ class SymbolicPrimitiveInfiniteCylinderProxy(SymbolicPrimitiveSolidProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveSemiInfiniteConeProxy(SymbolicPrimitiveSolidProxy):
+class SymbolicPrimitiveSemiInfiniteConeProxy(SymbolicPrimitiveProxy):
     SymPyType = euclid.SemiInfiniteCone
 
     def onChanged(self, obj, p):
@@ -200,7 +200,7 @@ class SymbolicPrimitiveSemiInfiniteConeProxy(SymbolicPrimitiveSolidProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveBoxProxy(SymbolicPrimitiveSolidProxy):
+class SymbolicPrimitiveBoxProxy(SymbolicPrimitiveProxy):
     SymPyType = euclid.Box
 
     def onChanged(self, obj, p):
@@ -218,7 +218,7 @@ class SymbolicPrimitiveBoxProxy(SymbolicPrimitiveSolidProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveCylinderProxy(SymbolicPrimitiveSolidProxy):
+class SymbolicPrimitiveCylinderProxy(SymbolicPrimitiveProxy):
     SymPyType = euclid.Cylinder
 
     def onChanged(self, obj, p):
@@ -239,7 +239,7 @@ class SymbolicPrimitiveCylinderProxy(SymbolicPrimitiveSolidProxy):
             if FreeCAD.GuiUp:
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
-class SymbolicPrimitiveConeProxy(SymbolicPrimitiveSolidProxy):
+class SymbolicPrimitiveConeProxy(SymbolicPrimitiveProxy):
     SymPyType = euclid.Cone
 
     def onChanged(self, obj, p):
@@ -261,7 +261,7 @@ class SymbolicPrimitiveConeProxy(SymbolicPrimitiveSolidProxy):
                 obj.ViewObject.Proxy = SymbolicPrimitiveViewProxy()
 
 
-Solid = SymbolicPrimitiveSolidProxy
+Feature = SymbolicPrimitiveProxy
 EmptySpace = SymbolicPrimitiveEmptySpaceProxy
 WholeSpace = SymbolicPrimitiveWholeSpaceProxy
 Halfspace = SymbolicPrimitiveHalfspaceProxy
@@ -274,7 +274,7 @@ Cone = SymbolicPrimitiveConeProxy
 
 
 def show(expr):
-    ftr = addObject(Solid, "Solid",
+    ftr = addObject(Feature, "Feature",
         rep=P.rep, cached=P.cached, args=dict(SymPyExpression=expr))
     recompute([ftr])
     viewAllBounded()
@@ -361,7 +361,7 @@ def SymPyExpressionOf(ftr):
     elif isDerivedFrom(ftr, Image):
         return setplus.Image(SymPyExpressionOf(ftr.Source), ftr.Proxy.getSymPyTransformation(ftr))
 
-    elif isDerivedFrom(ftr, Solid):
+    elif isDerivedFrom(ftr, Feature):
         return ftr.Proxy.getSymPyExpression(ftr)
 
     else:

@@ -33,7 +33,7 @@ def _trace(obj, outobjs=None, N=4):
 
     outinds = Shapes.trace(obj.Shape, [outobj.Shape for outobj in outobjs], N)
     links = [subFaceLinksOf(outobj) for outobj in outobjs]
-    outlinks = [links[i][j] for i, j in outinds]
+    outlinks = [links[ind[0]][ind[1]] if ind is not None else None for ind in outinds]
 
     return outlinks
 
