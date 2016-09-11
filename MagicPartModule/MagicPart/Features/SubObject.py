@@ -1,5 +1,6 @@
 from itertools import islice
 from MagicPart.Features.Utilities import *
+from MagicPart import Shapes
 
 
 def subFaceLinksOf(obj):
@@ -26,67 +27,14 @@ def subColorOf(link, default=(0.8,0.8,0.8,0.0)):
         raise TypeError
 
 
-def biter(u0, u1, v0, v1):
-    """
-    (n, m) iterate like that:
-    m
-    ^
-    | 10 12 14 15
-    | 05 07 08 13
-    | 02 03 06 11
-    | 00 01 04 09
-    +-------------> n
-
-    (u, v) iterate like that:
-    v
-    ^
-    | -- -- -- -- -- -- --
-    | -- 06 -- 04 -- 08 --
-    | -- -- -- -- -- -- --
-    | -- 01 -- 00 -- 02 --
-    | -- -- -- -- -- -- --
-    | -- 05 -- 03 -- 07 --
-    | -- -- -- -- -- -- --
-    +----------------------> u
-    """
-    n = 0
-    m = 0
-    while True:
-        du = (u1-u0)/2**n
-        for i in xrange(2**n):
-            dv = (v1-v0)/2**m
-            for j in xrange(2**m):
-                yield (u0 + du*(i+0.5), v0 + dv*(j+0.5))
-
-        if n == m:
-            n += 1
-            m = 0
-        elif n > m:
-            m, n = n, m
-        elif m > n:
-            m, n = n+1, m
-
-def innerPointsOf(face):
-    return (face.valueAt(u, v) for u, v in biter(*face.ParameterRange) if face.isPartOfDomain(u, v))
-
 def _trace(obj, outobjs=None, N=4):
     if outobjs is None:
         outobjs = ftrlist(obj.OutList)
 
-    if len(outobjs) == 0:
-        return [None]*len(obj.Shape.Faces)
+    outinds = Shapes.trace(obj.Shape, [outobj.Shape for outobj in outobjs], N)
+    links = [subFaceLinksOf(outobj) for outobj in outobjs]
+    outlinks = [links[i][j] for i, j in outinds]
 
-    links = [link for outobj in outobjs for link in subFaceLinksOf(outobj)]
-    outlinks = []
-    for subface in obj.Shape.Faces:
-        points = list(islice(innerPointsOf(subface), N))
-        for link in links:
-            face = subShapeOf(link)
-            if all(face.isInside(p, face.Tolerance, True) for p in points):
-                outlinks.append(link)
-                break
-        else:
-            outlinks.append(None)
     return outlinks
 
 def trace(obj):
