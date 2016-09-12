@@ -1,47 +1,71 @@
 from sympy import S
-from sympy.sets import Intersection, Union, Complement, EmptySet
-from symplus.setplus import Image, AbsoluteComplement, simplify_set
+from sympy.sets import EmptySet
+from symplus.setplus import (Image, RegularizedIntersection, RegularizedUnion,
+    RegularizedAbsoluteComplement, simplify_boolean)
+from symplus.euclid import EuclideanSpace, Halfspace, as_algebraic
+from symplus.affine import AffineTransformation
 from magicpy.solid.general import SolidEngine
 
-
-def Intersection_(*args):
-    if len(args) > 1:
-        return Intersection(*args, evaluate=False)
-    elif len(args) == 1:
-        return args[0]
-    else:
-        return S.UniversalSet
-
-def Union_(*args):
-    if len(args) > 1:
-        return Union(*args, evaluate=False)
-    elif len(args) == 1:
-        return args[0]
-    else:
-        return S.EmptySet
 
 class SymbolicSolidEngine(SolidEngine):
     def __init__(self):
         self.variables = {}
 
     def common(self, zets):
-        return Intersection_(*zets)
+        return RegularizedIntersection(*zets)
 
     def fuse(self, zets):
-        return Union_(*zets)
+        return RegularizedUnion(*zets)
 
     def complement(self, zet):
-        return AbsoluteComplement(zet)
+        return RegularizedAbsoluteComplement(zet)
 
     def transform(self, zet, trans):
+        # if not isinstance(trans, AffineTransformation):
+        #     raise TypeError
         return Image(trans, zet, evaluate=True)
 
     def is_null(self, zet):
         return zet == EmptySet()
 
     def simp(self, zet):
-        return simplify_set(zet)
+        return simplify_boolean(self._std(zet),
+                                op=(RegularizedUnion,
+                                    RegularizedIntersection,
+                                    RegularizedAbsoluteComplement))
 
+    def _std(self, zet):
+        if isinstance(zet, Image):
+            if isinstance(zet.set, (RegularizedUnion,
+                                    RegularizedIntersection,
+                                    RegularizedAbsoluteComplement)):
+                return zet.func(*[self._std(Image(zet.function, arg))
+                                  for arg in zet.set.args])
+            zet_set_ = self._std(zet.set)
+            if zet_set_ != zet.set:
+                return self._std(Image(zet.function, zet_set_))
+            zet_ = Image(zet.function, zet.set, evaluate=True)
+            if zet_ != zet:
+                return self._std(zet_)
+            return zet
+
+        elif isinstance(zet, (RegularizedUnion,
+                              RegularizedIntersection,
+                              RegularizedAbsoluteComplement)):
+            return zet.func(*[self._std(arg) for arg in zet.args])
+
+        elif isinstance(zet, EuclideanSpace):
+            zet_ = as_algebraic(zet)
+            if zet_ != zet:
+                return self._std(zet)
+            if isinstance(zet, Halfspace) and hash(zet.direction) < hash(-zet.direction):
+                return RegularizedAbsoluteComplement(
+                    RegularizedAbsoluteComplement(zet, evaluate=True),
+                    evaluate=False)
+            return zet
+
+        else:
+            return zet
 
 class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
     def __init__(self, subengine):
@@ -82,14 +106,11 @@ class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
         return self.subengine.no_cross_collision(cols)
 
     def simp(self, zet):
-        return self._volalgo(simplify_set(zet))
+        return self._volalgo(super(SymbolicSolidEngineVolumeAlgo, self).simp(zet))
 
     def _volalgo(self, zet, ran=None):
         if zet.subs(self.variables) in (S.EmptySet, S.UniversalSet):
             return zet
-
-        if zet.has(Complement):
-            raise TypeError('zet is not nnf: %r' % zet)
 
         if ran is None:
             ran = self._cvrt(S.UniversalSet)
@@ -100,7 +121,7 @@ class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
         elif self._veq(sub, ran):
             return S.UniversalSet
 
-        if isinstance(zet, Intersection):
+        if isinstance(zet, RegularizedIntersection):
             # remove unimportant arguments
             args = set(zet.args)
             for arg in list(args):
@@ -117,7 +138,7 @@ class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
                 args.add(self._volalgo(arg, ran_))
             return self.common(args)
 
-        elif isinstance(zet, Union):
+        elif isinstance(zet, RegularizedUnion):
             # remove unimportant arguments
             args = set(zet.args)
             for arg in list(args):

@@ -279,7 +279,7 @@ class InfiniteCylinder(AlgebraicEuclideanSpace):
         >>> InfiniteCylinder()
         InfiniteCylinder(1, [0 0 0]', [0 0 1]', False)
         >>> InfiniteCylinder(2, [0,0,0], [0,1,1])
-        InfiniteCylinder(2, [0 0 0]', [0 sqrt(2)/2 sqrt(2)/2]', False)
+        InfiniteCylinder(2, [0 0 0]', [0 -sqrt(2)/2 -sqrt(2)/2]', False)
         >>> InfiniteCylinder().contains((1,1,1))
         False
         >>> InfiniteCylinder(2, [0,0,0], [0,1,1]).contains((1,1,1))
@@ -292,7 +292,7 @@ class InfiniteCylinder(AlgebraicEuclideanSpace):
             if norm(direction) == 0:
                 raise ValueError
             direction = simplify(normalize(direction))
-        direction = max(direction, -direction, key=tuple)
+        direction = max(direction, -direction, key=hash)
         center = Mat(center)
         if normalization:
             center = simplify(center - project(center, direction))
@@ -341,7 +341,7 @@ class InfiniteCylinder(AlgebraicEuclideanSpace):
         >>> InfiniteCylinder().as_abstract()
         {(x, y, z) | x**2 + y**2 < 1}
         >>> InfiniteCylinder(2, [0,0,0], [0,1,1]).as_abstract()
-        {(x, y, z) | x**2 + (sqrt(2)*y/2 - sqrt(2)*z/2)**2 < 4}
+        {(x, y, z) | x**2 + (-sqrt(2)*y/2 + sqrt(2)*z/2)**2 < 4}
         """
         p = r - self.center
         if self.closed:
@@ -624,7 +624,7 @@ class Cylinder(BoundedEuclideanSpace):
             if norm(direction) == 0:
                 raise ValueError
             direction = simplify(normalize(direction))
-        direction = max(direction, -direction, key=tuple)
+        direction = max(direction, -direction, key=hash)
         closed = sympify(bool(closed))
         return Basic.__new__(cls, radius, height, center, direction, closed)
 
@@ -723,7 +723,7 @@ class Cone(BoundedEuclideanSpace):
             if norm(direction) == 0:
                 raise ValueError
             direction = simplify(normalize(direction))
-        direction = max(direction, -direction, key=tuple)
+        direction = max(direction, -direction, key=hash)
         height = sympify(abs(height))
         center = Mat(center)
         closed = sympify(bool(closed))
@@ -810,14 +810,14 @@ class Cone(BoundedEuclideanSpace):
 EmptySpace = EmptySet
 
 def as_algebraic(zet):
-    if isinstance(zet, (Intersection, Union, Complement)):
+    if isinstance(zet, (Intersection, Union, Complement, AbsoluteComplement)):
         return zet.func(*(as_algebraic(arg) for arg in zet.args))
-    elif isinstance(zet, BoundedEuclideanSpace):
-        return zet.as_algebraic()
     elif isinstance(zet, AlgebraicEuclideanSpace):
         return zet
+    elif hasattr(zet, "as_algebraic"):
+        return zet.as_algebraic()
     else:
-        raise TypeError
+        return zet
 
 
 # topology of Euclidean Space

@@ -1,6 +1,6 @@
 import operator
 from functools import reduce
-from sympy.core import S, Basic, Atom, Symbol, sympify, Ne, Eq, Gt, Ge, Lt, Le, oo, symbols
+from sympy.core import S, Basic, Atom, Symbol, Dummy, sympify, Ne, Eq, Gt, Ge, Lt, Le, oo, symbols
 from sympy.core.function import Application
 from sympy.core.evaluate import global_evaluate
 from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent, to_dnf
@@ -459,6 +459,81 @@ class AbstractSet(Set):
     def _mathstr(self, printer):
         return '{{{0} | {1}}}'.format(*map(printer._print, self.args))
 
+class AbsoluteComplement(Set):
+    def __new__(cls, set, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+        if evaluate:
+            res = AbsoluteComplement.eval(set)
+            if res is not None:
+                return res
+        return Set.__new__(cls, set, **kwargs)
+
+    @staticmethod
+    def eval(zet):
+        """
+        >>> from sympy import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
+        >>> AbsoluteComplement(Interval(0,1, False, False))
+        (-oo, 0) u (1, oo)
+        >>> AbsoluteComplement(Interval(1,2, True, False))
+        (-oo, 1] u (2, oo)
+        >>> AbsoluteComplement(Interval(1,oo, False, False))
+        (-oo, 1)
+        >>> AbsoluteComplement(Interval(1,2, False, False) * Interval(0,1, False, False))
+        -([1, 2] x [0, 1])
+        >>> x,y = symbols('x y')
+        >>> AbsoluteComplement(AbstractSet(x, x**2<1))
+        {x | x**2 >= 1}
+        >>> AbsoluteComplement(AbstractSet(x, (x<4)|(x>=6)))
+        {x | ~((x < 4) \/ (x >= 6))}
+        >>> AbsoluteComplement(AbstractSet((x,y), x<=y))
+        {(x, y) | x > y}
+        """
+        if isinstance(zet, Interval):
+            return zet.complement(S.Reals)
+
+        elif isinstance(zet, Union):
+            return Intersection(*[AbsoluteComplement(arg, evaluate=True)
+                                  for arg in zet.args])
+
+        elif isinstance(zet, Intersection):
+            return Union(*[AbsoluteComplement(arg, evaluate=True)
+                           for arg in zet.args])
+
+        elif isinstance(zet, Complement):
+            return Union(AbsoluteComplement(zet.args[0], evaluate=True),
+                         zet.args[1])
+
+        elif isinstance(zet, AbsoluteComplement):
+            return zet.args[0]
+
+        elif hasattr(zet, "_absolute_complement"):
+            return zet._absolute_complement()
+
+        else:
+            return None
+
+    @property
+    def set(self):
+        return self.args[0]
+
+    @property
+    def is_open(self):
+        return Not(self.set.is_open)
+
+    @property
+    def is_closed(self):
+        return Not(self.set.is_closed)
+
+    def _absolute_complement(self):
+        return self.set
+
+    def _mathstr(self, printer):
+        if isinstance(self.args[0], (Atom, AbsoluteComplement)):
+            return '-'+printer._print(self.args[0])
+        else:
+            return '-({0})'.format(printer._print(self.args[0]))
 
 class SetBuilder(object):
     def __getitem__(self, zets):
@@ -543,7 +618,7 @@ def as_abstract(zet):
         else:
             return zet
 
-    elif isinstance(zet, (Intersection, Union, Complement)):
+    elif isinstance(zet, (Intersection, Union, Complement, AbsoluteComplement)):
         return zet.func(*[as_abstract(e) for e in zet.args])
 
     else:
@@ -613,7 +688,7 @@ class Image(Set):
                 func = FunctionCompose(func, zet.function, evaluate=True)
                 zet = zet.set
 
-            if isinstance(zet, (Intersection, Union, Complement)):
+            if isinstance(zet, (Intersection, Union, Complement, AbsoluteComplement)):
                 args = [Image(func, arg, evaluate=True) for arg in zet.args]
                 return Id, zet.func(*args, evaluate=False)
 
@@ -720,7 +795,7 @@ class Contains(Application, Boolean):
         if not isinstance(ret, Contains):
             return ret
 
-def simplify_set(zet, variable=Symbol("x", real=True), form='dnf', deep=False):
+def simplify_boolean(expr, form='dnf', op=(Union, Intersection, AbsoluteComplement, Complement)):
     """
     >>> from sympy import *
     >>> from symplus.strplus import init_mprinting
@@ -728,40 +803,44 @@ def simplify_set(zet, variable=Symbol("x", real=True), form='dnf', deep=False):
     >>> A = Set(symbols("A"))
     >>> B = Set(symbols("B"))
     >>> C = Set(symbols("C"))
-    >>> simplify_set(B & (A | C))
+    >>> simplify_boolean(B & (A | C))
     Set(A) n Set(B) u Set(B) n Set(C)
-    >>> simplify_set((A & B) | (A - B) | (B & C) | (C - B))
+    >>> simplify_boolean((A & B) | (A - B) | (B & C) | (C - B))
     Set(A) u Set(C)
-    >>> simplify_set(AbsoluteComplement(A+B+C) | (C-A-B))
+    >>> simplify_boolean(AbsoluteComplement(A+B+C) | (C-A-B))
     -(Set(A)) n -(Set(B))
     """
-    x = rename_variables_in(variable, free_symbols(zet))
+    exprs = {}
 
-    def containx(zet):
-        if isinstance(zet, Union):
-            return Or(*map(containx, zet.args))
-        elif isinstance(zet, Intersection):
-            return And(*map(containx, zet.args))
-        elif isinstance(zet, Complement):
-            return And(containx(zet.args[0]), Not(containx(zet.args[1])))
-        elif isinstance(zet, AbsoluteComplement):
-            return Not(containx(zet.args[0]))
+    def expr2bool(expr):
+        if isinstance(expr, op[0]):
+            return Or(*map(expr2bool, expr.args))
+        elif isinstance(expr, op[1]):
+            return And(*map(expr2bool, expr.args))
+        elif isinstance(expr, op[2]):
+            return Not(expr2bool(expr.args[0]))
+        elif len(op) >= 4 & isinstance(expr, op[3]):
+            return And(expr2bool(expr.args[0]), Not(expr2bool(expr.args[1])))
         else:
-            return Contains(x, zet, evaluate=False)
+            for b, e in exprs.items():
+                if e == expr:
+                    return b
+            else:
+                b = Dummy("b")
+                exprs[b] = expr
+                return b
 
-    def collectx(expr):
-        if isinstance(expr, Or):
-            return Union(*map(collectx, expr.args), evaluate=False)
-        elif isinstance(expr, And):
-            return Intersection(*map(collectx, expr.args), evaluate=False)
-        elif isinstance(expr, Not):
-            return AbsoluteComplement(collectx(expr.args[0]), evaluate=False)
-        elif isinstance(expr, Contains) and expr.args[0] == x:
-            return expr.args[1]
+    def bool2expr(b):
+        if isinstance(b, Or):
+            return op[0](*map(bool2expr, b.args), evaluate=False)
+        elif isinstance(b, And):
+            return op[1](*map(bool2expr, b.args), evaluate=False)
+        elif isinstance(b, Not):
+            return op[2](bool2expr(b.args[0]), evaluate=False)
         else:
-            return AbstractSet(x, expr)
+            return exprs[b]
 
-    return collectx(simplify_logic(containx(zet), form='dnf', deep=deep))
+    return bool2expr(simplify_logic(expr2bool(expr), form='dnf', deep=False))
 
 
 def is_open(zet):
@@ -779,22 +858,12 @@ def is_open(zet):
     True
     >>> is_open(Interval(1,2, False, True) * Interval(0,1, True, True))
     False
-    >>> x,y = symbols('x y')
-    >>> is_open(AbstractSet(x, x**2<1))
-    True
-    >>> is_open(AbstractSet((x,y), x<=y))
-    False
     """
     if isinstance(zet, Interval):
         return (zet.left_open | (zet.start==-oo)) & (zet.right_open | (zet.end==oo))
 
-    elif isinstance(zet, AbstractSet):
-        if isinstance(zet.expr, (Or, And)):
-            return is_open(zet.expand())
-        elif isinstance(zet.expr, (Ne, Gt, Lt)):
-            return true
-        elif isinstance(zet.expr, (Eq, Ge, Le)):
-            return false
+    elif isinstance(zet, ProductSet):
+        return And(*map(is_open, zet.args))
 
     elif isinstance(zet, (Intersection, Union)):
 
@@ -802,20 +871,16 @@ def is_open(zet):
             return true
 
     elif isinstance(zet, Complement):
-        if is_open(zet.args[0]) & is_closed(zet.args[1]) == true:
+        if (is_open(zet.args[0]) & is_closed(zet.args[1])) == true:
             return true
 
-    elif isinstance(zet, ProductSet):
-        return And(*map(is_open, zet.args))
+    elif isinstance(zet, AbsoluteComplement):
+        return is_closed(zet.args[0])
 
-    try:
-        res = zet.is_open
-        if res in (true, false):
-            return res
-        else:
-            return Eq(Intersection(zet, zet.boundary), S.EmptySet)
-    except NotImplementedError:
-        raise NotImplementedError(zet)
+    res = zet.is_open
+    if res in (true, false):
+        return res
+    raise NotImplementedError
 
 def is_closed(zet):
     """
@@ -832,111 +897,28 @@ def is_closed(zet):
     True
     >>> is_closed(Interval(1,2, False, True) * Interval(0,1, True, True))
     False
-    >>> x,y = symbols('x y')
-    >>> is_closed(AbstractSet(x, x**2<1))
-    False
-    >>> is_closed(AbstractSet((x,y), x<=y))
-    True
     """
     if isinstance(zet, Interval):
         return ((~zet.left_open) | (zet.start==-oo)) & ((~zet.right_open) | (zet.end==oo))
 
-    elif isinstance(zet, AbstractSet):
-        if isinstance(zet.expr, (Or, And)):
-            return is_closed(zet.expand())
-        elif isinstance(zet.expr, (Eq, Ge, Le)):
-            return true
-        elif isinstance(zet.expr, (Ne, Gt, Lt)):
-            return false
+    elif isinstance(zet, ProductSet):
+        return And(*map(is_closed, zet.args))
 
     elif isinstance(zet, (Intersection, Union)):
         if And(*map(is_closed, zet.args)) == true:
             return true
 
     elif isinstance(zet, Complement):
-        if is_closed(zet.args[0]) & is_open(zet.args[1]) == true:
+        if (is_closed(zet.args[0]) & is_open(zet.args[1])) == true:
             return true
 
-    elif isinstance(zet, ProductSet):
-        return And(*map(is_closed, zet.args))
+    elif isinstance(zet, AbsoluteComplement):
+        return is_open(zet.args[0])
 
-    try:
-        res = zet.is_closed
-        if res in (true, false):
-            return res
-        else:
-            return Eq(Intersection(zet, zet.boundary), zet.boundary)
-    except NotImplementedError:
-        raise NotImplementedError
-
-class AbsoluteComplement(Set):
-    def __new__(cls, set, **kwargs):
-        evaluate = kwargs.pop('evaluate', global_evaluate[0])
-        if evaluate:
-            res = AbsoluteComplement.eval(set)
-            if res is not None:
-                return res
-        return Set.__new__(cls, set, **kwargs)
-
-    @staticmethod
-    def eval(zet):
-        """
-        >>> from sympy import *
-        >>> from symplus.strplus import init_mprinting
-        >>> init_mprinting()
-        >>> AbsoluteComplement(Interval(0,1, False, False))
-        (-oo, 0) u (1, oo)
-        >>> AbsoluteComplement(Interval(1,2, True, False))
-        (-oo, 1] u (2, oo)
-        >>> AbsoluteComplement(Interval(1,oo, False, False))
-        (-oo, 1)
-        >>> AbsoluteComplement(Interval(1,2, False, False) * Interval(0,1, False, False))
-        -([1, 2] x [0, 1])
-        >>> x,y = symbols('x y')
-        >>> AbsoluteComplement(AbstractSet(x, x**2<1))
-        {x | x**2 >= 1}
-        >>> AbsoluteComplement(AbstractSet(x, (x<4)|(x>=6)))
-        {x | ~((x < 4) \/ (x >= 6))}
-        >>> AbsoluteComplement(AbstractSet((x,y), x<=y))
-        {(x, y) | x > y}
-        """
-        if isinstance(zet, Interval):
-            return zet.complement(S.Reals)
-
-        elif isinstance(zet, Union):
-            return Intersection(*[AbsoluteComplement(arg, evaluate=True)
-                                  for arg in zet.args])
-
-        elif isinstance(zet, Intersection):
-            return Union(*[AbsoluteComplement(arg, evaluate=True)
-                           for arg in zet.args])
-
-        else:
-            if hasattr(zet, "_absolute_complement"):
-                return zet._absolute_complement()
-            else:
-                return None
-
-    @property
-    def set(self):
-        return self.args[0]
-
-    @property
-    def is_open(self):
-        return Not(self.set.is_open)
-
-    @property
-    def is_closed(self):
-        return Not(self.set.is_closed)
-
-    def _absolute_complement(self):
-        return self.set
-
-    def _mathstr(self, printer):
-        if isinstance(self.args[0], (Atom, AbsoluteComplement)):
-            return '-'+printer._print(self.args[0])
-        else:
-            return '-({0})'.format(printer._print(self.args[0]))
+    res = zet.is_closed
+    if res in (true, false):
+        return res
+    raise NotImplementedError
 
 class Interior(Set):
     def __new__(cls, set, **kwargs):
@@ -961,13 +943,6 @@ class Interior(Set):
         (1, oo)
         >>> Interior(Interval(1,2, False, False) * Interval(0,1, False, False))
         (1, 2) x (0, 1)
-        >>> x,y = symbols('x y')
-        >>> Interior(AbstractSet(x, x**2<1))
-        {x | x**2 < 1}
-        >>> Interior(AbstractSet(x, (x<6)&(x>=4)))
-        {x | (x < 6) /\ (x > 4)}
-        >>> Interior(AbstractSet((x,y), x<=y))
-        {(x, y) | x < y}
         """
         if isinstance(zet, Interior):
             return zet
@@ -975,36 +950,26 @@ class Interior(Set):
         elif isinstance(zet, Interval):
             return Interval(zet.start, zet.end, left_open=True, right_open=True)
 
-        elif isinstance(zet, AbstractSet):
-            if isinstance(zet.expr, (Or, And)):
-                return Interior(zet.expand(), evaluate=True)
-            elif isinstance(zet.expr, Ne):
-                return zet
-            elif isinstance(zet.expr, Eq):
-                return AbstractSet(zet.variables, false)
-            elif isinstance(zet.expr, (Gt, Ge)):
-                return AbstractSet(zet.variables, Gt(*zet.expr.args))
-            elif isinstance(zet.expr, (Lt, Le)):
-                return AbstractSet(zet.variables, Lt(*zet.expr.args))
-
-        elif isinstance(zet, Intersection):
+        elif isinstance(zet, ProductSet):
             return zet.func(*[Interior(arg, evaluate=True) for arg in zet.args])
 
-        elif isinstance(zet, Complement):
-            return zet.func(Interior(zet.args[0], evaluate=True),
-                            Closure(zet.args[1], evaluate=True))
-
-        elif isinstance(zet, ProductSet):
+        elif isinstance(zet, Intersection):
             return zet.func(*[Interior(arg, evaluate=True) for arg in zet.args])
 
         try:
             res = zet.interior
             if res is not None:
                 return res
-            else:
-                return zet - zet.boundary
         except NotImplementedError:
-            return None
+            pass
+
+        try:
+            if is_open(zet):
+                return zet
+        except NotImplementedError:
+            pass
+
+        return None
 
     @property
     def set(self):
@@ -1019,7 +984,10 @@ class Interior(Set):
         return false
 
     def _absolute_complement(self):
-        return Closure(AbsoluteComplement(self.set))
+        return Closure(AbsoluteComplement(self.set, evaluate=True), evaluate=True)
+
+    def _mathstr(self, printer):
+        return 'int({0})'.format(printer._print(self.args[0]))
 
 class Closure(Set):
     def __new__(cls, set, **kwargs):
@@ -1044,13 +1012,6 @@ class Closure(Set):
         [1, oo)
         >>> Closure(Interval(1,2, False, False) * Interval(0,1, False, False))
         [1, 2] x [0, 1]
-        >>> x,y = symbols('x y')
-        >>> Closure(AbstractSet(x, x**2<1))
-        {x | x**2 =< 1}
-        >>> Closure(AbstractSet(x, (x<4)|(x>=6)))
-        {x | (x =< 4) \/ (x >= 6)}
-        >>> Closure(AbstractSet((x,y), x<=y))
-        {(x, y) | x =< y}
         """
         if isinstance(zet, Closure):
             return zet
@@ -1058,32 +1019,26 @@ class Closure(Set):
         elif isinstance(zet, Interval):
             return Interval(zet.start, zet.end, left_open=False, right_open=False)
 
-        elif isinstance(zet, AbstractSet):
-            if isinstance(zet.expr, (Or, And)):
-                return Closure(zet.expand(), evaluate=True)
-            elif isinstance(zet.expr, Eq):
-                return zet
-            elif isinstance(zet.expr, Ne):
-                return AbstractSet(zet.variables, true)
-            elif isinstance(zet.expr, (Ge, Gt)):
-                return AbstractSet(zet.variables, Ge(*zet.expr.args))
-            elif isinstance(zet.expr, (Le, Lt)):
-                return AbstractSet(zet.variables, Le(*zet.expr.args))
-
-        elif isinstance(zet, Union):
+        elif isinstance(zet, ProductSet):
             return zet.func(*[Closure(arg, evaluate=True) for arg in zet.args])
 
-        elif isinstance(zet, ProductSet):
+        elif isinstance(zet, Union):
             return zet.func(*[Closure(arg, evaluate=True) for arg in zet.args])
 
         try:
             res = zet.closure
             if res is not None:
                 return res
-            else:
-                return zet + zet.boundary
         except NotImplementedError:
-            return None
+            pass
+
+        try:
+            if is_closed(zet):
+                return zet
+        except NotImplementedError:
+            pass
+
+        return None
 
     @property
     def set(self):
@@ -1098,7 +1053,10 @@ class Closure(Set):
         return true
 
     def _absolute_complement(self):
-        return Interior(AbsoluteComplement(self.set))
+        return Interior(AbsoluteComplement(self.set, evaluate=True), evaluate=True)
+
+    def _mathstr(self, printer):
+        return 'cl({0})'.format(printer._print(self.args[0]))
 
 class Exterior(Set):
     def __new__(cls, set, **kwargs):
@@ -1126,7 +1084,167 @@ class Exterior(Set):
         return false
 
     def _absolute_complement(self):
-        return Closure(self.set)
+        return Closure(self.set, evaluate=True)
+
+    def _mathstr(self, printer):
+        return 'ext({0})'.format(printer._print(self.args[0]))
+
+
+class Regularization(Set):
+    def __new__(cls, *args, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+
+        if evaluate:
+            res = Regularization.eval(*args)
+            if res is not None:
+                return res
+        return Set.__new__(cls, *args, **kwargs)
+
+    @staticmethod
+    def eval(zet):
+        zet_ = Interior.eval(zet)
+        if zet_ is not None:
+            return Closure.eval(zet_)
+
+    def as_primary(self):
+        return Closure(Interior(self.set))
+
+    @property
+    def set(self):
+        return self.args[0]
+
+    @property
+    def is_open(self):
+        return false
+
+    @property
+    def is_closed(self):
+        return true
+
+class RegularizedAbsoluteComplement(Set):
+    def __new__(cls, set, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+        if evaluate:
+            res = RegularizedAbsoluteComplement.eval(set)
+            if res is not None:
+                return res
+        return Set.__new__(cls, set, **kwargs)
+
+    @staticmethod
+    def eval(zet):
+        zet_ = AbsoluteComplement.eval(zet)
+        if zet_ is not None:
+            return Regularization.eval(zet_)
+
+    def as_primary(self):
+        return Regularization(AbsoluteComplement(self.set)).as_primary()
+
+    @property
+    def set(self):
+        return self.args[0]
+
+    @property
+    def is_open(self):
+        return false
+
+    @property
+    def is_closed(self):
+        return true
+
+    def _mathstr(self, printer):
+        if isinstance(self.args[0], (Atom,
+                                     RegularizedAbsoluteComplement)):
+            return '-*'+printer.doPrint(self.args[0])
+        else:
+            return '-*(%s)'%printer.doPrint(self.args[0])
+
+class RegularizedIntersection(Set):
+    def __new__(cls, *args, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+
+        if evaluate:
+            args = RegularizedIntersection.reduce(args)
+        return Set.__new__(cls, *args, **kwargs)
+
+    @classmethod
+    def reduce(cls, args):
+        def flatten(arg):
+            if isinstance(arg, cls):
+                return sum(map(flatten, arg.args), [])
+            elif isinstance(arg, Set):
+                return [arg]
+            elif isinstance(arg, (tuple, list)):
+                return sum(map(flatten, arg), [])
+            else:
+                raise TypeError("Input must be Sets or iterables of Sets")
+        return list(set(flatten(args)))
+
+    def as_primary(self):
+        return Regularization(Intersection(*self.args))
+
+    @property
+    def is_open(self):
+        return false
+
+    @property
+    def is_closed(self):
+        return true
+
+    def _mathstr(self, printer):
+        argstr = []
+        for a in self.args:
+            if isinstance(a, (Atom,
+                              RegularizedAbsoluteComplement,
+                              RegularizedIntersection)):
+                argstr.append(printer.doPrint(a))
+            else:
+                argstr.append('(%s)'%printer.doPrint(a))
+        return ' n* '.join(sorted(argstr))
+
+class RegularizedUnion(Set):
+    def __new__(cls, *args, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+
+        if evaluate:
+            args = RegularizedUnion.reduce(args)
+        return Set.__new__(cls, *args, **kwargs)
+
+    @classmethod
+    def reduce(cls, args):
+        def flatten(arg):
+            if isinstance(arg, cls):
+                return sum(map(flatten, arg.args), [])
+            elif isinstance(arg, Set):
+                return [arg]
+            elif isinstance(arg, (tuple, list)):
+                return sum(map(flatten, arg), [])
+            else:
+                raise TypeError("Input must be Sets or iterables of Sets")
+        return list(set(flatten(args)))
+
+    def as_primary(self):
+        return Regularization(Union(*self.args))
+
+    @property
+    def is_open(self):
+        return false
+
+    @property
+    def is_closed(self):
+        return true
+
+    def _mathstr(self, printer):
+        argstr = []
+        for a in self.args:
+            if isinstance(a, (Atom,
+                              RegularizedAbsoluteComplement,
+                              RegularizedIntersection,
+                              RegularizedUnion)):
+                argstr.append(printer.doPrint(a))
+            else:
+                argstr.append('(%s)'%printer.doPrint(a))
+        return ' u* '.join(sorted(argstr))
+
 
 # topology(open set definition)
 
@@ -1162,7 +1280,7 @@ class Topology(Set):
     def is_regular_open_set(self, zet):
         return Eq(zet, self.interior_of(self.closure_of(zet)))
 
-    def is_regular_open_set(self, zet):
+    def is_regular_closed_set(self, zet):
         return Eq(zet, self.closure_of(self.interior_of(zet)))
 
 class DiscreteTopology(Topology):
