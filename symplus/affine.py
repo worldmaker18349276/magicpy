@@ -425,6 +425,10 @@ class AffineTransformation(Transformation):
         return AffineTransformation(matrix, vector)
 
 class EuclideanTransformation(AffineTransformation):
+    is_invertible = True
+    is_continuous = True
+    is_bicontinuous = True
+
     def __new__(cls, tvec=zeros3, rquat=Mat([1,0,0,0]), parity=1):
         tvec = Mat(tvec)
         rquat = Mat(rquat)

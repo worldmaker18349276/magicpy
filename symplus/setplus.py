@@ -270,10 +270,12 @@ class AbstractSet(Set):
         return self.expr.xreplace(dict(zip(var, val)))
 
     def _image(self, func):
-        inv_func = FunctionInverse(func, evaluate=True)
-        if not isinstance(inv_func, FunctionInverse):
-            lambda_inv_func = as_lambda(inv_func)
-            return AbstractSet(lambda_inv_func.variables, zet.contains(lambda_inv_func.expr))
+        if getattr(func, "is_invertible", False):
+            inv_func = FunctionInverse(func, evaluate=True)
+            if not isinstance(inv_func, FunctionInverse):
+                inv_func = as_lambda(inv_func)
+                return AbstractSet(inv_func.variables,
+                                   zet.contains(inv_func.expr))
     
     def is_subset(self, other):
         """
@@ -649,26 +651,17 @@ class Image(Set):
     (/)
     >>> x, y = symbols('x y')
     >>> Image(cos, AbstractSet(x, x > 0))
-    {a0 | acos(a0) > 0}
+    {cos(x) | x > 0}
     >>> Image(cos, Intersection(AbstractSet(x, x > 0), AbstractSet(x, x < 0), evaluate=False))
-    {a0 | acos(a0) < 0} n {a0 | acos(a0) > 0}
-    >>> Image(Lambda(x, x+1), Interval(-1, 1)).contains(1)
-    True
+    {cos(x) | x < 0} n {cos(x) | x > 0}
     >>> Image(Lambda(x, sin(x)+x), Interval(-1, 1)).contains(1)
-    ((x |-> x + sin(x))`'(1) =< 1) /\ ((x |-> x + sin(x))`'(1) >= -1)
-    >>> f = Lambda((x, y), (x*cos(y), x*sin(y)))
-    >>> f_inv = FunctionInverse(f, evaluate=False)
-    >>> f_inv(*f(1, pi/4))
-    (-1, -3*pi/4)
-    >>> Image(f, ProductSet(Interval(0,1), Interval(-pi,pi))).contains(f(1, pi/4))
+    1 in Image(Lambda(x, x + sin(x)), [-1, 1])
+    >>> f = Lambda(x, x+1)
+    >>> f.is_invertible = True
+    >>> Image(f, Interval(-1, 1)).contains(1)
     True
-    >>> Image(Lambda(x, x+1), Interval(-1, 1)).as_abstract()
+    >>> Image(f, Interval(-1, 1)).as_abstract()
     {x0 | (x0 - 1 =< 1) /\ (x0 - 1 >= -1)}
-    >>> g = Lambda((x, y), (x+exp(y), x+sin(y)))
-    >>> Image(g, ProductSet(Interval(-1,1), Interval(-1,1))).contains(g(1,2))
-    False
-    >>> Image(g, AbstractSet((x,y), x<y)).contains(g(1,2))
-    False
     """
     def __new__(cls, function, zet, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
@@ -746,10 +739,9 @@ class Image(Set):
         return self._args[1]
 
     def _contains(self, mem):
-        mem = pack_if_not(mem)
-        inv_func = FunctionInverse(self.function)
-        mem_ = unpack_if_can(inv_func(*mem))
-        return self.set._contains(mem_)
+        if getattr(self.function, "is_invertible", False):
+            mem_ = unpack_if_can(FunctionInverse(self.function)(*pack_if_not(mem)))
+            return self.set._contains(mem_)
 
     def as_abstract(self):
         narg = nres(self.function)
@@ -808,7 +800,7 @@ def simplify_boolean(expr, form='dnf', op=(Union, Intersection, AbsoluteCompleme
             return And(*map(expr2bool, expr.args))
         elif isinstance(expr, op[2]):
             return Not(expr2bool(expr.args[0]))
-        elif len(op) >= 4 & isinstance(expr, op[3]):
+        elif len(op) >= 4 and isinstance(expr, op[3]):
             return And(expr2bool(expr.args[0]), Not(expr2bool(expr.args[1])))
         else:
             for b, e in exprs.items():
@@ -975,6 +967,10 @@ class Interior(Set):
     def _absolute_complement(self):
         return Closure(AbsoluteComplement(self.set, evaluate=True), evaluate=True)
 
+    def _image(self, func):
+        if getattr(func, "is_bicontinuous", False):
+            return self.func(Image(func, self.set, evaluate=True))
+
     def _mathstr(self, printer):
         return 'int({0})'.format(printer._print(self.args[0]))
 
@@ -1044,6 +1040,10 @@ class Closure(Set):
     def _absolute_complement(self):
         return Interior(AbsoluteComplement(self.set, evaluate=True), evaluate=True)
 
+    def _image(self, func):
+        if getattr(func, "is_bicontinuous", False):
+            return self.func(Image(func, self.set, evaluate=True))
+
     def _mathstr(self, printer):
         return 'cl({0})'.format(printer._print(self.args[0]))
 
@@ -1074,6 +1074,10 @@ class Exterior(Set):
 
     def _absolute_complement(self):
         return Closure(self.set, evaluate=True)
+
+    def _image(self, func):
+        if getattr(func, "is_bicontinuous", False):
+            return self.func(Image(func, self.set, evaluate=True))
 
     def _mathstr(self, printer):
         return 'ext({0})'.format(printer._print(self.args[0]))
@@ -1110,6 +1114,10 @@ class Regularization(Set):
     def is_closed(self):
         return true
 
+    def _image(self, func):
+        if getattr(func, "is_bicontinuous", False):
+            return self.func(Image(func, self.set, evaluate=True))
+
 class RegularizedAbsoluteComplement(Set):
     def __new__(cls, set, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
@@ -1139,6 +1147,10 @@ class RegularizedAbsoluteComplement(Set):
     @property
     def is_closed(self):
         return true
+
+    def _image(self, func):
+        if getattr(func, "is_bicontinuous", False):
+            return self.func(Image(func, self.set, evaluate=True))
 
     def _mathstr(self, printer):
         if isinstance(self.args[0], (Atom,
@@ -1178,6 +1190,11 @@ class RegularizedIntersection(Set):
     @property
     def is_closed(self):
         return true
+
+    def _image(self, func):
+        if getattr(func, "is_bicontinuous", False):
+            return self.func(*[Image(func, arg, evaluate=True)
+                               for arg in self.args])
 
     def _mathstr(self, printer):
         argstr = []
@@ -1221,6 +1238,11 @@ class RegularizedUnion(Set):
     @property
     def is_closed(self):
         return true
+
+    def _image(self, func):
+        if getattr(func, "is_bicontinuous", False):
+            return self.func(*[Image(func, arg, evaluate=True)
+                               for arg in self.args])
 
     def _mathstr(self, printer):
         argstr = []
