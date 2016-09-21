@@ -14,8 +14,6 @@ from symplus.funcplus import Functor, compose, inverse
 from symplus.setplus import AbstractSet, Image
 from symplus.matplus import Mat, norm, normalize, dot, cross, project, i, j, k, x, y, z, r
 from symplus.path import PathMonoid, TransformationPath
-from symplus.euclid import (WholeSpace, Halfspace, Sphere, InfiniteCylinder, SemiInfiniteCone,
-                            Revolution, Box, Cylinder, Cone)
 
 
 # algorithm for affine transformation
@@ -494,126 +492,6 @@ class EuclideanTransformation(AffineTransformation):
         rquat = qinv(trans.rquat)
         parity = trans.parity
         return EuclideanTransformation(tvec, rquat, parity)
-
-    def _image(self, zet):
-        """
-        >>> from sympy import *
-        >>> from symplus.strplus import init_mprinting
-        >>> init_mprinting()
-        >>> t = EuclideanTransformation([0,1,-1], rquat(pi/3, [1,0,1]))
-        >>> t._image(WholeSpace())
-        WholeSpace()
-        >>> t._image(Halfspace(2, [2,1,4]))
-        Halfspace(-sqrt(21)/7 - 3*sqrt(14)/28 + 2, [-sqrt(14)/28 + 5*sqrt(21)/42\
- -sqrt(14)/14 + sqrt(21)/42 sqrt(14)/28 + sqrt(21)/6]', False)
-        >>> t._image(Sphere(3, [2,0,1]))
-        Sphere(3, [7/4 sqrt(6)/4 + 1 1/4]', False)
-        >>> t._image(InfiniteCylinder(3, [1,1,0], [0,1,4]))
-        InfiniteCylinder(3, [-27*sqrt(6)/136 + 99/136 27*sqrt(6)/136 + 75/68\
- -3/8 + 67*sqrt(6)/136]', [-sqrt(102)/68 + sqrt(17)/17 -sqrt(102)/17 + sqrt(17)/34\
- sqrt(102)/68 + 3*sqrt(17)/17]', False)
-        >>> t._image(SemiInfiniteCone(1, [2,1,0], [2,3,1]))
-        SemiInfiniteCone(1, [-sqrt(6)/4 + 3/2 sqrt(6)/2 + 3/2 -1/2 + sqrt(6)/4]',\
- [-sqrt(14)/8 + 3*sqrt(21)/28 -3*sqrt(14)/28 - sqrt(21)/28 -3*sqrt(21)/28\
- - 5*sqrt(14)/56]', False)
-        """
-        if isinstance(zet, WholeSpace):
-            return zet
-
-        elif isinstance(zet, Halfspace):
-            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
-            offset = simplify(zet.offset + dot(self.tvec, direction))
-            closed = zet.closed
-            return Halfspace(
-                offset=offset,
-                direction=direction,
-                closed=closed,
-                normalization=False)
-
-        elif isinstance(zet, Sphere):
-            radius = zet.radius
-            center = self.call(*zet.center)
-            closed = zet.closed
-            return Sphere(
-                radius=radius,
-                center=center,
-                closed=closed,
-                normalization=False)
-
-        elif isinstance(zet, InfiniteCylinder):
-            radius = zet.radius
-            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
-            center = simplify(qrotate(self.rquat, self.parity*zet.center))
-            center = simplify(center + self.tvec - project(self.tvec, direction))
-            closed = zet.closed
-            return InfiniteCylinder(
-                radius=radius,
-                center=center,
-                direction=direction,
-                closed=closed,
-                normalization=False)
-
-        elif isinstance(zet, SemiInfiniteCone):
-            slope = zet.slope
-            center = self.call(*zet.center)
-            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
-            closed = zet.closed
-            return SemiInfiniteCone(
-                slope=slope,
-                center=center,
-                direction=direction,
-                closed=closed,
-                normalization=False)
-
-        elif isinstance(zet, Revolution):
-            func = zet.func
-            center = self.call(*zet.center)
-            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
-            return Revolution(
-                func=func,
-                center=center,
-                direction=direction,
-                normalization=False)
-
-        elif isinstance(zet, Box):
-            size = zet.size
-            center = self.call(*zet.center)
-            orientation = simplify(rquat2rmat(self.rquat)*self.parity*zet.orientation)
-            closed = zet.closed
-            return Box(
-                size=size,
-                center=center,
-                orientation=orientation,
-                closed=closed,
-                normalization=False)
-
-        elif isinstance(zet, Cylinder):
-            radius = zet.radius
-            height = zet.height
-            center = self.call(*zet.center)
-            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
-            closed = zet.closed
-            return Cylinder(
-                radius=radius,
-                height=height,
-                center=center,
-                direction=direction,
-                closed=closed,
-                normalization=False)
-
-        elif isinstance(zet, Cone):
-            radius = zet.radius
-            height = zet.height
-            center = self.call(*zet.center)
-            direction = simplify(qrotate(self.rquat, self.parity*zet.direction))
-            closed = zet.closed
-            return Cone(
-                radius=radius,
-                height=height,
-                center=center,
-                direction=direction,
-                closed=closed,
-                normalization=False)
 
 # transformation group
 

@@ -9,6 +9,7 @@ from symplus.typlus import is_Tuple
 from symplus.strplus import mstr_inline_Matrix
 from symplus.setplus import AbstractSet, as_abstract, NaturalTopology, AbsoluteComplement, Exterior
 from symplus.matplus import Mat, norm, normalize, dot, cross, project, i, j, k, x, y, z, r
+from symplus.affine import EuclideanTransformation, qrotate
 
 
 # primitive sets
@@ -28,6 +29,32 @@ class EuclideanSpace(Set):
         if isinstance(other, WholeSpace):
             return self
 
+    def _image(self, func):
+        """
+        >>> from sympy import *
+        >>> from symplus.setplus import Image
+        >>> from symplus.affine import *
+        >>> from symplus.strplus import init_mprinting
+        >>> init_mprinting()
+        >>> t = EuclideanTransformation([0,1,-1], rquat(pi/3, [1,0,1]))
+        >>> Image(t, WholeSpace())
+        WholeSpace()
+        >>> Image(t, Halfspace(2, [2,1,4]))
+        Halfspace(-sqrt(21)/7 - 3*sqrt(14)/28 + 2, [-sqrt(14)/28 + 5*sqrt(21)/42\
+ -sqrt(14)/14 + sqrt(21)/42 sqrt(14)/28 + sqrt(21)/6]', False)
+        >>> Image(t, Sphere(3, [2,0,1]))
+        Sphere(3, [7/4 sqrt(6)/4 + 1 1/4]', False)
+        >>> Image(t, InfiniteCylinder(3, [1,1,0], [0,1,4]))
+        InfiniteCylinder(3, [-27*sqrt(6)/136 + 99/136 27*sqrt(6)/136 + 75/68\
+ -3/8 + 67*sqrt(6)/136]', [-sqrt(17)/17 + sqrt(102)/68 -sqrt(17)/34 + sqrt(102)/17\
+ -3*sqrt(17)/17 - sqrt(102)/68]', False)
+        >>> Image(t, SemiInfiniteCone(1, [2,1,0], [2,3,1]))
+        SemiInfiniteCone(1, [-sqrt(6)/4 + 3/2 sqrt(6)/2 + 3/2 -1/2 + sqrt(6)/4]',\
+ [-3*sqrt(21)/28 + sqrt(14)/8 sqrt(21)/28 + 3*sqrt(14)/28 5*sqrt(14)/56\
+ + 3*sqrt(21)/28]', False)
+        """
+        return None
+
 class WholeSpace(with_metaclass(Singleton, EuclideanSpace)):
     def _absolute_complement(self):
         return S.EmptySet
@@ -42,6 +69,10 @@ class WholeSpace(with_metaclass(Singleton, EuclideanSpace)):
 
     def _contains(self, other):
         return is_Tuple(other) and len(other) == 3
+
+    def _image(self, func):
+        if isinstance(func, EuclideanTransformation):
+            return self
 
     def as_abstract(self):
         return AbstractSet(symbols('x y z', real=True), true)
@@ -120,6 +151,17 @@ class Halfspace(AlgebraicEuclideanSpace):
             return dot(v, self.direction) >= self.offset
         else:
             return dot(v, self.direction) > self.offset
+
+    def _image(self, func):
+        if isinstance(func, EuclideanTransformation):
+            direction = simplify(qrotate(func.rquat, func.parity*self.direction))
+            offset = simplify(self.offset + dot(func.tvec, direction))
+            closed = self.closed
+            return Halfspace(
+                offset=offset,
+                direction=direction,
+                closed=closed,
+                normalization=False)
 
     def as_abstract(self):
         """
@@ -230,6 +272,17 @@ class Sphere(AlgebraicEuclideanSpace, BoundedEuclideanSpace):
         else:
             return norm(v-self.center)**2 < self.radius**2
 
+    def _image(self, func):
+        if isinstance(func, EuclideanTransformation):
+            radius = self.radius
+            center = func.call(*self.center)
+            closed = self.closed
+            return Sphere(
+                radius=radius,
+                center=center,
+                closed=closed,
+                normalization=False)
+
     def as_abstract(self):
         """
         >>> from sympy import *
@@ -332,6 +385,20 @@ class InfiniteCylinder(AlgebraicEuclideanSpace):
             return norm(cross(p, self.direction))**2 <= self.radius**2
         else:
             return norm(cross(p, self.direction))**2 < self.radius**2
+
+    def _image(self, func):
+        if isinstance(func, EuclideanTransformation):
+            radius = self.radius
+            direction = simplify(qrotate(func.rquat, func.parity*self.direction))
+            center = simplify(qrotate(func.rquat, func.parity*self.center))
+            center = simplify(center + func.tvec - project(func.tvec, direction))
+            closed = self.closed
+            return InfiniteCylinder(
+                radius=radius,
+                center=center,
+                direction=direction,
+                closed=closed,
+                normalization=False)
 
     def as_abstract(self):
         """
@@ -436,6 +503,19 @@ class SemiInfiniteCone(AlgebraicEuclideanSpace):
         else:
             return norm(cross(p, self.direction)) < self.slope*dot(p, self.direction)
 
+    def _image(self, func):
+        if isinstance(func, EuclideanTransformation):
+            slope = self.slope
+            center = func.call(*self.center)
+            direction = simplify(qrotate(func.rquat, func.parity*self.direction))
+            closed = self.closed
+            return SemiInfiniteCone(
+                slope=slope,
+                center=center,
+                direction=direction,
+                closed=closed,
+                normalization=False)
+
     def as_abstract(self):
         """
         >>> from sympy import *
@@ -514,6 +594,17 @@ class Revolution(AlgebraicEuclideanSpace):
         p = v - self.center
         return self.func(dot(p, self.direction), norm(cross(p, self.direction)))
 
+    def _image(self, func):
+        if isinstance(func, EuclideanTransformation):
+            func = self.func
+            center = func.call(*self.center)
+            direction = simplify(qrotate(func.rquat, func.parity*self.direction))
+            return Revolution(
+                func=func,
+                center=center,
+                direction=direction,
+                normalization=False)
+
     def as_abstract(self):
         """
         >>> from sympy import *
@@ -583,6 +674,19 @@ class Box(BoundedEuclideanSpace):
 
     def _contains(self, other):
         return self.as_algebraic()._contains(other)
+
+    def _image(self, func):
+        if isinstance(func, EuclideanTransformation):
+            size = self.size
+            center = func.call(*self.center)
+            orientation = simplify(rquat2rmat(func.rquat)*func.parity*self.orientation)
+            closed = self.closed
+            return Box(
+                size=size,
+                center=center,
+                orientation=orientation,
+                closed=closed,
+                normalization=False)
 
     def as_abstract(self):
         return as_abstract(self.as_algebraic())
@@ -681,6 +785,21 @@ class Cylinder(BoundedEuclideanSpace):
     def _contains(self, other):
         return self.as_algebraic()._contains(other)
 
+    def _image(self, func):
+        if isinstance(func, EuclideanTransformation):
+            radius = self.radius
+            height = self.height
+            center = func.call(*self.center)
+            direction = simplify(qrotate(func.rquat, func.parity*self.direction))
+            closed = self.closed
+            return Cylinder(
+                radius=radius,
+                height=height,
+                center=center,
+                direction=direction,
+                closed=closed,
+                normalization=False)
+
     def as_abstract(self):
         return as_abstract(self.as_algebraic())
 
@@ -775,6 +894,21 @@ class Cone(BoundedEuclideanSpace):
 
     def _contains(self, other):
         return self.as_algebraic()._contains(other)
+
+    def _image(self, func):
+        if isinstance(func, EuclideanTransformation):
+            radius = self.radius
+            height = self.height
+            center = func.call(*self.center)
+            direction = simplify(qrotate(func.rquat, func.parity*self.direction))
+            closed = self.closed
+            return Cone(
+                radius=radius,
+                height=height,
+                center=center,
+                direction=direction,
+                closed=closed,
+                normalization=False)
 
     def as_abstract(self):
         return as_abstract(self.as_algebraic())

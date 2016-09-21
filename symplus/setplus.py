@@ -268,6 +268,12 @@ class AbstractSet(Set):
         if not type_match(var, val):
             return false
         return self.expr.xreplace(dict(zip(var, val)))
+
+    def _image(self, func):
+        inv_func = FunctionInverse(func, evaluate=True)
+        if not isinstance(inv_func, FunctionInverse):
+            lambda_inv_func = as_lambda(inv_func)
+            return AbstractSet(lambda_inv_func.variables, zet.contains(lambda_inv_func.expr))
     
     def is_subset(self, other):
         """
@@ -606,7 +612,6 @@ class SetBuilder(object):
 
 St = SetBuilder()
 
-
 def as_abstract(zet):
     if hasattr(zet, 'as_abstract'):
         return zet.as_abstract()
@@ -717,21 +722,13 @@ class Image(Set):
                         zet = zet_
                 return FunctionCompose(*funcs, evaluate=False), zet
 
-            elif hasattr(func, '_image'):
-                res = func._image(zet)
+            elif hasattr(zet, '_image'):
+                res = zet._image(func)
                 if res is not None:
                     if isinstance(res, Image):
                         return res.function, res.set
                     else:
                         return Id, res
-                else:
-                    return func, zet
-
-            elif isinstance(zet, AbstractSet):
-                inv_func = FunctionInverse(func, evaluate=True)
-                if not isinstance(inv_func, FunctionInverse):
-                    lambda_inv_func = as_lambda(inv_func)
-                    return Id, AbstractSet(lambda_inv_func.variables, zet.contains(lambda_inv_func.expr))
                 else:
                     return func, zet
 
@@ -759,14 +756,6 @@ class Image(Set):
         x = symbols('x:%d'%narg, real=True)
         expr = self.contains(x)
         return AbstractSet(x, expr)
-
-    @property
-    def is_open(self):
-        return is_open(self.set)
-
-    @property
-    def is_closed(self):
-        return is_closed(self.set)
 
     def _mathstr(self, printer):
         if isinstance(self.set, AbstractSet):
@@ -1091,14 +1080,14 @@ class Exterior(Set):
 
 
 class Regularization(Set):
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, set, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         if evaluate:
-            res = Regularization.eval(*args)
+            res = Regularization.eval(set)
             if res is not None:
                 return res
-        return Set.__new__(cls, *args, **kwargs)
+        return Set.__new__(cls, set, **kwargs)
 
     @staticmethod
     def eval(zet):
@@ -1366,6 +1355,12 @@ class NaturalTopology(Topology):
 
     def interior_of(self, zet):
         return Interior(zet)
+
+    def complement_of(self, zet):
+        return AbsoluteComplement(zet)
+
+    def exterior_of(self, zet):
+        return Exterior(zet)
 
     def is_open_set(self, zet):
         return is_open(zet)
