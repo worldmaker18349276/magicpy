@@ -1083,6 +1083,32 @@ class Exterior(Set):
         return 'ext({0})'.format(printer._print(self.args[0]))
 
 
+def regularize(set, evaluate=False):
+    reg_table = {
+        Intersection: RegularizedIntersection,
+        RegularizedIntersection: RegularizedIntersection,
+        Union: RegularizedUnion,
+        RegularizedUnion: RegularizedUnion,
+        AbsoluteComplement: RegularizedAbsoluteComplement,
+        RegularizedAbsoluteComplement: RegularizedAbsoluteComplement}
+    if isinstance(set, tuple(reg_table.keys())):
+        func_ = reg_table[type(set)]
+        args_ = [regularize(arg, evaluate=evaluate) for arg in set.args]
+        return func_(*args_, evaluate=evaluate)
+
+    elif isinstance(set, Complement):
+        set_ = Intersection(
+            set.args[0],
+            AbsoluteComplement(set.args[1], evaluate=False),
+            evaluate=False)
+        return regularize(set_, evaluate=evaluate)
+
+    elif isinstance(set, Regularization):
+        return regularize(set.args[0], evaluate=evaluate)
+
+    else:
+        return Regularization(set, evaluate=evaluate)
+
 class Regularization(Set):
     def __new__(cls, set, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])

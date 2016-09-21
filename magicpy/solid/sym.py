@@ -35,37 +35,14 @@ class SymbolicSolidEngine(SolidEngine):
                                     RegularizedAbsoluteComplement))
 
     def _std(self, zet):
-        if isinstance(zet, Image):
-            if isinstance(zet.set, (RegularizedUnion,
-                                    RegularizedIntersection,
-                                    RegularizedAbsoluteComplement)):
-                return zet.func(*[self._std(Image(zet.function, arg))
-                                  for arg in zet.set.args])
-            zet_set_ = self._std(zet.set)
-            if zet_set_ != zet.set:
-                return self._std(Image(zet.function, zet_set_))
-            zet_ = Image(zet.function, zet.set, evaluate=True)
-            if zet_ != zet:
-                return self._std(zet_)
-            return zet
-
-        elif isinstance(zet, (RegularizedUnion,
-                              RegularizedIntersection,
-                              RegularizedAbsoluteComplement)):
-            return zet.func(*[self._std(arg) for arg in zet.args])
-
-        elif isinstance(zet, EuclideanSpace):
-            zet_ = as_algebraic(zet)
-            if zet_ != zet:
-                return self._std(zet)
-            if isinstance(zet, Halfspace) and hash(zet.direction) < hash(-zet.direction):
-                return RegularizedAbsoluteComplement(
-                    RegularizedAbsoluteComplement(zet, evaluate=True),
-                    evaluate=False)
-            return zet
-
-        else:
-            return zet
+        zet = zet.replace(
+            lambda e: isinstance(e, Set) and hasattr(e, "as_algebraic"),
+            lambda e: e.as_algebraic())
+        zet = zet.replace(
+            lambda e: isinstance(e, Image),
+            lambda e: e.func(*e.args, evaluate=True))
+        zet = regularize(zet)
+        return zet
 
 class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
     def __init__(self, subengine):

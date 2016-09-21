@@ -943,16 +943,6 @@ class Cone(BoundedEuclideanSpace):
 
 EmptySpace = EmptySet
 
-def as_algebraic(zet):
-    if isinstance(zet, (Intersection, Union, Complement, AbsoluteComplement)):
-        return zet.func(*(as_algebraic(arg) for arg in zet.args))
-    elif isinstance(zet, AlgebraicEuclideanSpace):
-        return zet
-    elif hasattr(zet, "as_algebraic"):
-        return zet.as_algebraic()
-    else:
-        return zet
-
 
 # topology of Euclidean Space
 
