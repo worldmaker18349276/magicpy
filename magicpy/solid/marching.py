@@ -4,7 +4,7 @@ from operator import and_, or_
 from sympy.core.compatibility import lru_cache
 from sympy.sets import Set, Intersection, Union, Complement
 from sympy.utilities import lambdify
-from symplus.setplus import AbstractSet, as_abstract
+from symplus.setplus import AbstractSet, as_abstract, AbsoluteComplement
 from magicpy.solid.general import SolidEngine
 from magicpy.util import map, range
 
@@ -55,15 +55,18 @@ def cube_voxels(r=2.0, n=10):
 
 
 class VoxelEngine(SolidEngine):
-    def __init__(self, voxels):
+    def __init__(self, voxels, operations=(Union, Intersection, AbsoluteComplement, Complement)):
         self.voxels = voxels
+        self.operations = operations
 
     def construct(self, zet):
-        if isinstance(zet, Intersection):
-            return self.common(map(self.construct, zet.args))
-        elif isinstance(zet, Union):
+        if isinstance(zet, self.operations[0]):
             return self.fuse(map(self.construct, zet.args))
-        elif isinstance(zet, Complement):
+        elif isinstance(zet, self.operations[1]):
+            return self.common(map(self.construct, zet.args))
+        elif isinstance(zet, self.operations[2]):
+            return self.complement(self.construct(zet.args[0]))
+        elif len(self.operations) > 3 and isinstance(zet, self.operations[3]):
             return self.cut(*map(self.construct, zet.args))
         elif isinstance(zet, Set):
             return self._construct(zet)

@@ -11,15 +11,18 @@ from magicpy.solid.general import SolidEngine
 class SymbolicSolidEngine(SolidEngine):
     def __init__(self):
         self.variables = {}
+        self.operations = (OpenRegularizedUnion,
+                           OpenRegularizedIntersection,
+                           OpenRegularizedAbsoluteComplement)
 
     def common(self, zets):
-        return OpenRegularizedIntersection(*zets)
+        return self.operations[1](*zets)
 
     def fuse(self, zets):
-        return OpenRegularizedUnion(*zets)
+        return self.operations[0](*zets)
 
     def complement(self, zet):
-        return OpenRegularizedAbsoluteComplement(zet)
+        return self.operations[2](zet)
 
     def transform(self, zet, trans):
         # if not isinstance(trans, AffineTransformation):
@@ -43,15 +46,13 @@ class SymbolicSolidEngine(SolidEngine):
             lambda e: AbsoluteComplement(AbsoluteComplement(e, evaluate=True), evaluate=False),
             simultaneous=False)
         zet = regularize(zet, closed=False)
-        zet = simplify_boolean(zet,
-                               op=(OpenRegularizedUnion,
-                                   OpenRegularizedIntersection,
-                                   OpenRegularizedAbsoluteComplement))
+        zet = simplify_boolean(zet, op=self.operations)
 
 class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
     def __init__(self, subengine):
         SymbolicSolidEngine.__init__(self)
         self.subengine = subengine
+        subengine.operations = self.operations
 
     def _cvrt(self, zet, ran=None):
         sub = self.subengine.construct(zet.subs(self.variables))
@@ -102,7 +103,7 @@ class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
         elif self._veq(sub, ran):
             return S.UniversalSet
 
-        if isinstance(zet, OpenRegularizedIntersection):
+        if isinstance(zet, self.operations[1]):
             # remove unimportant arguments
             args = set(zet.args)
             for arg in list(args):
@@ -119,7 +120,7 @@ class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
                 args.add(self._volalgo(arg, ran_))
             return self.common(args)
 
-        elif isinstance(zet, OpenRegularizedUnion):
+        elif isinstance(zet, self.operations[0]):
             # remove unimportant arguments
             args = set(zet.args)
             for arg in list(args):
