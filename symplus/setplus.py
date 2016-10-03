@@ -1083,7 +1083,17 @@ class Exterior(Set):
         return 'ext({0})'.format(printer._print(self.args[0]))
 
 
-def regularize(set, evaluate=False):
+def regularize(set, evaluate=False, closed=True):
+    if closed:
+        Regularization = ClosedRegularization
+        RegularizedIntersection = ClosedRegularizedIntersection
+        RegularizedUnion = ClosedRegularizedUnion
+        RegularizedAbsoluteComplement = ClosedRegularizedAbsoluteComplement
+    else:
+        Regularization = OpenRegularization
+        RegularizedIntersection = OpenRegularizedIntersection
+        RegularizedUnion = OpenRegularizedUnion
+        RegularizedAbsoluteComplement = OpenRegularizedAbsoluteComplement
     reg_table = {
         Intersection: RegularizedIntersection,
         RegularizedIntersection: RegularizedIntersection,
@@ -1091,6 +1101,7 @@ def regularize(set, evaluate=False):
         RegularizedUnion: RegularizedUnion,
         AbsoluteComplement: RegularizedAbsoluteComplement,
         RegularizedAbsoluteComplement: RegularizedAbsoluteComplement}
+
     if isinstance(set, tuple(reg_table.keys())):
         func_ = reg_table[type(set)]
         args_ = [regularize(arg, evaluate=evaluate) for arg in set.args]
@@ -1109,12 +1120,12 @@ def regularize(set, evaluate=False):
     else:
         return Regularization(set, evaluate=evaluate)
 
-class Regularization(Set):
+class ClosedRegularization(Set):
     def __new__(cls, set, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         if evaluate:
-            res = Regularization.eval(set)
+            res = ClosedRegularization.eval(set)
             if res is not None:
                 return res
         return Set.__new__(cls, set, **kwargs)
@@ -1144,11 +1155,11 @@ class Regularization(Set):
         if getattr(func, "is_bicontinuous", False):
             return self.func(Image(func, self.set, evaluate=True))
 
-class RegularizedAbsoluteComplement(Set):
+class ClosedRegularizedAbsoluteComplement(Set):
     def __new__(cls, set, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
         if evaluate:
-            res = RegularizedAbsoluteComplement.eval(set)
+            res = ClosedRegularizedAbsoluteComplement.eval(set)
             if res is not None:
                 return res
         return Set.__new__(cls, set, **kwargs)
@@ -1157,10 +1168,10 @@ class RegularizedAbsoluteComplement(Set):
     def eval(zet):
         zet_ = AbsoluteComplement.eval(zet)
         if zet_ is not None:
-            return Regularization.eval(zet_)
+            return ClosedRegularization.eval(zet_)
 
     def as_primary(self):
-        return Regularization(AbsoluteComplement(self.set)).as_primary()
+        return ClosedRegularization(AbsoluteComplement(self.set)).as_primary()
 
     @property
     def set(self):
@@ -1180,17 +1191,17 @@ class RegularizedAbsoluteComplement(Set):
 
     def _mathstr(self, printer):
         if isinstance(self.args[0], (Atom,
-                                     RegularizedAbsoluteComplement)):
+                                     ClosedRegularizedAbsoluteComplement)):
             return '-*'+printer.doPrint(self.args[0])
         else:
             return '-*(%s)'%printer.doPrint(self.args[0])
 
-class RegularizedIntersection(Set):
+class ClosedRegularizedIntersection(Set):
     def __new__(cls, *args, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         if evaluate:
-            args = RegularizedIntersection.reduce(args)
+            args = ClosedRegularizedIntersection.reduce(args)
         return Set.__new__(cls, *args, **kwargs)
 
     @classmethod
@@ -1207,7 +1218,7 @@ class RegularizedIntersection(Set):
         return list(set(flatten(args)))
 
     def as_primary(self):
-        return Regularization(Intersection(*self.args))
+        return ClosedRegularization(Intersection(*self.args))
 
     @property
     def is_open(self):
@@ -1226,19 +1237,19 @@ class RegularizedIntersection(Set):
         argstr = []
         for a in self.args:
             if isinstance(a, (Atom,
-                              RegularizedAbsoluteComplement,
-                              RegularizedIntersection)):
+                              ClosedRegularizedAbsoluteComplement,
+                              ClosedRegularizedIntersection)):
                 argstr.append(printer.doPrint(a))
             else:
                 argstr.append('(%s)'%printer.doPrint(a))
         return ' n* '.join(sorted(argstr))
 
-class RegularizedUnion(Set):
+class ClosedRegularizedUnion(Set):
     def __new__(cls, *args, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         if evaluate:
-            args = RegularizedUnion.reduce(args)
+            args = ClosedRegularizedUnion.reduce(args)
         return Set.__new__(cls, *args, **kwargs)
 
     @classmethod
@@ -1255,7 +1266,7 @@ class RegularizedUnion(Set):
         return list(set(flatten(args)))
 
     def as_primary(self):
-        return Regularization(Union(*self.args))
+        return ClosedRegularization(Union(*self.args))
 
     @property
     def is_open(self):
@@ -1274,9 +1285,182 @@ class RegularizedUnion(Set):
         argstr = []
         for a in self.args:
             if isinstance(a, (Atom,
-                              RegularizedAbsoluteComplement,
-                              RegularizedIntersection,
-                              RegularizedUnion)):
+                              ClosedRegularizedAbsoluteComplement,
+                              ClosedRegularizedIntersection,
+                              ClosedRegularizedUnion)):
+                argstr.append(printer.doPrint(a))
+            else:
+                argstr.append('(%s)'%printer.doPrint(a))
+        return ' u* '.join(sorted(argstr))
+
+class OpenRegularization(Set):
+    def __new__(cls, set, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+
+        if evaluate:
+            res = OpenRegularization.eval(set)
+            if res is not None:
+                return res
+        return Set.__new__(cls, set, **kwargs)
+
+    @staticmethod
+    def eval(zet):
+        zet_ = Closure.eval(zet)
+        if zet_ is not None:
+            return Interior.eval(zet_)
+
+    def as_primary(self):
+        return Interior(Closure(self.set))
+
+    @property
+    def set(self):
+        return self.args[0]
+
+    @property
+    def is_open(self):
+        return true
+
+    @property
+    def is_closed(self):
+        return false
+
+    def _image(self, func):
+        if getattr(func, "is_bicontinuous", False):
+            return self.func(Image(func, self.set, evaluate=True))
+
+class OpenRegularizedAbsoluteComplement(Set):
+    def __new__(cls, set, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+        if evaluate:
+            res = OpenRegularizedAbsoluteComplement.eval(set)
+            if res is not None:
+                return res
+        return Set.__new__(cls, set, **kwargs)
+
+    @staticmethod
+    def eval(zet):
+        zet_ = AbsoluteComplement.eval(zet)
+        if zet_ is not None:
+            return OpenRegularization.eval(zet_)
+
+    def as_primary(self):
+        return OpenRegularization(AbsoluteComplement(self.set)).as_primary()
+
+    @property
+    def set(self):
+        return self.args[0]
+
+    @property
+    def is_open(self):
+        return true
+
+    @property
+    def is_closed(self):
+        return false
+
+    def _image(self, func):
+        if getattr(func, "is_bicontinuous", False):
+            return self.func(Image(func, self.set, evaluate=True))
+
+    def _mathstr(self, printer):
+        if isinstance(self.args[0], (Atom,
+                                     OpenRegularizedAbsoluteComplement)):
+            return '-*'+printer.doPrint(self.args[0])
+        else:
+            return '-*(%s)'%printer.doPrint(self.args[0])
+
+class OpenRegularizedIntersection(Set):
+    def __new__(cls, *args, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+
+        if evaluate:
+            args = OpenRegularizedIntersection.reduce(args)
+        return Set.__new__(cls, *args, **kwargs)
+
+    @classmethod
+    def reduce(cls, args):
+        def flatten(arg):
+            if isinstance(arg, cls):
+                return sum(map(flatten, arg.args), [])
+            elif isinstance(arg, Set):
+                return [arg]
+            elif isinstance(arg, (tuple, list)):
+                return sum(map(flatten, arg), [])
+            else:
+                raise TypeError("Input must be Sets or iterables of Sets")
+        return list(set(flatten(args)))
+
+    def as_primary(self):
+        return OpenRegularization(Intersection(*self.args))
+
+    @property
+    def is_open(self):
+        return true
+
+    @property
+    def is_closed(self):
+        return false
+
+    def _image(self, func):
+        if getattr(func, "is_bicontinuous", False):
+            return self.func(*[Image(func, arg, evaluate=True)
+                               for arg in self.args])
+
+    def _mathstr(self, printer):
+        argstr = []
+        for a in self.args:
+            if isinstance(a, (Atom,
+                              OpenRegularizedAbsoluteComplement,
+                              OpenRegularizedIntersection)):
+                argstr.append(printer.doPrint(a))
+            else:
+                argstr.append('(%s)'%printer.doPrint(a))
+        return ' n* '.join(sorted(argstr))
+
+class OpenRegularizedUnion(Set):
+    def __new__(cls, *args, **kwargs):
+        evaluate = kwargs.pop('evaluate', global_evaluate[0])
+
+        if evaluate:
+            args = OpenRegularizedUnion.reduce(args)
+        return Set.__new__(cls, *args, **kwargs)
+
+    @classmethod
+    def reduce(cls, args):
+        def flatten(arg):
+            if isinstance(arg, cls):
+                return sum(map(flatten, arg.args), [])
+            elif isinstance(arg, Set):
+                return [arg]
+            elif isinstance(arg, (tuple, list)):
+                return sum(map(flatten, arg), [])
+            else:
+                raise TypeError("Input must be Sets or iterables of Sets")
+        return list(set(flatten(args)))
+
+    def as_primary(self):
+        return OpenRegularization(Union(*self.args))
+
+    @property
+    def is_open(self):
+        return true
+
+    @property
+    def is_closed(self):
+        return false
+
+    def _image(self, func):
+        if getattr(func, "is_bicontinuous", False):
+            return self.func(*[Image(func, arg, evaluate=True)
+                               for arg in self.args])
+
+    def _mathstr(self, printer):
+        argstr = []
+        for a in self.args:
+            if isinstance(a, (Atom,
+                              OpenRegularizedAbsoluteComplement,
+                              OpenRegularizedIntersection,
+                              OpenRegularizedUnion)):
                 argstr.append(printer.doPrint(a))
             else:
                 argstr.append('(%s)'%printer.doPrint(a))

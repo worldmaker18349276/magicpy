@@ -79,7 +79,7 @@ class SymbolicPhysicalPuzzle(PhysicalPuzzle):
         return sym_engine
 
     def is_valid_elem(self, elem):
-        return simplify(self.states.is_regular_closed_set(elem)) == True
+        return simplify(self.states.is_regular_open_set(elem)) == True
 
     def is_valid_action(self, action):
         return simplify(self.actions.contains(action)) == True

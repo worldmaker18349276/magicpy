@@ -1,7 +1,8 @@
 from sympy import S
 from sympy.sets import EmptySet
-from symplus.setplus import (Image, RegularizedIntersection, RegularizedUnion,
-    RegularizedAbsoluteComplement, simplify_boolean)
+from symplus.setplus import (Image,
+    OpenRegularizedIntersection, OpenRegularizedUnion,
+    OpenRegularizedAbsoluteComplement, simplify_boolean)
 from symplus.euclid import EuclideanSpace, Halfspace, as_algebraic
 from symplus.affine import AffineTransformation
 from magicpy.solid.general import SolidEngine
@@ -12,13 +13,13 @@ class SymbolicSolidEngine(SolidEngine):
         self.variables = {}
 
     def common(self, zets):
-        return RegularizedIntersection(*zets)
+        return OpenRegularizedIntersection(*zets)
 
     def fuse(self, zets):
-        return RegularizedUnion(*zets)
+        return OpenRegularizedUnion(*zets)
 
     def complement(self, zet):
-        return RegularizedAbsoluteComplement(zet)
+        return OpenRegularizedAbsoluteComplement(zet)
 
     def transform(self, zet, trans):
         # if not isinstance(trans, AffineTransformation):
@@ -29,20 +30,23 @@ class SymbolicSolidEngine(SolidEngine):
         return zet == EmptySet()
 
     def simp(self, zet):
-        return simplify_boolean(self._std(zet),
-                                op=(RegularizedUnion,
-                                    RegularizedIntersection,
-                                    RegularizedAbsoluteComplement))
-
-    def _std(self, zet):
         zet = zet.replace(
             lambda e: isinstance(e, Set) and hasattr(e, "as_algebraic"),
-            lambda e: e.as_algebraic())
+            lambda e: e.as_algebraic(),
+            simultaneous=False)
         zet = zet.replace(
             lambda e: isinstance(e, Image),
-            lambda e: e.func(*e.args, evaluate=True))
-        zet = regularize(zet)
-        return zet
+            lambda e: e.func(*e.args, evaluate=True),
+            simultaneous=False)
+        zet = zet.replace(
+            lambda e: isinstance(e, Halfspace) and hash(e.direction) < hash(-e.direction),
+            lambda e: AbsoluteComplement(AbsoluteComplement(e, evaluate=True), evaluate=False),
+            simultaneous=False)
+        zet = regularize(zet, closed=False)
+        zet = simplify_boolean(zet,
+                               op=(OpenRegularizedUnion,
+                                   OpenRegularizedIntersection,
+                                   OpenRegularizedAbsoluteComplement))
 
 class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
     def __init__(self, subengine):
@@ -98,7 +102,7 @@ class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
         elif self._veq(sub, ran):
             return S.UniversalSet
 
-        if isinstance(zet, RegularizedIntersection):
+        if isinstance(zet, OpenRegularizedIntersection):
             # remove unimportant arguments
             args = set(zet.args)
             for arg in list(args):
@@ -115,7 +119,7 @@ class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
                 args.add(self._volalgo(arg, ran_))
             return self.common(args)
 
-        elif isinstance(zet, RegularizedUnion):
+        elif isinstance(zet, OpenRegularizedUnion):
             # remove unimportant arguments
             args = set(zet.args)
             for arg in list(args):
