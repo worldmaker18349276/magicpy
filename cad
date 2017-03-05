@@ -1,0 +1,9 @@
+#!/bin/sh
+
+FREECAD_DIR=/usr/lib/freecad-daily
+cd MagicPartModule
+rcc -binary resources.qrc -o resources.rcc
+cd ..
+sudo rm -rf $FREECAD_DIR/Mod/MagicPart
+sudo cp -rf MagicPartModule $FREECAD_DIR/Mod/MagicPart
+freecad-daily -M $PWD -M $PWD/lib &>/dev/null &

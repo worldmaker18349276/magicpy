@@ -7,6 +7,10 @@ if sys.version_info[0] == 2:
 	from itertools import ifilterfalse as filterfalse
 	range = xrange
 else:
+	map = map
+	filter = filter
+	zip = zip
+	range = range
 	from itertools import filterfalse
 
 
@@ -20,4 +24,3 @@ class Thiz(object):
                 return attr(*args, **kwargs)
         return func
 thiz = Thiz()
-

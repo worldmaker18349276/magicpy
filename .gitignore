@@ -1,6 +1,4 @@
 *.pyc
 *.pyo
-test_poly.py
 report
-old/
-ref/
+lib

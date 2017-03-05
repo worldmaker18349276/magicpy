@@ -190,7 +190,7 @@ class FeatureAbsoluteComplementProxy(DerivedFeatureProxy):
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
-            obj.Shape = shape_absoluteComplement(obj.Source.Shape, reshaped=True)
+            obj.Shape = Shapes.complement(obj.Source.Shape, reshaped=True)
             obj.Placement = FreeCAD.Placement()
 
             obj.Outfaces = trace(obj) if P.autotrace else []
@@ -497,5 +497,3 @@ def noCollision(ftrs):
     vol_sum = sum(shp.Volume for shp in shps)
     vol_fus = Shapes.fuse(shps).Volume
     return fuzzyCompare(vol_sum, vol_fus)
-
-

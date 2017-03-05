@@ -185,4 +185,3 @@ class Param(object):
         return self.group.SetBool("tool_in_commandline", val)
 
 P = Param()
-
