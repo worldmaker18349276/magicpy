@@ -43,7 +43,7 @@ The main goal of this project is provide an API for jumbling twisty puzzle simul
   > simplify_boolean  
   > is_open, is_close  
   > Interior, Closure, Exterior  
-  > regularize, Regularization,   Regularized(AbsoluteComplement/Intersection/Union)
+  > regularize, Regularization, Regularized(AbsoluteComplement/Intersection/Union)  
   > Topology, DiscreteTopology, NaturalTopology  
 
 - [x] matplus
@@ -102,11 +102,11 @@ The main goal of this project is provide an API for jumbling twisty puzzle simul
     - [x] basic
       > Puzzle, (/Wrapped/Identity/Concatenated/Continuous)Operation  
       > TensorPuzzle, (Tensor/Parrallel)Operation  
-      > CombinationalPuzzle,   (Combinational/ContinuousCombinational/Selective)Operation
+      > CombinationalPuzzle, (Combinational/ContinuousCombinational/Selective)Operation  
 
     - [ ] phy
       > PhysicalPuzzle, (Physical/Partitional)Operation  
-      > Symbolic(/SE3/SO3/T3)PhysicalPuzzle,   Symbolic(Physical/Partitional)Operation
+      > Symbolic(/SE3/SO3/T3)PhysicalPuzzle, Symbolic(Physical/Partitional)Operation  
       > \+ MagicBall/MagicShell/Interlock  
 
 
@@ -134,9 +134,9 @@ The main goal of this project is provide an API for jumbling twisty puzzle simul
 
     - [ ] Primitive
       > makeConicalFrustum, construct  
-      > \+ perturbation(to avoid OCC bugs)  
+      > \+ perturbation (to avoid OCC bugs)  
 
-    - [ ] BooleanTracing
+    - [x] BooleanTracing
       > biter, innerPointsOf, trace  
 
 
@@ -155,7 +155,7 @@ The main goal of this project is provide an API for jumbling twisty puzzle simul
 - Features:
     - [x] Utilities
       > centerOf, massOf, meshOf, boundBoxOf  
-      > ftrlist, typeIdOf, isDerivedFrom, isTouched, isDependOn,   featurePropertiesOf, addObject
+      > ftrlist, typeIdOf, isDerivedFrom, isTouched, isDependOn, featurePropertiesOf, addObject  
       > forceTouch, retouch  
       > weakRecomputable, weakRecompute, recompute  
 
@@ -175,7 +175,7 @@ The main goal of this project is provide an API for jumbling twisty puzzle simul
 
     - [x] Operation
       > Compound, Intersection, Union, AbsoluteComplement, Image  
-      > common, fuse, cut, complement, transform, compound, compoundFuse,   compoundTransform, partition, fragment, slice
+      > common, fuse, cut, complement, transform, compound, compoundFuse, compoundTransform, partition, fragment, slice  
       > isOutside, isInside, catch, noCollision  
 
     - [x] Primitive
