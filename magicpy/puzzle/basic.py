@@ -1,8 +1,46 @@
 """
 this module define control method for puzzle, and implement the procedure for
 dealing with monoid-structured operation and continuous operation.
-`is_valid_operation`, `is_valid_state` indicate the limitation rule of
-puzzle; `transform` and `apply` indicate operation rule of puzzle.
+`is_valid_elementary_operation` and `is_valid_state` indicate the limitation
+rule of puzzle; `transform` and `apply` indicate operation rule of puzzle.
+
+IDEA:
+puzzle system is a transition system composed by states of puzzle and its
+operations.  all possible states of puzzle form a state space, which may be
+discrete or continuous.  operation transit state from one to another, and
+describe the geometry (distance and direction) of state space.
+in puzzle system, all possible operations form monoid, that is, operations can
+be concatenated and becomes a new operation.  so we only need to define
+elementary operations, and ensure that all possible operations can be generated
+by those operations.
+it is best to do that puzzle system is homogeneous: structure of state space is
+simple, and all operations is always valid and applying in the same way.  but
+in general it is not like that, so we often define an extended homogeneous
+puzzle system first, then use limitation rule to specify what we concern.
+
+DESIGN:
+`is_valid_elementary_operation`, `is_valid_state` is defined in `Puzzle`, so
+that we can focus on specifying type of puzzle when defining `Puzzle`.
+the constructor of `Puzzle` define how to build a state of this puzzle.  all
+valid states should be able to build from the constructor.
+not only valid state and valid operation are useful; sometimes we have to use
+invalid one to deal with something.  so we will not validate puzzle in
+constructor, and we can apply invalid operation on the puzzle by `transform`.
+
+all reachable state should be valid: if ``moved = op.apply(pzl)`` pass, `moved`
+must be valid state.  but not all valid state is reachable; two valid states
+may have no connection by valid operation.
+all applicable operation should be valid: if ``moved = op.apply(pzl)`` pass,
+`op` must be valid operation.  but not all valid operation is applicable; it
+may bring puzzle into invalid state.
+so the definition and meaning of `is_valid_state` and `is_valid_operatioin` are
+not in math-style, and are not unique for constructing same puzzle; this is for
+semantics of state and operation.
+
+`is_valid_elementary_operation` only can check elementary operation; validating
+advanced operation may depend on process of applying.  so for monoid-structured
+operation or others advanced operation, the validation process is directly
+implemented in `apply`.
 """
 from magicpy.util import thiz, map
 
@@ -18,13 +56,15 @@ class Puzzle(object):
     """
     basic class of all puzzles.
     """
+    elementary_operation_type = Operation
+
     def is_valid_state(self):
         """
         True if this puzzle is in the valid state.
         """
         return True
 
-    def is_valid_operation(self, op):
+    def is_valid_elementary_operation(self, op):
         """
         True if `op` is valid operation for this state, where `op` should be
         elementary operation.
@@ -46,7 +86,9 @@ class Operation(object):
         apply this operation to puzzle `pzl`.
         """
         # this implementation is for elementary operation.
-        if not pzl.is_valid_operation(self):
+        if not isinstance(self, pzl.elementary_operation_type):
+            raise IllegalOperationError
+        if not pzl.is_valid_elementary_operation(self):
             raise IllegalOperationError
 
         pzl = self.transform(pzl)
@@ -186,7 +228,9 @@ class ContinuousOperation(Operation):
         raise NotImplementedError
 
     def apply(self, pzl):
-        if not pzl.is_valid_operation(self):
+        if not isinstance(self, pzl.elementary_operation_type):
+            raise IllegalOperationError
+        if not pzl.is_valid_elementary_operation(self):
             raise IllegalOperationError
 
         for t in range(int(self.distance*self.density)+1):
@@ -214,10 +258,10 @@ class TensorPuzzle(Puzzle, tuple):
     def is_valid_state(self):
         return all(map(thiz.is_valid_state, self))
 
-    def is_valid_operation(self, op):
+    def is_valid_elementary_operation(self, op):
         return (isinstance(op, TensorOperation) and
                 len(self) == len(op) and
-                all(map(thiz.is_valid_operation, self, op)))
+                all(map(thiz.is_valid_elementary_operation, self, op)))
 
     def __add__(self, other):
         if type(self) == type(other):
@@ -303,12 +347,12 @@ class CombinationalPuzzle(Puzzle, tuple):
     def is_valid_state(self):
         return all(map(self.is_valid_elem, self))
 
-    def is_valid_operation(self, op):
+    def is_valid_elementary_operation(self, op):
         return len(self) == len(op) and all(map(self.is_valid_action, op))
 
     def is_valid_elem(self, elem):
         """
-        True if `elem` is in the valid element.
+        True if `elem` is valid element.
         """
         raise NotImplementedError
 
@@ -351,7 +395,7 @@ class CombinationalPuzzle(Puzzle, tuple):
 
 class CombinationalOperation(Operation, tuple):
     """
-    operation that operate elements of combinational puzzle seperatly.
+    operation that operate elements of combinational puzzle separately.
     element of operation is action.
     """
     def transform(self, pzl):
@@ -424,7 +468,7 @@ class ContinuousCombinationalOperation(ContinuousOperation,
 class SelectiveOperation(WrappedOperation, tuple):
     """
     operation that operate different elements of combinational puzzle
-    seperatly by selecting.
+    separately by selecting.
     the data structure of `SelectiveOperation` is sorted items of dictionary,
     where key is selection, value is action.
     """
@@ -461,4 +505,3 @@ class SelectiveOperation(WrappedOperation, tuple):
 
     def __str__(self):
         return "(%s)"%"; ".join("%s: %s"%(sel, act) for sel, act in self)
-

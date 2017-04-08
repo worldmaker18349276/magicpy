@@ -114,4 +114,3 @@ up = MoveUpOperation()
 down = MoveDownOperation()
 left = MoveLeftOperation()
 right = MoveRightOperation()
-
