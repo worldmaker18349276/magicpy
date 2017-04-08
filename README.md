@@ -76,7 +76,7 @@ The main goal of this project is provide an API for jumbling twisty puzzle simul
   > \+ EuclideanTopology (regular_open, interior, closure)  
 
 - [ ] poly
-  > \+ vertices of 5 regular polyhedron  
+  > vertices of 5 regular polyhedron  
   > \+ ConvexPolyhedron (from_hrepr, as_hrepr)  
   > \+ PointGroup  
   > \+ cut_by, is_disjoint, is_subset  
