@@ -14,7 +14,7 @@ class PhysicalPuzzle(CombinationalPuzzle):
         return (all(map(self.is_valid_elem, self)) and
                 self.engine.no_collision(self))
 
-    def is_valid_operation(self, op):
+    def is_valid_elementary_operation(self, op):
         return (isinstance(op, PhysicalOperation) and
                 len(self) == len(op) and
                 all(map(self.is_valid_action, op)))
@@ -33,7 +33,9 @@ class PhysicalPuzzle(CombinationalPuzzle):
 
 class PhysicalOperation(ContinuousCombinationalOperation):
     def apply(self, pzl):
-        if not pzl.is_valid_operation(self):
+        if not isinstance(self, pzl.elementary_operation_type):
+            raise IllegalOperationError
+        if not pzl.is_valid_elementary_operation(self):
             raise IllegalOperationError
 
         ops = []

@@ -11,7 +11,7 @@ class FifteenPuzzle(Puzzle):
     def is_valid_state(self):
         return list(sorted(self.mat)) == list(range(16))
 
-    def is_valid_operation(self, op):
+    def is_valid_elementary_operation(self, op):
         if not (isinstance(op, PermutationOperation) and
                 len(op.perm.array_form) == 16):
             return False
