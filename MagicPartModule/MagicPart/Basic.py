@@ -180,19 +180,27 @@ class Param(object):
         return self.group.SetString("solid_representation", val)
 
     @property
+    def hard(self):
+        return self.group.GetBool("solid_hard_construct", True)
+
+    @hard.setter
+    def hard(self, val):
+        return self.group.SetBool("solid_hard_construct", val)
+
+    @property
+    def pert(self):
+        return self.group.GetBool("solid_perturbation", False)
+
+    @pert.setter
+    def pert(self, val):
+        return self.group.SetBool("solid_perturbation", val)
+
+    @property
     def incmdline(self):
         return self.group.GetBool("tool_in_commandline", True)
 
     @incmdline.setter
     def incmdline(self, val):
         return self.group.SetBool("tool_in_commandline", val)
-
-    @property
-    def pert(self):
-        return self.group.GetBool("shape_perturbation", False)
-
-    @pert.setter
-    def pert(self, val):
-        return self.group.SetBool("shape_perturbation", val)
 
 P = Param()

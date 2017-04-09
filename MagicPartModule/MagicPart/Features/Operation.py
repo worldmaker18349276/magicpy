@@ -1,5 +1,6 @@
 from itertools import product, imap, starmap, islice
 import FreeCAD
+import symplus.setplus as setplus
 from symplus.affine import EuclideanTransformation
 from MagicPart.Basic import fuzzyCompare, spstr2spexpr, spexpr2spstr, spexpr2fcexpr, P
 from MagicPart.Features.Utilities import *
@@ -54,6 +55,9 @@ class FeatureCompoundProxy(DerivedFeatureProxy):
 
         return prop
 
+    def getSymPyExpression(self, obj):
+        return [s.Proxy.getSymPyExpression(s) for s in obj.Sources]
+
     def onChanged(self, obj, p):
         if p == "Proxy":
             if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -96,6 +100,9 @@ class FeatureIntersectionProxy(DerivedFeatureProxy):
 
         return prop
 
+    def getSymPyExpression(self, obj):
+        return setplus.Intersection(*[s.Proxy.getSymPyExpression(s) for s in obj.Sources])
+
     def onChanged(self, obj, p):
         if p == "Proxy":
             if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -112,13 +119,29 @@ class FeatureIntersectionProxy(DerivedFeatureProxy):
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
-            obj.Shape = Shapes.common(outobj.Shape for outobj in obj.Sources)
+            if P.hard:
+                V = getattr(obj.Document, "ViewBox", None)
+                mbb = boundBoxOf(V) if V is not None else None
+                expr = self.getSymPyExpression(obj)
+                shape = Shapes.construct(expr, mbb)
+                obj.Shape = Shapes.reshape(shape)
+            else:
+                obj.Shape = Shapes.common(s.Shape for s in obj.Sources)
+
             obj.Placement = FreeCAD.Placement()
 
             obj.Outfaces = trace(obj) if P.autotrace else []
 
         elif isDerivedFrom(obj, "Mesh::FeaturePython"):
-            obj.Mesh = Meshes.common(meshOf(s) for s in obj.Sources)
+            if P.hard:
+                V = getattr(obj.Document, "ViewBox", None)
+                mbb = boundBoxOf(V) if V is not None else None
+                expr = self.getSymPyExpression(obj)
+                mesh = Meshes.construct(expr, mbb)
+                obj.Mesh = Meshes.remesh(mesh)
+            else:
+                obj.Mesh = Meshes.common(meshOf(s) for s in obj.Sources)
+
             obj.Placement = FreeCAD.Placement()
 
         else:
@@ -135,6 +158,9 @@ class FeatureUnionProxy(DerivedFeatureProxy):
 
         return prop
 
+    def getSymPyExpression(self, obj):
+        return setplus.Union(*[s.Proxy.getSymPyExpression(s) for s in obj.Sources])
+
     def onChanged(self, obj, p):
         if p == "Proxy":
             if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -151,13 +177,29 @@ class FeatureUnionProxy(DerivedFeatureProxy):
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
-            obj.Shape = Shapes.fuse(s.Shape for s in obj.Sources)
+            if P.hard:
+                V = getattr(obj.Document, "ViewBox", None)
+                mbb = boundBoxOf(V) if V is not None else None
+                expr = self.getSymPyExpression(obj)
+                shape = Shapes.construct(expr, mbb)
+                obj.Shape = Shapes.reshape(shape)
+            else:
+                obj.Shape = Shapes.fuse(s.Shape for s in obj.Sources)
+
             obj.Placement = FreeCAD.Placement()
 
             obj.Outfaces = trace(obj) if P.autotrace else []
 
         elif isDerivedFrom(obj, "Mesh::FeaturePython"):
-            obj.Mesh = Meshes.fuse(meshOf(s) for s in obj.Sources)
+            if P.hard:
+                V = getattr(obj.Document, "ViewBox", None)
+                mbb = boundBoxOf(V) if V is not None else None
+                expr = self.getSymPyExpression(obj)
+                mesh = Meshes.construct(expr, mbb)
+                obj.Mesh = Shapes.remesh(mesh)
+            else:
+                obj.Mesh = Meshes.fuse(meshOf(s) for s in obj.Sources)
+
             obj.Placement = FreeCAD.Placement()
 
         else:
@@ -173,6 +215,9 @@ class FeatureAbsoluteComplementProxy(DerivedFeatureProxy):
         prop["Source"] = args.get("Source", Source)
 
         return prop
+
+    def getSymPyExpression(self, obj):
+        return setplus.AbsoluteComplement(obj.Source.Proxy.getSymPyExpression(obj.Source))
 
     def onChanged(self, obj, p):
         if p == "Proxy":
@@ -190,13 +235,29 @@ class FeatureAbsoluteComplementProxy(DerivedFeatureProxy):
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
-            obj.Shape = Shapes.complement(obj.Source.Shape, reshaped=True)
+            if P.hard:
+                V = getattr(obj.Document, "ViewBox", None)
+                mbb = boundBoxOf(V) if V is not None else None
+                expr = self.getSymPyExpression(obj)
+                shape = Shapes.construct(expr, mbb)
+                obj.Shape = Shapes.reshape(shape)
+            else:
+                obj.Shape = Shapes.complement(obj.Source.Shape, reshaped=True)
+
             obj.Placement = FreeCAD.Placement()
 
             obj.Outfaces = trace(obj) if P.autotrace else []
 
         elif isDerivedFrom(obj, "Mesh::FeaturePython"):
-            obj.Mesh = Meshes.complement(meshOf(obj.Source), remeshed=True)
+            if P.hard:
+                V = getattr(obj.Document, "ViewBox", None)
+                mbb = boundBoxOf(V) if V is not None else None
+                expr = self.getSymPyExpression(obj)
+                mesh = Meshes.construct(expr, mbb)
+                obj.Mesh = Shapes.remesh(mesh)
+            else:
+                obj.Mesh = Meshes.complement(meshOf(obj.Source), remeshed=True)
+
             obj.Placement = FreeCAD.Placement()
 
         else:
@@ -235,6 +296,11 @@ class FeatureImageProxy(DerivedFeatureProxy):
         obj.rquat = spexpr2spstr(expr.rquat)
         obj.parity = spexpr2spstr(expr.parity)
 
+    def getSymPyExpression(self, obj):
+        return setplus.Image(
+            self.getSyPyTransformation(obj),
+            obj.Source.Proxy.getSymPyExpression(obj.Source))
+
     def onChanged(self, obj, p):
         if p == "Proxy":
             if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -260,14 +326,30 @@ class FeatureImageProxy(DerivedFeatureProxy):
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
-            obj.Shape = Shapes.reshape(obj.Source.Shape)
-            obj.Placement = spexpr2fcexpr(self.getSymPyTransformation(obj))
+            if P.hard:
+                V = getattr(obj.Document, "ViewBox", None)
+                mbb = boundBoxOf(V) if V is not None else None
+                expr = self.getSymPyExpression(obj)
+                shape = Shapes.construct(expr, mbb)
+                obj.Shape = Shapes.reshape(shape)
+                obj.Placement = FreeCAD.Placement()
+            else:
+                obj.Shape = Shapes.reshape(obj.Source.Shape)
+                obj.Placement = spexpr2fcexpr(self.getSymPyTransformation(obj))
 
             obj.Outfaces = trace(obj) if P.autotrace else []
 
         elif isDerivedFrom(obj, "Mesh::FeaturePython"):
-            obj.Mesh = meshOf(obj.Source, remeshed=True)
-            obj.Placement = spexpr2fcexpr(self.getSymPyTransformation(obj))
+            if P.hard:
+                V = getattr(obj.Document, "ViewBox", None)
+                mbb = boundBoxOf(V) if V is not None else None
+                expr = self.getSymPyExpression(obj)
+                mesh = Meshes.construct(expr, mbb)
+                obj.Mesh = Shapes.remesh(mesh)
+                obj.Placement = FreeCAD.Placement()
+            else:
+                obj.Mesh = meshOf(obj.Source, remeshed=True)
+                obj.Placement = spexpr2fcexpr(self.getSymPyTransformation(obj))
 
         else:
             raise TypeError
