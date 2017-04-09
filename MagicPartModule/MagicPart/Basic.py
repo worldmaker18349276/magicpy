@@ -75,7 +75,10 @@ def spstr2spexpr(spstr):
 
 def spexpr2spstr(spexpr):
     from sympy.printing import sstr
-    return sstr(spexpr)
+    if is_Matrix(spexpr) and spexpr.shape == (3, 1):
+        return sstr(list(spexpr))
+    else:
+        return sstr(spexpr)
 
 def fcexpr2spexpr(expr):
     if isinstance(expr, (int, long, float)):
@@ -183,5 +186,13 @@ class Param(object):
     @incmdline.setter
     def incmdline(self, val):
         return self.group.SetBool("tool_in_commandline", val)
+
+    @property
+    def pert(self):
+        return self.group.GetBool("shape_perturbation", False)
+
+    @pert.setter
+    def pert(self, val):
+        return self.group.SetBool("shape_perturbation", val)
 
 P = Param()

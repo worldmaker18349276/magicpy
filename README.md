@@ -133,7 +133,7 @@ The main goal of this project is provide an API for jumbling twisty puzzle simul
       > \+ is_null, is_outside, is_inside, no_collision  
 
     - [ ] Primitive
-      > makeConicalFrustum, construct  
+      > makeConicalFrustum, perturb, construct  
       > \+ perturbation (to avoid OCC bugs)  
 
     - [x] BooleanTracing

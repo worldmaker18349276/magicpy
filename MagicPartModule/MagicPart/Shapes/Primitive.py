@@ -3,7 +3,7 @@ from symplus.affine import AffineTransformation, rmat_k2d
 from symplus.setplus import Intersection, Union, Complement, AbsoluteComplement, Image
 import symplus.euclid as euclid
 import FreeCAD, Part
-from MagicPart.Basic import fuzzyCompare, spexpr2fcexpr
+from MagicPart.Basic import fuzzyCompare, spexpr2fcexpr, P
 from MagicPart.Shapes.Operation import complement, common, fuse, transform
 
 
@@ -23,6 +23,19 @@ def makeConicalFrustum(radius1, radius2, height, pnt=FreeCAD.Vector()):
         shape2 = Part.makeCone(0, abs(radius2), height2, pnt2)
         shape = shape1.fuse(shape2)
         return shape
+
+# to avoid OCC bugs
+def perturb(v):
+    if not P.pert:
+        return v
+    import random
+    if isinstance(v, FreeCAD.Placement):
+        rot = FreeCAD.Rotation(random.random()*0.1, random.random()*0.1, random.random()*0.1)
+        return FreeCAD.Placement(FreeCAD.Vector(0,0,0), rot).multiply(v)
+    elif isinstance(v, FreeCAD.Vector):
+        return v + FreeCAD.Vector(perturb(0), perturb(0), perturb(0))
+    else:
+        return v + random.random()*1e-03
 
 def construct(zet, mbb, margin=1e-03):
     if zet is None:
@@ -61,7 +74,8 @@ def construct(zet, mbb, margin=1e-03):
 
         rot = rmat_k2d(zet.direction)
         center = zet.direction*zet.offset
-        placement = spexpr2fcexpr(AffineTransformation(matrix=rot, vector=center))
+        placement = perturb(spexpr2fcexpr(AffineTransformation(matrix=rot)))
+        placement.move(perturb(spexpr2fcexpr(center)))
 
         mbb_ = mbb.transformed(placement.inverse().toMatrix())
         height = mbb_.ZMax + margin
@@ -84,7 +98,8 @@ def construct(zet, mbb, margin=1e-03):
             return construct(euclid.WholeSpace(), mbb, margin)
 
         rot = rmat_k2d(zet.direction)
-        placement = spexpr2fcexpr(AffineTransformation(matrix=rot, vector=zet.center))
+        placement = perturb(spexpr2fcexpr(AffineTransformation(matrix=rot)))
+        placement.move(perturb(spexpr2fcexpr(zet.center)))
 
         mbb_ = mbb.transformed(placement.inverse().toMatrix())
         height = mbb_.ZLength + 2*margin
@@ -107,7 +122,8 @@ def construct(zet, mbb, margin=1e-03):
                 return construct(euclid.WholeSpace(), mbb, margin)
 
         rot = rmat_k2d(zet.direction)
-        placement = spexpr2fcexpr(AffineTransformation(matrix=rot, vector=zet.center))
+        placement = perturb(spexpr2fcexpr(AffineTransformation(matrix=rot)))
+        placement.move(perturb(spexpr2fcexpr(zet.center)))
 
         mbb_ = mbb.transformed(placement.inverse().toMatrix())
         height = mbb_.ZMax+margin
@@ -120,7 +136,7 @@ def construct(zet, mbb, margin=1e-03):
         radius = spexpr2fcexpr(zet.radius)
         shape = Part.makeSphere(radius)
 
-        placement = spexpr2fcexpr(AffineTransformation(vector=zet.center))
+        placement = perturb(spexpr2fcexpr(AffineTransformation(vector=zet.center)))
         shape.Placement = placement
         return shape
 
@@ -130,7 +146,8 @@ def construct(zet, mbb, margin=1e-03):
         shape = Part.makeBox(size.x, size.y, size.z, pnt)
 
         rot = zet.orientation
-        placement = spexpr2fcexpr(AffineTransformation(matrix=rot, vector=zet.center))
+        placement = perturb(spexpr2fcexpr(AffineTransformation(matrix=rot)))
+        placement.move(perturb(spexpr2fcexpr(zet.center)))
         shape.Placement = placement
 
         return shape
@@ -142,7 +159,8 @@ def construct(zet, mbb, margin=1e-03):
         shape = makeConicalFrustum(radius, radius, height, pnt)
 
         rot = rmat_k2d(zet.direction)
-        placement = spexpr2fcexpr(AffineTransformation(matrix=rot, vector=zet.center))
+        placement = perturb(spexpr2fcexpr(AffineTransformation(matrix=rot)))
+        placement.move(perturb(spexpr2fcexpr(zet.center)))
         shape.Placement = placement
 
         return shape
@@ -153,7 +171,8 @@ def construct(zet, mbb, margin=1e-03):
         shape = makeConicalFrustum(0, radius, height)
 
         rot = rmat_k2d(zet.direction)
-        placement = spexpr2fcexpr(AffineTransformation(matrix=rot, vector=zet.center))
+        placement = perturb(spexpr2fcexpr(AffineTransformation(matrix=rot)))
+        placement.move(perturb(spexpr2fcexpr(zet.center)))
         shape.Placement = placement
 
         return shape
