@@ -1192,9 +1192,9 @@ class ClosedRegularizedAbsoluteComplement(Set):
     def _mathstr(self, printer):
         if isinstance(self.args[0], (Atom,
                                      ClosedRegularizedAbsoluteComplement)):
-            return '-*'+printer.doPrint(self.args[0])
+            return '-*'+printer.doprint(self.args[0])
         else:
-            return '-*(%s)'%printer.doPrint(self.args[0])
+            return '-*(%s)'%printer.doprint(self.args[0])
 
 class ClosedRegularizedIntersection(Set):
     def __new__(cls, *args, **kwargs):
@@ -1239,9 +1239,9 @@ class ClosedRegularizedIntersection(Set):
             if isinstance(a, (Atom,
                               ClosedRegularizedAbsoluteComplement,
                               ClosedRegularizedIntersection)):
-                argstr.append(printer.doPrint(a))
+                argstr.append(printer.doprint(a))
             else:
-                argstr.append('(%s)'%printer.doPrint(a))
+                argstr.append('(%s)'%printer.doprint(a))
         return ' n* '.join(sorted(argstr))
 
 class ClosedRegularizedUnion(Set):
@@ -1288,9 +1288,9 @@ class ClosedRegularizedUnion(Set):
                               ClosedRegularizedAbsoluteComplement,
                               ClosedRegularizedIntersection,
                               ClosedRegularizedUnion)):
-                argstr.append(printer.doPrint(a))
+                argstr.append(printer.doprint(a))
             else:
-                argstr.append('(%s)'%printer.doPrint(a))
+                argstr.append('(%s)'%printer.doprint(a))
         return ' u* '.join(sorted(argstr))
 
 class OpenRegularization(Set):
@@ -1365,9 +1365,9 @@ class OpenRegularizedAbsoluteComplement(Set):
     def _mathstr(self, printer):
         if isinstance(self.args[0], (Atom,
                                      OpenRegularizedAbsoluteComplement)):
-            return '-*'+printer.doPrint(self.args[0])
+            return '-*'+printer.doprint(self.args[0])
         else:
-            return '-*(%s)'%printer.doPrint(self.args[0])
+            return '-*(%s)'%printer.doprint(self.args[0])
 
 class OpenRegularizedIntersection(Set):
     def __new__(cls, *args, **kwargs):
@@ -1412,9 +1412,9 @@ class OpenRegularizedIntersection(Set):
             if isinstance(a, (Atom,
                               OpenRegularizedAbsoluteComplement,
                               OpenRegularizedIntersection)):
-                argstr.append(printer.doPrint(a))
+                argstr.append(printer.doprint(a))
             else:
-                argstr.append('(%s)'%printer.doPrint(a))
+                argstr.append('(%s)'%printer.doprint(a))
         return ' n* '.join(sorted(argstr))
 
 class OpenRegularizedUnion(Set):
@@ -1461,9 +1461,9 @@ class OpenRegularizedUnion(Set):
                               OpenRegularizedAbsoluteComplement,
                               OpenRegularizedIntersection,
                               OpenRegularizedUnion)):
-                argstr.append(printer.doPrint(a))
+                argstr.append(printer.doprint(a))
             else:
-                argstr.append('(%s)'%printer.doPrint(a))
+                argstr.append('(%s)'%printer.doprint(a))
         return ' u* '.join(sorted(argstr))
 
 

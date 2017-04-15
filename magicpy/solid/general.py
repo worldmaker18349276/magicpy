@@ -123,11 +123,17 @@ class OpenSCADDisplayer(SolidDisplayer):
             self.temp.close()
 
     def show(self, document):
+        """
+        >>> from magicpy.museum.ball2x2x2 import ball2x2x2
+        >>> import magicpy.solid.sym as sym
+        >>> dis = sym.SymbolicOpenSCADDisplayer()
+        >>> dis.show(dict(enumerate(ball2x2x2)))
+        """
         scad = ""
         for k, v in self.settings.items():
             scad += "{}={!s};".format(k,v)
         for k, v in document.items():
-            scad += self.interpret(v)
+            scad += "color(rands(0,1,3)){}".format(self.interpret(v))
 
         import subprocess, tempfile
         self.clear()

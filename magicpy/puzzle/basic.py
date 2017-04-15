@@ -52,31 +52,6 @@ class IllegalStateError(Exception):
     pass
 
 
-class Puzzle(object):
-    """
-    basic class of all puzzles.
-    """
-    elementary_operation_type = Operation
-
-    def is_valid_state(self):
-        """
-        True if this puzzle is in the valid state.
-        """
-        return True
-
-    def is_valid_elementary_operation(self, op):
-        """
-        True if `op` is valid operation for this state, where `op` should be
-        elementary operation.
-        """
-        return False
-
-    def new(self, *args, **kwargs):
-        """
-        re-build puzzle from given parameters with this state as default.
-        """
-        return type(self)(*args, **kwargs)
-
 class Operation(object):
     """
     basic class of all operations.
@@ -113,6 +88,31 @@ class Operation(object):
 
     def __mul__(self, other):
         return ConcatenatedOperation(self, other)
+
+class Puzzle(object):
+    """
+    basic class of all puzzles.
+    """
+    elementary_operation_type = Operation
+
+    def is_valid_state(self):
+        """
+        True if this puzzle is in the valid state.
+        """
+        return True
+
+    def is_valid_elementary_operation(self, op):
+        """
+        True if `op` is valid operation for this state, where `op` should be
+        elementary operation.
+        """
+        return False
+
+    def new(self, *args, **kwargs):
+        """
+        re-build puzzle from given parameters with this state as default.
+        """
+        return type(self)(*args, **kwargs)
 
 class WrappedOperation(Operation):
     def interpret_for(self, pzl):
