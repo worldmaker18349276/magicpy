@@ -1,11 +1,16 @@
-from sympy import S
+from sympy import S, pi, N
 from sympy.sets import EmptySet
-from symplus.setplus import (Image,
+from symplus.matplus import normalize, dot, project
+from symplus.funcplus import FunctionInverse
+from symplus.setplus import (Image, Intersection, Union, Complement, AbsoluteComplement,
     OpenRegularizedIntersection, OpenRegularizedUnion,
     OpenRegularizedAbsoluteComplement, simplify_boolean)
-from symplus.euclid import EuclideanSpace, Halfspace, as_algebraic
-from symplus.affine import AffineTransformation
-from magicpy.solid.general import SolidEngine
+from symplus.euclid import (EuclideanSpace, Halfspace,
+    Sphere, Box, Cylinder, Cone, EmptySpace,
+    WholeSpace, Halfspace, InfiniteCylinder, SemiInfiniteCone)
+from symplus.affine import (AffineTransformation, EuclideanTransformation,
+    rmat2rquat, thax, thax_k2d)
+from magicpy.solid.general import SolidEngine, OpenSCADDisplayer
 
 
 class SymbolicSolidEngine(SolidEngine):
@@ -139,4 +144,118 @@ class SymbolicSolidEngineVolumeAlgo(SymbolicSolidEngine):
 
         else:
             return zet
+
+
+class SymbolicOpenSCADDisplayer(OpenSCADDisplayer):
+    """
+    >>> import symplus as sp
+    >>> import symplus.poly as poly
+    >>> import magicpy.solid.sym as sym
+    >>> dis = sym.SymbolicOpenSCADDisplayer()
+    >>> doc = {}
+    >>> doc['tetra'] = poly.tetrahedron
+    >>> doc["dodeca"] = sp.Image(sp.translation([2,0,0]), poly.dodecahedron)
+    >>> doc["icosa"] = sp.Image(sp.translation([-2,0,0]), poly.icosahedron)
+    >>> doc["cube"] = sp.Image(sp.translation([0,2,0]), poly.cube)
+    >>> doc["octa"] = sp.Image(sp.translation([0,-2,0]), poly.octahedron)
+    >>> dis.settings["$vpd"] = 15
+    >>> dis.show(doc)
+    """
+    def __init__(self):
+        super().__init__()
+        self.bdradius = 5.
+
+    def interpret(self, obj):
+        return self._interpret(self.bounding(obj))
+
+    def bounding(self, obj, bd=None):
+        if bd is None:
+            bd = Sphere(radius=self.bdradius)
+
+        if isinstance(obj, (Intersection, OpenRegularizedIntersection, Union,
+                            OpenRegularizedIntersection, Complement)):
+            return obj.func(*[self.bounding(arg, bd) for arg in obj.args])
+
+        elif isinstance(obj, Image) and isinstance(obj.function, EuclideanTransformation):
+            bd_ = Image(FunctionInverse(obj.function, evaluate=True), bd, evaluate=True)
+            return Image(obj.function, self.bounding(obj.set, bd_))
+
+        elif isinstance(obj, (AbsoluteComplement, OpenRegularizedAbsoluteComplement)):
+            return Complement(bd, obj.set)
+
+        elif isinstance(obj, (EmptySpace, Sphere, Box, Cylinder, Cone)):
+            return obj
+
+        elif isinstance(obj, WholeSpace):
+            return bd
+
+        elif isinstance(obj, Halfspace):
+            d = normalize(obj.direction)
+            offset2 = dot(bd.center, d) + bd.radius
+            center = d*(obj.offset + offset2)/2
+            height = offset2 - obj.offset
+            return Cylinder(bd.radius, height, center, obj.direction)
+
+        elif isinstance(obj, InfiniteCylinder):
+            center = obj.center + project(bd.center - obj.center, direction)
+            return Cylinder(obj.radius, bd.radius*2, center, obj.direction)
+
+        elif isinstance(obj, SemiInfiniteCone):
+            height = dot(bd.center - obj.center, normalize(direction))
+            return Cone(obj.slope*height, height, obj.center, obj.direction)
+
+        else:
+            raise TypeError
+
+    def _interpret(self, obj):
+        if isinstance(obj, (Intersection, OpenRegularizedIntersection)):
+            return "intersection(){%s}"%"".join(map(self.interpret, obj.args))
+
+        elif isinstance(obj, (Union, OpenRegularizedIntersection)):
+            return "union(){%s}"%"".join(map(self.interpret, obj.args))
+
+        elif isinstance(obj, Complement):
+            return "difference(){{{}{}}}".format(*map(self.interpret, obj.args))
+
+        elif isinstance(obj, Image) and isinstance(obj.function, EuclideanTransformation):
+            th, ax = thax(obj.function.rquat)
+            return "translate({t!s})rotate({th!s},{ax!s}){p}{s}".format(
+                t=list(N(obj.function.tvec, 5)),
+                th=N(th/pi*180, 5), ax=list(N(ax, 5)),
+                p="rotate(180,[0,0,1])mirror([0,0,1])" if obj.function.parity==1 else "",
+                s=self.interpret(obj.set))
+
+        elif isinstance(obj, EmptySpace):
+            return "cube(0);"
+
+        elif isinstance(obj, Sphere):
+            return "translate({c!s})sphere({r!s});".format(
+                c=list(N(obj.center, 5)),
+                r=N(obj.radius, 5))
+
+        elif isinstance(obj, Box):
+            th, ax = thax(rmat2rquat(obj.orientation))
+            return "translate({c!s})rotate({th!s},{ax!s})cube({s!s},center=true);".format(
+                c=list(N(obj.center, 5)),
+                th=N(th/pi*180, 5), ax=list(N(ax, 5)),
+                s=list(N(obj.size, 5)))
+
+        elif isinstance(obj, Cylinder):
+            th, ax = thax_k2d(obj.direction)
+            return "translate({c!s})rotate({th!s},{ax!s})cylinder({h!s},{r!s},{r!s},center=true);".format(
+                c=list(N(obj.center, 5)),
+                th=N(th/pi*180, 5), ax=list(N(ax, 5)),
+                h=N(obj.height, 5),
+                r=N(obj.radius, 5))
+
+        elif isinstance(obj, Cone):
+            th, ax = thax_k2d(obj.direction)
+            return "translate({c!s})rotate({th!s},{ax!s})cylinder({h!s},0,{r!s},center=false);".format(
+                c=list(N(obj.center, 5)),
+                th=N(th/pi*180, 5), ax=list(N(ax, 5)),
+                h=N(obj.height, 5),
+                r=N(obj.radius, 5))
+
+        else:
+            raise TypeError
 

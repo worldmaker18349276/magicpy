@@ -1,4 +1,4 @@
-from sympy.core import Ne, Eq, Symbol, Lambda, Tuple, pi, Dummy
+from sympy.core import Ne, Eq, Symbol, Lambda, Tuple, pi, Dummy, sympify
 from sympy.core.compatibility import with_metaclass
 from sympy.core.singleton import Singleton
 from sympy.simplify import simplify
@@ -33,6 +33,12 @@ def augment(m=eye3, v=zeros3):
 def rquat(th, axis):
     axis = Mat(axis)
     return Mat([cos(th/2)]).col_join(sin(th/2)*normalize(axis))
+
+def thax(q):
+    sin = norm(Mat(q[1:]))
+    ax = normalize(Mat(q[1:])) if sin != 0 else k
+    th = acos(q[0]**2 - sin**2)
+    return th, ax
 
 def qmult(q1, q2):
     """
@@ -297,6 +303,15 @@ def zvec2zmat(zvec):
     nvec = normalize(zvec)
     zfac = norm(zvec)
     return eye3 + nvec*nvec.T*(zfac-1)
+
+def thax_k2d(d):
+    d = normalize(d)
+    if d == k:
+        return sympify(0), k
+    elif d == -k:
+        return pi, i
+    else:
+        return acos(dot(k, d)), normalize(cross(k, d))
 
 def rmat_k2d(d):
     d = normalize(d)

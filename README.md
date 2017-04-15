@@ -13,9 +13,9 @@ The main goal of this project is provide an API for jumbling twisty puzzle simul
 - [Virtual Magic Polyhedra](http://users.skynet.be/moz071262/Applets/Magic%20Polyhedra/)
 
 ## Design
-- ctrl/edit/view/analyze
+- modelling/visualizing/analyzing
+- OpenSCAD-liked/FreeCAD-liked interface
 - play & improve
-- OpenSCAD-liked interface
 
 ## List
 ### symplus: (math model)

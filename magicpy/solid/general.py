@@ -83,3 +83,56 @@ class SolidEngine(object):
         return tuple(filterfalse(self.is_null, map(self.simp, col)))
 
 
+class SolidDisplayer(object):
+    def show(self, document):
+        raise NotImplementedError
+
+    def clear(self):
+        raise NotImplementedError
+
+class OpenSCADDisplayer(SolidDisplayer):
+
+    def __init__(self):
+        self.fn = 50
+        self.proc = None
+        self.temp = None
+
+        self.settings = {}
+        self.settings["$fa"] = 1
+        self.settings["$fs"] = 0.1
+        self.settings["$fn"] = 50
+        self.settings["$t"] = 0.1
+        self.settings["$vpt"] = [0, 0, 0]
+        self.settings["$vpr"] = [55.0, 0.0, 25.0]
+        self.settings["$vpd"] = 10
+
+        import atexit
+        atexit.register(self.clear)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, typ, msg, traceback):
+        self.clear()
+        return False
+
+    def clear(self):
+        if self.proc is not None and self.proc.poll() is None:
+            self.proc.terminate()
+        if self.temp is not None and not self.temp.closed:
+            self.temp.close()
+
+    def show(self, document):
+        scad = ""
+        for k, v in self.settings.items():
+            scad += "{}={!s};".format(k,v)
+        for k, v in document.items():
+            scad += self.interpret(v)
+
+        import subprocess, tempfile
+        self.clear()
+        self.temp = tempfile.NamedTemporaryFile(suffix=".scad", prefix="tmp", dir=".")
+        self.temp.write(scad.encode("UTF-8"))
+        self.temp.flush()
+        self.proc = subprocess.Popen(["openscad", self.temp.name])
+
