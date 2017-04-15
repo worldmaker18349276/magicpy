@@ -92,11 +92,7 @@ class SolidDisplayer(object):
 
 class OpenSCADDisplayer(SolidDisplayer):
 
-    def __init__(self):
-        self.fn = 50
-        self.proc = None
-        self.temp = None
-
+    def __init__(self, filename=None):
         self.settings = {}
         self.settings["$fa"] = 1
         self.settings["$fs"] = 0.1
@@ -106,21 +102,23 @@ class OpenSCADDisplayer(SolidDisplayer):
         self.settings["$vpr"] = [55.0, 0.0, 25.0]
         self.settings["$vpd"] = 10
 
-        import atexit
-        atexit.register(self.clear)
+        if filename is None:
+            import subprocess, tempfile
+            temp = tempfile.NamedTemporaryFile(suffix=".scad", prefix="tmp", dir=".")
+            proc = subprocess.Popen(["openscad", temp.name])
 
-    def __enter__(self):
-        return self
+            def clear():
+                if proc.poll() is None:
+                    proc.terminate()
+                if not temp.closed:
+                    temp.close()
 
-    def __exit__(self, typ, msg, traceback):
-        self.clear()
-        return False
+            self.filename = temp.name
+            import atexit
+            atexit.register(clear)
 
-    def clear(self):
-        if self.proc is not None and self.proc.poll() is None:
-            self.proc.terminate()
-        if self.temp is not None and not self.temp.closed:
-            self.temp.close()
+        else:
+            self.filename = filename
 
     def show(self, document):
         """
@@ -135,10 +133,7 @@ class OpenSCADDisplayer(SolidDisplayer):
         for k, v in document.items():
             scad += "color(rands(0,1,3)){}".format(self.interpret(v))
 
-        import subprocess, tempfile
-        self.clear()
-        self.temp = tempfile.NamedTemporaryFile(suffix=".scad", prefix="tmp", dir=".")
-        self.temp.write(scad.encode("UTF-8"))
-        self.temp.flush()
-        self.proc = subprocess.Popen(["openscad", self.temp.name])
+        with open(self.filename, "w") as fil:
+            fil.write(scad)
+            fil.flush()
 
