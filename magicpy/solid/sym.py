@@ -29,10 +29,13 @@ class SymbolicSolidEngine(SolidEngine):
     def complement(self, zet):
         return self.operations[2](zet)
 
-    def transform(self, zet, trans):
-        # if not isinstance(trans, AffineTransformation):
-        #     raise TypeError
-        return Image(trans, zet, evaluate=True)
+    def transform(self, zets, *transs):
+        for trans in transs:
+            if isinstance(trans, Transformation):
+                zets = [Image(trans, zet, evaluate=True) for zet in zets]
+            else:
+                zets = [Image(t, zet, evaluate=True) for zet in zets for t in trans]
+        return zets
 
     def is_null(self, zet):
         return zet == EmptySet()

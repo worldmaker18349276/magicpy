@@ -73,7 +73,7 @@ class SolidEngine(object):
         knives = zip(objs, map(self.complement, objs))
         return tuple(map(self.common, product(col, *knives)))
 
-    def transform(self, obj, trans):
+    def transform(self, col, *transs):
         raise NotImplementedError
 
     def simp(self, obj):

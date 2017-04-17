@@ -30,6 +30,9 @@ class PhysicalPuzzle(CombinationalPuzzle):
     def partition_by(self, *objs):
         return self.new(self.engine.partition_by(self, *objs))
 
+    def transform(self, *transs):
+        return self.new(self.engine.transform(self, *transs))
+
 
 class PhysicalOperation(ContinuousCombinationalOperation):
     def apply(self, pzl):
@@ -114,7 +117,7 @@ class SymbolicPhysicalOperation(PhysicalOperation):
         if isinstance(action, IdentityPath):
             return elem
         else:
-            return self.engine.transform(elem, action.call())
+            return self.engine.transform([elem], action.call())[0]
 
 class SymbolicPartitionalOperation(PartitionalOperation):
     interpreted_type = SymbolicPhysicalOperation
