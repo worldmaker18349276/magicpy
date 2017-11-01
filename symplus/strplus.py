@@ -73,6 +73,16 @@ class MathPrinter(StrPrinter):
                 argstr.append('(%s)'%self._print(a))
         return ' <=> '.join(sorted(argstr))
 
+    def _print_Interval(self, expr):
+        fin =  '{lb}{a}, {b}{rb}'
+        a, b, l, r = expr.args
+        lb = '(' if a.is_infinite or l else '['
+        rb = ')' if b.is_infinite or r else ']'
+        return fin.format(**{'a':a, 'b':b, 'lb':lb, 'rb':rb})
+
+    def _print_Reals(self, expr):
+        return '(-oo, oo)'
+
     def is_ComposedSet(self, expr):
         return isinstance(expr, (Complement, Intersection, Union))
 
@@ -191,12 +201,12 @@ def mprint(expr):
     (-oo, oo) u {x | x < 1} n {x | x > 0}
     >>> mprint(St({x : x>0}) | Interval(-1,1))
     [-1, 1] u {x | x > 0}
-    >>> mprint(St({x : x<1}) - S.Reals)
+    >>> mprint(Complement(St({x : x<1}), S.Reals, evaluate=False))
     {x | x < 1} \ (-oo, oo)
     >>> mprint(Image(Lambda(x, x**2), St({x : x>y}), evaluate=False))
     {x**2 | x > y}
     >>> mprint(Image(Lambda(x, x*y), S.Naturals))
-    {x*y | x in Naturals()}
+    {x*y | x in S.Naturals}
     >>> from symplus.funcplus import *
     >>> mprint(FunctionCompose(exp, sin))
     (exp o sin)

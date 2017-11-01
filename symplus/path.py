@@ -51,6 +51,8 @@ class Word(Tuple):
 class FreeMonoid(Set):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> fmnd1 = FreeMonoid({'a', 'b', 'c'}); fmnd1
     FreeMonoid({a, b, c})
     >>> Word(*'aabc') in fmnd1
@@ -495,15 +497,17 @@ class TransformationPath(LambdaPath, FunctionObject):
 class PathMonoid(Set):
     """
     >>> from sympy import *
+    >>> from symplus.strplus import init_mprinting
+    >>> init_mprinting()
     >>> t = Symbol('t', positive=True)
     >>> pmnd1 = PathMonoid(S.Reals); pmnd1
-    PathMonoid((-oo, oo))
+    ((-oo, oo))^*
     >>> AdditivePath(10, t, t**2+1) in pmnd1
     True
     >>> AdditivePath(10, t, t*I+1) in pmnd1
     False
     >>> pmnd2 = pmnd1**2; pmnd2
-    PathMonoid((-oo, oo) x (-oo, oo))
+    ((-oo, oo) x (-oo, oo))^*
     >>> AdditivePath(10, t, t**2+1)*AdditivePath(10, t, exp(t)) in pmnd2
     True
     """
@@ -546,6 +550,6 @@ class PathMonoid(Set):
 
     def _mathstr(self, printer):
         from sympy.printing.precedence import PRECEDENCE
-        return "%s^*" % printer.parenthesize(self.base, PRECEDENCE["Pow"])
+        return "(%s)^*" % printer.parenthesize(self.base, PRECEDENCE["Pow"])
 
 

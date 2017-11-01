@@ -64,7 +64,7 @@ def qmult(q1, q2):
     xyz2 = Mat(q2[1:])
     w = w1*w2 - dot(xyz1, xyz2)
     xyz = w1*xyz2 + w2*xyz1 + cross(xyz1, xyz2)
-    return Mat([w] + xyz[:])
+    return Mat([w] + list(xyz))
 
 def qinv(q):
     """

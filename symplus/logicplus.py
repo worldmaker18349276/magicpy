@@ -54,6 +54,10 @@ class Forall(Application, Boolean):
             ", ".join(map(printer._print, self.variables)),
             printer._print(self.expr))
 
+    def __bool__(self):
+        return valid(self)
+    __nonzero__=__bool__
+
 class Exist(Application, Boolean):
     def __new__(cls, variable, expr, **kwargs):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
@@ -98,4 +102,8 @@ class Exist(Application, Boolean):
         return "E. {0} st {1}".format(
             ", ".join(map(printer._print, self.variables)),
             printer._print(self.expr))
+
+    def __bool__(self):
+        return satisfiable(self)
+    __nonzero__=__bool__
 

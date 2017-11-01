@@ -46,8 +46,8 @@ class EuclideanSpace(Set):
         Sphere(3, [7/4 sqrt(6)/4 + 1 1/4]', False)
         >>> Image(t, InfiniteCylinder(3, [1,1,0], [0,1,4]))
         InfiniteCylinder(3, [-27*sqrt(6)/136 + 99/136 27*sqrt(6)/136 + 75/68\
- -3/8 + 67*sqrt(6)/136]', [-sqrt(17)/17 + sqrt(102)/68 -sqrt(17)/34 + sqrt(102)/17\
- -3*sqrt(17)/17 - sqrt(102)/68]', False)
+ -3/8 + 67*sqrt(6)/136]', [-sqrt(102)/68 + sqrt(17)/17 -sqrt(102)/17 + sqrt(17)/34\
+ sqrt(102)/68 + 3*sqrt(17)/17]', False)
         >>> Image(t, SemiInfiniteCone(1, [2,1,0], [2,3,1]))
         SemiInfiniteCone(1, [-sqrt(6)/4 + 3/2 sqrt(6)/2 + 3/2 -1/2 + sqrt(6)/4]',\
  [-3*sqrt(21)/28 + sqrt(14)/8 sqrt(21)/28 + 3*sqrt(14)/28 5*sqrt(14)/56\
@@ -332,7 +332,7 @@ class InfiniteCylinder(AlgebraicEuclideanSpace):
         >>> InfiniteCylinder()
         InfiniteCylinder(1, [0 0 0]', [0 0 1]', False)
         >>> InfiniteCylinder(2, [0,0,0], [0,1,1])
-        InfiniteCylinder(2, [0 0 0]', [0 -sqrt(2)/2 -sqrt(2)/2]', False)
+        InfiniteCylinder(2, [0 0 0]', [0 sqrt(2)/2 sqrt(2)/2]', False)
         >>> InfiniteCylinder().contains((1,1,1))
         False
         >>> InfiniteCylinder(2, [0,0,0], [0,1,1]).contains((1,1,1))
