@@ -3,7 +3,7 @@ from sympy.matrices import MatrixSymbol
 from sympy.logic import true, false
 
 
-class Functor(Basic):
+class FunctionObject(Basic):
     def __call__(self, *args):
         return self.call(*args)
 
@@ -52,7 +52,7 @@ def is_Matrix(obj):
     return getattr(obj, 'is_Matrix', False)
 
 def is_Function(obj):
-    return isinstance(obj, (FunctionClass, Functor, Lambda))
+    return isinstance(obj, (FunctionClass, FunctionObject, Lambda))
 
 def type_match(obj1, obj2):
     if is_Tuple(obj1):

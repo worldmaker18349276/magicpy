@@ -1,10 +1,12 @@
 from sympy.core import S, Basic, Lambda, Tuple, sympify, Symbol
+from sympy.core.compatibility import with_metaclass
+from sympy.core.singleton import Singleton
 from sympy.core.evaluate import global_evaluate
 from sympy.functions import Piecewise
 from sympy.sets import Set, FiniteSet, ProductSet, Interval
 from symplus.typlus import is_Matrix
 from symplus.symbplus import free_symbols, rename_variables_in
-from symplus.funcplus import Functor, compose, inverse
+from symplus.funcplus import FunctionObject, compose, inverse, nres, narg
 
 
 class Word(Tuple):
@@ -91,10 +93,7 @@ class FreeMonoid(Set):
         return FreeMonoid(ProductSet(*[fmnd.alphabet for fmnd in fmnds]))
 
 
-class Path(Functor):
-    narg = S.One
-    nres = S.One
-
+class Path(Basic):
     def __len__(self):
         return self.length
 
@@ -109,26 +108,24 @@ class Path(Functor):
     def __mul__(self, other):
         return TensorPath(self, other)
 
-    def as_lambda(self):
-        t = Symbol('t')
-        t = rename_variables_in(t, free_symbols(self))
-        return Lambda(t, self(t))
+    def forget(self, t=None):
+        t = t if t is not None else self.length
+        if free_symbols(t) == set() and t not in Interval(0, self.length):
+            raise ValueError
+        return self.slice_lambda()(t)
 
-class IdentityPath(Path):
-    def __new__(cls, nres, **kwargs):
-        return Functor.__new__(cls, sympify(nres))
-
+class IdentityPath(with_metaclass(Singleton, Path)):
     length = S.Zero
-
-    @property
-    def nres(self):
-        return self.args[0]
 
     def _sympystr(self, printer):
         return "Id"
 
     def _mathstr(self, printer):
         return "1^0"
+
+    def slice_lambda(self):
+        t = Symbol('t')
+        return Lambda(t, t)
 
 class SlicedPath(Path):
     def __new__(cls, path, start, stop, **kwargs):
@@ -147,14 +144,14 @@ class SlicedPath(Path):
             if start == 0 and stop == path.length:
                 sliced_path = path
             elif start == stop:
-                sliced_path = IdentityPath(path.nres)
+                sliced_path = IdentityPath()
             else:
                 sliced_path = path._slice(start, stop)
 
         if sliced_path is not None:
             return sliced_path
         else:
-            return Functor.__new__(cls, path, start, stop)
+            return Basic.__new__(cls, path, start, stop)
 
     @property
     def path(self):
@@ -167,10 +164,6 @@ class SlicedPath(Path):
     @property
     def stop(self):
         return self.args[2]
-
-    @property
-    def nres(self):
-        return self.path.nres
 
     @property
     def length(self):
@@ -200,19 +193,16 @@ class ConcatenatedPath(Path):
 
         if any(not isinstance(pth, Path) for pth in paths):
             raise TypeError
-        if len(paths) != 0 and len(set(pth.nres for pth in paths)) != 1:
-            raise ValueError
 
-        nres = paths[0].nres if len(paths) != 0 else S.One
         if evaluate:
             paths = cls.reduce(paths)
 
         if len(paths) == 0:
-            return IdentityPath(nres)
+            return IdentityPath()
         elif len(paths) == 1:
             return paths[0]
         else:
-            return Functor.__new__(cls, *paths)
+            return Basic.__new__(cls, *paths)
 
     @staticmethod
     def reduce(paths):
@@ -233,10 +223,6 @@ class ConcatenatedPath(Path):
     @property
     def paths(self):
         return self.args
-
-    @property
-    def nres(self):
-        return self.paths[0].nres
 
     @property
     def length(self):
@@ -278,24 +264,21 @@ class TensorPath(Path):
         if len(paths) != 0 and len(set(pth.length for pth in paths)) != 1:
             raise ValueError
 
-        nres = sum(pth.nres for pth in paths)
         if evaluate:
             paths = cls.reduce(paths)
 
         if len(paths) == 0:
-            return IdentityPath(nres)
+            return IdentityPath()
         elif len(paths) == 1:
             return paths[0]
         else:
-            return Functor.__new__(cls, *paths)
+            return Basic.__new__(cls, *paths)
 
     @staticmethod
     def reduce(paths):
         i = 0
         while i < len(paths):
-            if paths[i].nres == 0:
-                paths = paths[:i] + paths[i+1:]
-            elif isinstance(paths[i], TensorPath):
+            if isinstance(paths[i], TensorPath):
                 paths = paths[:i] + paths[i].paths + paths[i+1:]
             i = i + 1
         return paths
@@ -303,10 +286,6 @@ class TensorPath(Path):
     @property
     def paths(self):
         return self.args
-
-    @property
-    def nres(self):
-        return sum(pth.nres for pth in self.paths)
 
     @property
     def length(self):
@@ -322,8 +301,8 @@ class TensorPath(Path):
     def _slice(self, start, stop):
         return TensorPath(*[SlicedPath(pth, start, stop) for pth in self.paths])
 
-    def as_lambda(self):
-        lambdas = tuple(pth.as_lambda() for pth in self.paths)
+    def slice_lambda(self):
+        lambdas = tuple(pth.slice_lambda() for pth in self.paths)
         t = lambdas[0].variables
         t = rename_variables_in(t, free_symbols(lambdas))
         return Lambda(t, tuple(f(*t) for f in lambdas))
@@ -341,7 +320,7 @@ class LambdaPath(Path):
             raise ValueError('flen must be positive: %s' % flen)
         if not isinstance(variable, Symbol):
             raise TypeError('variable is not a Symbol: %r' % variable)
-        return Path.__new__(cls, flen, variable, expr)
+        return Basic.__new__(cls, flen, variable, expr)
 
     @property
     def length(self):
@@ -355,22 +334,16 @@ class LambdaPath(Path):
     def expr(self):
         return self.args[2]
 
-    def as_lambda(self):
+    def slice_lambda(self):
         return Lambda(self.variable, self.expr)
-
-    def call(self, t=None):
-        t = t if t is not None else self.length
-        if free_symbols(t) == set() and t not in Interval(0, self.length):
-            raise ValueError
-        return self.as_lambda()(t)
 
     def _concat(self, other):
         if not isinstance(other, type(self)):
             raise ValueError('other is not a %s: %s' % (type(self), other))
         t = self.variable
         l = self.length
-        expr12 = Piecewise((self(t), t<=l),
-                           (self.base_compose(other(t-l), self(l)), True))
+        expr12 = Piecewise((self.forget(t), t<=l),
+                           (self.base_compose(other.forget(t-l), self.forget(l)), True))
         return self.func(self.length+other.length, t, expr12)
 
     def _slice(self, start=None, stop=None):
@@ -384,7 +357,7 @@ class LambdaPath(Path):
             return self.func(stop, self.variable, self.expr)
         else:
             t = self.variable
-            expr = self.base_decompose(self(start+t), self(start))
+            expr = self.base_decompose(self.forget(start+t), self.forget(start))
             return self.func(stop-start, t, expr)
 
     def _mathstr(self, printer):
@@ -403,7 +376,7 @@ class MultiplicativePath(LambdaPath):
     [t ~ 10 |-> t**2 + 1]
     >>> pth2 = MultiplicativePath(10, t, exp(t)); pth2
     [t ~ 10 |-> exp(t)]
-    >>> pth1(2)
+    >>> pth1.forget(2)
     5
     >>> len(pth1)
     10
@@ -413,11 +386,11 @@ class MultiplicativePath(LambdaPath):
     [t ~ 3 |-> exp(-2)*exp(t + 2)]
     >>> pth12 = pth1 * pth2; pth12
     [t ~ 10 |-> t**2 + 1] * [t ~ 10 |-> exp(t)]
-    >>> pth12.as_lambda()
+    >>> pth12.slice_lambda()
     (t |-> (t**2 + 1, exp(t)))
     >>> pth12.length
     10
-    >>> (pth12 + pth12).as_lambda().expr
+    >>> (pth12 + pth12).slice_lambda().expr
     ((t**2 + 1 if t =< 10; 101*(t - 10)**2 + 101 if True), (exp(t) if t =< 10; exp(10)*exp(t - 10) if True))
     >>> pth12[2:7]
     [t ~ 5 |-> (t + 2)**2/5 + 1/5] * [t ~ 5 |-> exp(-2)*exp(t + 2)]
@@ -443,7 +416,7 @@ class AdditivePath(LambdaPath):
     [t ~ 10 |-> t**2 + 1]
     >>> pth2 = AdditivePath(10, t, exp(t)); pth2
     [t ~ 10 |-> exp(t)]
-    >>> pth1(2)
+    >>> pth1.forget(2)
     5
     >>> len(pth1)
     10
@@ -453,11 +426,11 @@ class AdditivePath(LambdaPath):
     [t ~ 3 |-> exp(t + 2) - exp(2)]
     >>> pth12 = pth1 * pth2; pth12
     [t ~ 10 |-> t**2 + 1] * [t ~ 10 |-> exp(t)]
-    >>> pth12.as_lambda()
+    >>> pth12.slice_lambda()
     (t |-> (t**2 + 1, exp(t)))
     >>> pth12.length
     10
-    >>> (pth12 + pth12).as_lambda().expr
+    >>> (pth12 + pth12).slice_lambda().expr
     ((t**2 + 1 if t =< 10; (t - 10)**2 + 102 if True), (exp(t) if t =< 10; exp(t - 10) + exp(10) if True))
     >>> pth12[2:7]
     [t ~ 5 |-> (t + 2)**2 - 4] * [t ~ 5 |-> exp(t + 2) - exp(2)]
@@ -470,7 +443,7 @@ class AdditivePath(LambdaPath):
     def base_decompose(action1, action2):
         return action1 - action2
 
-class TransformationPath(LambdaPath):
+class TransformationPath(LambdaPath, FunctionObject):
     """
     >>> from sympy import *
     >>> from symplus.strplus import init_mprinting
@@ -481,7 +454,7 @@ class TransformationPath(LambdaPath):
     [t ~ 10 |-> (x |-> t*x)]
     >>> pth2 = TransformationPath(10, t, Lambda(x, t+x)); pth2
     [t ~ 10 |-> (x |-> t + x)]
-    >>> pth1(2)
+    >>> pth1.forget(2)
     (x |-> 2*x)
     >>> len(pth1)
     10
@@ -491,11 +464,11 @@ class TransformationPath(LambdaPath):
     [t ~ 3 |-> (a0 |-> a0 + t)]
     >>> pth12 = pth1 * pth2; pth12
     [t ~ 10 |-> (x |-> t*x)] * [t ~ 10 |-> (x |-> t + x)]
-    >>> pth12.as_lambda()
+    >>> pth12.slice_lambda()
     (t |-> (Lambda(x, t*x), Lambda(x, t + x)))
     >>> pth12.length
     10
-    >>> (pth12 + pth12).as_lambda().expr
+    >>> (pth12 + pth12).slice_lambda().expr
     (((x |-> t*x) if t =< 10; (x |-> 10*x*(t - 10)) if True), (x |-> t + x))
     >>> pth12[2:7]
     [t ~ 5 |-> (a0 |-> a0*(t + 2)/2)] * [t ~ 5 |-> (a0 |-> a0 + t)]
@@ -507,6 +480,17 @@ class TransformationPath(LambdaPath):
     @staticmethod
     def base_decompose(action1, action2):
         return compose(action1, inverse(action2))
+
+    @property
+    def nres(self):
+        return nres(self.forget())
+
+    @property
+    def narg(self):
+        return narg(self.forget())
+
+    def call(self, *args, **kwargs):
+        return self.forget()(*args, **kwargs)
 
 class PathMonoid(Set):
     """

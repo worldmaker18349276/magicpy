@@ -2,7 +2,7 @@ import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "../lib"))
 
 from sympy import *
-from symplus.typlus import (Functor, is_Tuple, is_Symbol, is_Number, is_Boolean, is_Matrix,
+from symplus.typlus import (FunctionObject, is_Tuple, is_Symbol, is_Number, is_Boolean, is_Matrix,
     is_Function, type_match)
 from symplus.tuplus import pack_if_not, unpack_if_can, repack_if_can
 from symplus.symbplus import free_symbols, rename_variables_in

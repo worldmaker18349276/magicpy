@@ -7,7 +7,7 @@ from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent, to
 from sympy.logic.boolalg import Boolean, simplify_logic
 from sympy.functions import Id
 from sympy.sets import Set, Interval, FiniteSet, Intersection, Union, Complement, ProductSet
-from symplus.typlus import is_Symbol, is_Function, is_Boolean, type_match
+from symplus.typlus import is_Symbol, is_Function, is_Boolean, type_match, FunctionObject
 from symplus.tuplus import pack_if_not, unpack_if_can, repack_if_can
 from symplus.symbplus import free_symbols, rename_variables_in
 from symplus.funcplus import FunctionCompose, FunctionInverse, as_lambda, nres
@@ -275,7 +275,7 @@ class AbstractSet(Set):
             if not isinstance(inv_func, FunctionInverse):
                 inv_func = as_lambda(inv_func)
                 return AbstractSet(inv_func.variables,
-                                   zet.contains(inv_func.expr))
+                                   self.contains(inv_func.expr))
     
     def is_subset(self, other):
         """
@@ -667,7 +667,7 @@ class Image(Set):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         if not is_Function(function):
-            raise TypeError('function is not a FunctionClass, Functor or Lambda: %s'%function)
+            raise TypeError('function is not a FunctionClass, FunctionObject or Lambda: %s'%function)
         if not isinstance(zet, Set):
             raise TypeError('zet is not a Set: %s'%zet)
 
@@ -763,6 +763,8 @@ class Image(Set):
             elemstr = printer._print(func.expr)
             setstr = printer._print(self.set)
             return '{{{0} | {1} in {2}}}'.format(elemstr, varstr, setstr)
+
+FunctionObject.image = lambda self, zet: Image(self, zet)
 
 class Contains(Application, Boolean):
     @classmethod

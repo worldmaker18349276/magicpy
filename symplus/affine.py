@@ -10,7 +10,7 @@ from sympy.functions import cos, sin, acos, sign, sqrt
 from symplus.typlus import is_Tuple, is_Function
 from symplus.symbplus import free_symbols
 from symplus.strplus import mstr_inline_Matrix
-from symplus.funcplus import Functor, compose, inverse
+from symplus.funcplus import FunctionObject, compose, inverse
 from symplus.setplus import AbstractSet, Image
 from symplus.matplus import Mat, norm, normalize, dot, cross, project, i, j, k, x, y, z, r
 from symplus.path import PathMonoid, TransformationPath
@@ -326,14 +326,14 @@ def rmat_k2d(d):
 
 # general transformation
 
-class Transformation(Functor):
+class Transformation(FunctionObject):
     def __new__(cls, variables, expr):
         if not is_Tuple(variables) or len(variables) != 3:
             raise TypeError('variables is not a 3-Tuple: %s'%variables)
         if not is_Tuple(expr) or len(expr) != 3:
             raise TypeError('expr is not a 3-Tuple: %s'%expr)
 
-        return Functor.__new__(cls, variables, expr)
+        return FunctionObject.__new__(cls, variables, expr)
 
     @property
     def variables(self):
@@ -366,7 +366,7 @@ class Transformation(Functor):
         >>> import symplus.setplus
         >>> x, y, z = symbols('x,y,z')
         >>> m.transform(AbstractSet((x,y,z), x**2+y**2+z**2<1))
-        {(x + 2, y + 3, z + 5) | x**2 + y**2 + z**2 < 1}
+        {(_x, _y, _z) | (_x - 2)**2 + (_y - 3)**2 + (_z - 5)**2 < 1}
         """
         if is_Tuple(st) and len(st) == 3:
             return self(*st)
@@ -388,7 +388,7 @@ class AffineTransformation(Transformation):
     def __new__(cls, matrix=eye(3), vector=zeros3):
         matrix = Mat(matrix)
         vector = Mat(vector)
-        return Functor.__new__(cls, matrix, vector)
+        return FunctionObject.__new__(cls, matrix, vector)
 
     @property
     def matrix(self):
@@ -448,7 +448,7 @@ class EuclideanTransformation(AffineTransformation):
         tvec = Mat(tvec)
         rquat = Mat(rquat)
         parity = sign(parity)
-        return Functor.__new__(cls, tvec, rquat, parity)
+        return FunctionObject.__new__(cls, tvec, rquat, parity)
 
     @property
     def tvec(self):
@@ -486,8 +486,8 @@ class EuclideanTransformation(AffineTransformation):
 
     def as_lambda(self):
         vec = Mat([Dummy('x'), Dummy('y'), Dummy('z')])
-        res = simplify(qrotate(self.rquat, self.parity*vec) + self.tvec)
-        return Tuple(*res)
+        res = qrotate(self.rquat, self.parity*vec) + self.tvec
+        return Lambda(Tuple(*vec), Tuple(*res))
 
     def call(self, *args):
         vec = Mat(args)

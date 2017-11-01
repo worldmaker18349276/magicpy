@@ -6,7 +6,7 @@ from sympy.solvers import solve
 from sympy.functions import (Id, exp, log, cos, acos, sin, asin, tan, atan,
                              cot, acot, sec, asec, csc, acsc)
 from sympy.sets import Set, Intersection, Union, Complement
-from symplus.typlus import Functor, is_Function
+from symplus.typlus import FunctionObject, is_Function
 from symplus.tuplus import pack_if_not, unpack_if_can, repack_if_can
 from symplus.symbplus import free_symbols, rename_variables_in
 
@@ -21,7 +21,7 @@ dummy = Dummy()
 def narg(func):
     if isinstance(func, Lambda):
         return len(func.variables)
-    elif isinstance(func, Functor):
+    elif isinstance(func, FunctionObject):
         return func.narg
     elif isinstance(func, FunctionClass):
         return next(iter(func.nargs))
@@ -31,7 +31,7 @@ def narg(func):
 def nres(func):
     if isinstance(func, Lambda):
         return len(pack_if_not(func.expr))
-    elif isinstance(func, Functor):
+    elif isinstance(func, FunctionObject):
         return func.nres
     elif isinstance(func, FunctionClass):
         return 1
@@ -55,7 +55,7 @@ def is_inverse_of(func1, func2):
         return False
 
 
-class FunctionCompose(Functor):
+class FunctionCompose(FunctionObject):
     """
     >>> from sympy import *
     >>> from symplus.strplus import init_mprinting
@@ -83,7 +83,7 @@ class FunctionCompose(Functor):
 
         for function in functions:
             if not is_Function(function):
-                raise TypeError('function is not a FunctionClass, Functor or Lambda: %s'%function)
+                raise TypeError('function is not a FunctionClass, FunctionObject or Lambda: %s'%function)
 
         if evaluate:
             functions = FunctionCompose.reduce(functions)
@@ -93,7 +93,7 @@ class FunctionCompose(Functor):
         elif len(functions) == 1:
             return functions[0]
         else:
-            return Functor.__new__(cls, *functions)
+            return FunctionObject.__new__(cls, *functions)
 
     @staticmethod
     def reduce(funcs):
@@ -144,7 +144,7 @@ class FunctionCompose(Functor):
     def _mathstr(self, printer):
         return '(' + ' o '.join(map(printer._print, self.functions)) + ')'
 
-class FunctionInverse(Functor):
+class FunctionInverse(FunctionObject):
     """
     >>> from sympy import *
     >>> from symplus.strplus import init_mprinting
@@ -167,12 +167,12 @@ class FunctionInverse(Functor):
         evaluate = kwargs.pop('evaluate', global_evaluate[0])
 
         if not is_Function(function):
-            raise TypeError('function is not a FunctionClass, Functor or Lambda: %s'%function)
+            raise TypeError('function is not a FunctionClass, FunctionObject or Lambda: %s'%function)
 
         if evaluate:
             return FunctionInverse.eval(function)
 
-        return Functor.__new__(cls, function)
+        return FunctionObject.__new__(cls, function)
 
     @staticmethod
     def eval(func):
@@ -253,7 +253,7 @@ class Apply(Function):
         argument = repack_if_can(sympify(unpack_if_can(argument)))
 
         if not is_Function(function):
-            raise TypeError('function is not a FunctionClass, Functor or Lambda: %s'%function)
+            raise TypeError('function is not a FunctionClass, FunctionObject or Lambda: %s'%function)
 
         if evaluate:
             function, argument = Apply.reduce(function, argument)
