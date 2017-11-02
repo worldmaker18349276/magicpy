@@ -1,4 +1,5 @@
 from sympy.core import Symbol, Tuple, FunctionClass, Lambda, Expr, Basic
+from sympy.core.core import BasicMeta
 from sympy.matrices import MatrixSymbol
 from sympy.logic import true, false
 
@@ -72,4 +73,36 @@ def type_match(obj1, obj2):
         if not is_Boolean(obj2):     return false
     else:                            return false
     return true
+
+
+def pack_if_not(a):
+    return Tuple(a) if not is_Tuple(a) else a
+
+def unpack_if_can(a):
+    return a[0] if is_Tuple(a) and len(a) == 1 else a
+
+def repack_if_can(a):
+    return Tuple(*a) if is_Tuple(a) else a
+
+
+def free_symbols(func):
+    if isinstance(func, BasicMeta):
+        return set()
+    elif isinstance(func, Basic):
+        return func.free_symbols
+    else:
+        return set()
+
+def rename_variables_in(variables, varspace):
+    if not is_Tuple(variables):
+        return rename_variables_in((variables,), varspace)[0]
+    names = [v.name for v in variables]
+    namespace = {v.name for v in varspace}
+    for i in range(len(names)):
+        while names[i] in namespace:
+            names[i] += '_'
+        namespace.add(names[i])
+    return list(Symbol(n, **v.assumptions0)
+                if isinstance(v, Symbol) else MatrixSymbol(n, v.rows, v.cols)
+                for n, v in zip(names, variables))
 

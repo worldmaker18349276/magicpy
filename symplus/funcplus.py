@@ -6,9 +6,8 @@ from sympy.solvers import solve
 from sympy.functions import (Id, exp, log, cos, acos, sin, asin, tan, atan,
                              cot, acot, sec, asec, csc, acsc)
 from sympy.sets import Set, Intersection, Union, Complement
-from symplus.typlus import FunctionObject, is_Function
-from symplus.tuplus import pack_if_not, unpack_if_can, repack_if_can
-from symplus.symbplus import free_symbols, rename_variables_in
+from symplus.typlus import (FunctionObject, is_Function, pack_if_not, unpack_if_can,
+                            repack_if_can, free_symbols, rename_variables_in)
 
 
 FunctionClass_inverse_table = {

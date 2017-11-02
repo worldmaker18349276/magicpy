@@ -22,12 +22,19 @@ The main goal of this project is provide an API for jumbling twisty puzzle simul
 - [x] typlus
   > is_Tuple, is_Symbol, is_Number, is_Boolean, is_Matrix, is_Function  
   > type_match  
-
-- [x] tuplus
   > pack_if_not, unpack_if_can, repack_if_can  
-
-- [x] symbplus
   > free_symbols, rename_variables_in  
+
+- [x] matplus
+  > basic vector operation (norm, normalize, dot, cross, angle, project)  
+
+- [x] simplus
+  > sqrt (sqrtsimp, with_sqrtsimp)  
+  > matrix (matsimp, with_matsym)  
+  > relational (polyrelsimp, logicrelsimp)  
+
+- [x] strplus
+  > MathPrinter, pr, mprint, mstr, init_mprinting  
 
 - [x] funcplus
   > Functor  
@@ -45,17 +52,6 @@ The main goal of this project is provide an API for jumbling twisty puzzle simul
   > Interior, Closure, Exterior  
   > regularize, Regularization, Regularized(AbsoluteComplement/Intersection/Union)  
   > Topology, DiscreteTopology, NaturalTopology  
-
-- [x] matplus
-  > basic vector operation (norm, normalize, dot, cross, angle, project)  
-
-- [x] simplus
-  > sqrt (sqrtsimp, with_sqrtsimp)  
-  > matrix (matsimp, with_matsym)  
-  > relational (polyrelsimp, logicrelsimp)  
-
-- [x] strplus
-  > MathPrinter, pr, mprint, mstr, init_mprinting  
 
 - [x] path
   > FreeMonoid, Word  

@@ -7,9 +7,8 @@ from sympy.logic import true, false, And, Or, Not, Nand, Implies, Equivalent, to
 from sympy.logic.boolalg import Boolean, simplify_logic
 from sympy.functions import Id
 from sympy.sets import Set, Interval, FiniteSet, Intersection, Union, Complement, ProductSet
-from symplus.typlus import is_Symbol, is_Function, is_Boolean, type_match, FunctionObject
-from symplus.tuplus import pack_if_not, unpack_if_can, repack_if_can
-from symplus.symbplus import free_symbols, rename_variables_in
+from symplus.typlus import (is_Symbol, is_Function, is_Boolean, type_match, FunctionObject, pack_if_not,
+                            unpack_if_can, repack_if_can, free_symbols, rename_variables_in)
 from symplus.funcplus import FunctionCompose, FunctionInverse, as_lambda, nres
 from symplus.logicplus import Forall
 

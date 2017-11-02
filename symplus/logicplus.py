@@ -4,9 +4,8 @@ from sympy.core.function import Application
 from sympy.logic import true, false
 from sympy.logic.boolalg import Boolean
 from sympy.logic.inference import valid, satisfiable
-from symplus.typlus import is_Symbol, is_Boolean
-from symplus.tuplus import pack_if_not, unpack_if_can, repack_if_can
-from symplus.symbplus import free_symbols
+from symplus.typlus import (is_Symbol, is_Boolean, pack_if_not, unpack_if_can,
+                            repack_if_can, free_symbols)
 
 
 class Forall(Application, Boolean):

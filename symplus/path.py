@@ -4,8 +4,7 @@ from sympy.core.singleton import Singleton
 from sympy.core.evaluate import global_evaluate
 from sympy.functions import Piecewise
 from sympy.sets import Set, FiniteSet, ProductSet, Interval
-from symplus.typlus import is_Matrix
-from symplus.symbplus import free_symbols, rename_variables_in
+from symplus.typlus import is_Matrix, free_symbols, rename_variables_in
 from symplus.funcplus import FunctionObject, compose, inverse, nres, narg
 
 

@@ -3,9 +3,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../lib"))
 
 from sympy import *
 from symplus.typlus import (FunctionObject, is_Tuple, is_Symbol, is_Number, is_Boolean, is_Matrix,
-    is_Function, type_match)
-from symplus.tuplus import pack_if_not, unpack_if_can, repack_if_can
-from symplus.symbplus import free_symbols, rename_variables_in
+    is_Function, type_match, pack_if_not, unpack_if_can, repack_if_can, free_symbols, rename_variables_in)
 from symplus.logicplus import Forall, Exist
 from symplus.funcplus import (narg, nres, FunctionCompose, FunctionInverse, Apply,
     compose, inverse, solve_inv, as_lambda)

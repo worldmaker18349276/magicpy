@@ -7,8 +7,7 @@ from sympy.sets.sets import UniversalSet
 from sympy.matrices import (eye, zeros, diag, det, trace, ShapeError, Matrix,
                             MatrixSymbol, Identity, ZeroMatrix)
 from sympy.functions import cos, sin, acos, sign, sqrt
-from symplus.typlus import is_Tuple, is_Function
-from symplus.symbplus import free_symbols
+from symplus.typlus import is_Tuple, is_Function, free_symbols
 from symplus.strplus import mstr_inline_Matrix
 from symplus.funcplus import FunctionObject, compose, inverse
 from symplus.setplus import AbstractSet, Image
