@@ -46,8 +46,8 @@ class EuclideanSpace(Set):
         Sphere(3, [7/4 sqrt(6)/4 + 1 1/4]', False)
         >>> Image(t, InfiniteCylinder(3, [1,1,0], [0,1,4]))
         InfiniteCylinder(3, [-27*sqrt(6)/136 + 99/136 27*sqrt(6)/136 + 75/68\
- -3/8 + 67*sqrt(6)/136]', [-sqrt(102)/68 + sqrt(17)/17 -sqrt(102)/17 + sqrt(17)/34\
- sqrt(102)/68 + 3*sqrt(17)/17]', False)
+ -3/8 + 67*sqrt(6)/136]', [-sqrt(17)/17 + sqrt(102)/68 -sqrt(17)/34 + sqrt(102)/17\
+ -3*sqrt(17)/17 - sqrt(102)/68]', False)
         >>> Image(t, SemiInfiniteCone(1, [2,1,0], [2,3,1]))
         SemiInfiniteCone(1, [-sqrt(6)/4 + 3/2 sqrt(6)/2 + 3/2 -1/2 + sqrt(6)/4]',\
  [-3*sqrt(21)/28 + sqrt(14)/8 sqrt(21)/28 + 3*sqrt(14)/28 5*sqrt(14)/56\
@@ -345,7 +345,7 @@ class InfiniteCylinder(AlgebraicEuclideanSpace):
             if norm(direction) == 0:
                 raise ValueError
             direction = simplify(normalize(direction))
-        direction = max(direction, -direction, key=hash)
+        direction = max(direction, -direction, key=direction.compare)
         center = Mat(center)
         if normalization:
             center = simplify(center - project(center, direction))
@@ -408,7 +408,7 @@ class InfiniteCylinder(AlgebraicEuclideanSpace):
         >>> InfiniteCylinder().as_abstract()
         {(x, y, z) | x**2 + y**2 < 1}
         >>> InfiniteCylinder(2, [0,0,0], [0,1,1]).as_abstract()
-        {(x, y, z) | x**2 + (-sqrt(2)*y/2 + sqrt(2)*z/2)**2 < 4}
+        {(x, y, z) | x**2 + (sqrt(2)*y/2 - sqrt(2)*z/2)**2 < 4}
         """
         p = r - self.center
         if self.closed:
@@ -728,7 +728,7 @@ class Cylinder(BoundedEuclideanSpace):
             if norm(direction) == 0:
                 raise ValueError
             direction = simplify(normalize(direction))
-        direction = max(direction, -direction, key=hash)
+        direction = max(direction, -direction, key=direction.compare)
         closed = sympify(bool(closed))
         return Basic.__new__(cls, radius, height, center, direction, closed)
 
@@ -842,7 +842,7 @@ class Cone(BoundedEuclideanSpace):
             if norm(direction) == 0:
                 raise ValueError
             direction = simplify(normalize(direction))
-        direction = max(direction, -direction, key=hash)
+        direction = max(direction, -direction, key=direction.compare)
         height = sympify(abs(height))
         center = Mat(center)
         closed = sympify(bool(closed))
