@@ -291,10 +291,10 @@ def construct(expr):
         return fuse(construct(arg) for arg in expr.args)
 
     elif isinstance(expr, setplus.Complement):
-        return cut(construct(expr.arg[0]), construct(expr.arg[1]))
+        return cut(construct(expr.args[0]), construct(expr.args[1]))
 
     elif isinstance(expr, setplus.AbsoluteComplement):
-        return complement(construct(expr.arg[0]))
+        return complement(construct(expr.args[0]))
 
     elif isinstance(expr, setplus.Image):
         return transform(construct(expr.set), expr.function)

@@ -48,11 +48,11 @@ def construct(zet, mbb, margin=1e-03):
         return fuse(construct(arg, mbb, margin) for arg in zet.args)
 
     elif isinstance(zet, Complement):
-        return common([construct(zet.arg[0], mbb, margin),
-                       complement(construct(zet.arg[1], mbb, margin))])
+        return common([construct(zet.args[0], mbb, margin),
+                       complement(construct(zet.args[1], mbb, margin))])
 
     elif isinstance(zet, AbsoluteComplement):
-        return complement(construct(zet.arg[0], mbb, margin))
+        return complement(construct(zet.args[0], mbb, margin))
 
     elif isinstance(zet, Image):
         placement = spexpr2fcexpr(zet.function)

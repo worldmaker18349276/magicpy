@@ -842,7 +842,6 @@ class Cone(BoundedEuclideanSpace):
             if norm(direction) == 0:
                 raise ValueError
             direction = simplify(normalize(direction))
-        direction = max(direction, -direction, key=direction.compare)
         height = sympify(abs(height))
         center = Mat(center)
         closed = sympify(bool(closed))

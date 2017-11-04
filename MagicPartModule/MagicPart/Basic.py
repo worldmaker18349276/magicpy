@@ -1,5 +1,6 @@
 import math
 from sympy import sympify
+from symplus import *
 from symplus.typlus import is_Matrix, is_Number
 from symplus.matplus import Mat
 from symplus.affine import EuclideanTransformation, AffineTransformation, augment
@@ -69,9 +70,7 @@ def fuzzyCompare(v1, v2):
 def spstr2spexpr(spstr):
     from sympy.parsing.sympy_parser import parse_expr
     from sympy.core.compatibility import exec_
-    global_dict = {}
-    exec_("from symplus import *", global_dict)
-    return parse_expr(spstr, global_dict=global_dict, evaluate=False)
+    return parse_expr(spstr, global_dict=globals(), evaluate=False)
 
 def spexpr2spstr(spexpr):
     from sympy.printing import sstr
@@ -111,9 +110,6 @@ def spexpr2fcexpr(expr):
             return FreeCAD.Matrix(*expr.evalf())
         else:
             TypeError
-
-    elif isinstance(expr, AffineTransformation):
-        return FreeCAD.Placement(spexpr2fcexpr(augment(m=expr.matrix, v=expr.vector).evalf()))
 
     elif isinstance(expr, AffineTransformation):
         return FreeCAD.Placement(spexpr2fcexpr(augment(m=expr.matrix, v=expr.vector).evalf()))
