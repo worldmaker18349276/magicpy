@@ -1,13 +1,9 @@
 import Part
 from MagicPart.Basic import spexpr2fcexpr
-from MagicPart.Shapes.Utilities import reshape
 
 
-def complement(shp, reshaped=False):
-    if reshaped:
-        shp = reshape(shp)
-    else:
-        shp = shp.copy()
+def complement(shp):
+    shp = shp.copy()
     shp.complement()
     return shp
 
@@ -81,7 +77,8 @@ def compound(shps):
         return Part.Compound(shps)
 
 def transform(shp, trans):
-    shp = reshape(shp)
-    shp.Placement = spexpr2fcexpr(trans)
+    shp = shp.copy()
+    plc = shp.Placement
+    shp.Placement = plc.multiply(spexpr2fcexpr(trans))
     return shp
 

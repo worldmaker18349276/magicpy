@@ -88,11 +88,13 @@ class SymbolicPrimitiveProxy(FeaturePythonProxy):
 
         if isDerivedFrom(obj, "Part::FeaturePython"):
             shape = Shapes.construct(expr, mbb)
-            obj.Shape = Shapes.reshape(shape)
+            obj.Shape = shape
+            obj.Placement = shape.Placement
 
         elif isDerivedFrom(obj, "Mesh::FeaturePython"):
             mesh = Meshes.construct(expr, mbb)
-            obj.Mesh = Meshes.remesh(mesh)
+            obj.Mesh = mesh
+            obj.Placement = mesh.Placement
 
         else:
             raise TypeError

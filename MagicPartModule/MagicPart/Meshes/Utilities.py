@@ -4,13 +4,6 @@ import FreeCAD, Mesh
 def asMesh(shape, precision=0.01):
     return Mesh.Mesh(shape.tessellate(precision))
 
-def remesh(mesh):
-    plc = mesh.Placement.toMatrix()
-    mesh = Mesh.Mesh(mesh)
-    mesh.Placement = FreeCAD.Placement()
-    mesh.transform(plc)
-    return mesh
-
 def orientation(mesh):
     mesh_ = Mesh.Mesh(mesh)
     mesh_.offset(0.001)

@@ -124,7 +124,8 @@ class FeatureIntersectionProxy(DerivedFeatureProxy):
                 mbb = boundBoxOf(V) if V is not None else None
                 expr = self.getSymPyExpression(obj)
                 shape = Shapes.construct(expr, mbb)
-                obj.Shape = Shapes.reshape(shape)
+                obj.Shape = shape
+                obj.Placement = shape.Placement
             else:
                 obj.Shape = Shapes.common(s.Shape for s in obj.Sources)
 
@@ -138,7 +139,8 @@ class FeatureIntersectionProxy(DerivedFeatureProxy):
                 mbb = boundBoxOf(V) if V is not None else None
                 expr = self.getSymPyExpression(obj)
                 mesh = Meshes.construct(expr, mbb)
-                obj.Mesh = Meshes.remesh(mesh)
+                obj.Mesh = mesh
+                obj.Placement = mesh.Placement
             else:
                 obj.Mesh = Meshes.common(meshOf(s) for s in obj.Sources)
 
@@ -182,7 +184,8 @@ class FeatureUnionProxy(DerivedFeatureProxy):
                 mbb = boundBoxOf(V) if V is not None else None
                 expr = self.getSymPyExpression(obj)
                 shape = Shapes.construct(expr, mbb)
-                obj.Shape = Shapes.reshape(shape)
+                obj.Shape = shape
+                obj.Placement = shape.Placement
             else:
                 obj.Shape = Shapes.fuse(s.Shape for s in obj.Sources)
 
@@ -196,7 +199,8 @@ class FeatureUnionProxy(DerivedFeatureProxy):
                 mbb = boundBoxOf(V) if V is not None else None
                 expr = self.getSymPyExpression(obj)
                 mesh = Meshes.construct(expr, mbb)
-                obj.Mesh = Shapes.remesh(mesh)
+                obj.Mesh = mesh
+                obj.Placement = mesh.Placement
             else:
                 obj.Mesh = Meshes.fuse(meshOf(s) for s in obj.Sources)
 
@@ -240,11 +244,12 @@ class FeatureAbsoluteComplementProxy(DerivedFeatureProxy):
                 mbb = boundBoxOf(V) if V is not None else None
                 expr = self.getSymPyExpression(obj)
                 shape = Shapes.construct(expr, mbb)
-                obj.Shape = Shapes.reshape(shape)
+                obj.Shape = shape
+                obj.Placement = shape.Placement
             else:
-                obj.Shape = Shapes.complement(obj.Source.Shape, reshaped=True)
-
-            obj.Placement = FreeCAD.Placement()
+                shape = Shapes.complement(obj.Source.Shape)
+                obj.Shape = shape
+                obj.Placement = shape.Placement
 
             obj.Outfaces = trace(obj) if P.autotrace else []
 
@@ -254,11 +259,12 @@ class FeatureAbsoluteComplementProxy(DerivedFeatureProxy):
                 mbb = boundBoxOf(V) if V is not None else None
                 expr = self.getSymPyExpression(obj)
                 mesh = Meshes.construct(expr, mbb)
-                obj.Mesh = Shapes.remesh(mesh)
+                obj.Mesh = mesh
+                obj.Placement = mesh.Placement
             else:
-                obj.Mesh = Meshes.complement(meshOf(obj.Source), remeshed=True)
-
-            obj.Placement = FreeCAD.Placement()
+                mesh = Meshes.complement(meshOf(obj.Source))
+                obj.Mesh = mesh
+                obj.Placement = mesh.Placement
 
         else:
             raise TypeError
@@ -331,11 +337,12 @@ class FeatureImageProxy(DerivedFeatureProxy):
                 mbb = boundBoxOf(V) if V is not None else None
                 expr = self.getSymPyExpression(obj)
                 shape = Shapes.construct(expr, mbb)
-                obj.Shape = Shapes.reshape(shape)
-                obj.Placement = FreeCAD.Placement()
+                obj.Shape = shape
+                obj.Placement = shape.Placement
             else:
-                obj.Shape = Shapes.reshape(obj.Source.Shape)
-                obj.Placement = spexpr2fcexpr(self.getSymPyTransformation(obj))
+                shape = Shapes.transform(obj.Source.Shape, self.getSymPyTransformation(obj))
+                obj.Shape = shape
+                obj.Placement = shape.Placement
 
             obj.Outfaces = trace(obj) if P.autotrace else []
 
@@ -345,11 +352,12 @@ class FeatureImageProxy(DerivedFeatureProxy):
                 mbb = boundBoxOf(V) if V is not None else None
                 expr = self.getSymPyExpression(obj)
                 mesh = Meshes.construct(expr, mbb)
-                obj.Mesh = Shapes.remesh(mesh)
-                obj.Placement = FreeCAD.Placement()
+                obj.Mesh = mesh
+                obj.Placement = mesh.Placement
             else:
-                obj.Mesh = meshOf(obj.Source, remeshed=True)
-                obj.Placement = spexpr2fcexpr(self.getSymPyTransformation(obj))
+                mesh = Meshes.transform(meshOf(obj.Source), self.getSymPyTransformation(obj))
+                obj.Mesh = mesh
+                obj.Placement = mesh.Placement
 
         else:
             raise TypeError

@@ -6,16 +6,13 @@ from Draft import select
 
 # Property
 
-def meshOf(obj, precision=0.01, remeshed=True):
+def meshOf(obj, precision=0.01):
     if obj is None:
         return Mesh.Mesh()
     elif isDerivedFrom(obj, "Part::Feature"):
         return Meshes.asMesh(obj.Shape, precision=precision)
     elif isDerivedFrom(obj, "Mesh::Feature"):
-        if remeshed:
-            return Meshes.remesh(obj.Mesh)
-        else:
-            return obj.Mesh
+        return obj.Mesh
     else:
         raise TypeError
 

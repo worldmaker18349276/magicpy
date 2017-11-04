@@ -63,14 +63,16 @@ class FeatureApartProxy(WrappedFeatureProxy):
         if isDerivedFrom(obj, "Part::FeaturePython"):
             shapes = []
             for ftr in ftrs:
-                shape = Shapes.reshape(ftr.Shape)
+                shape = ftr.Shape
+                plc = shape.Placement
                 center = Shapes.center(shape)
                 if center is None:
                     R = FreeCAD.Vector(0,0,0)
                 else:
                     R = center - obj.Base
                 shift = R*obj.Ratio - R
-                shape.Placement = FreeCAD.Placement(shift, FreeCAD.Rotation())
+                plc = plc.multiply(FreeCAD.Placement(shift, FreeCAD.Rotation()))
+                shape.Placement = plc
                 shapes.append(shape)
             obj.Shape = Shapes.compound(shapes)
 

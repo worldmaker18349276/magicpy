@@ -177,7 +177,7 @@ class Param(object):
 
     @property
     def hard(self):
-        return self.group.GetBool("solid_hard_construct", True)
+        return self.group.GetBool("solid_hard_construct", False)
 
     @hard.setter
     def hard(self, val):

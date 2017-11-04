@@ -1,13 +1,10 @@
 from MagicPart.Basic import spexpr2fcexpr
-from MagicPart.Meshes.Utilities import remesh, orientation
+from MagicPart.Meshes.Utilities import orientation
 import OpenSCADUtils
 
 
-def complement(mesh, remeshed=False):
-    if remeshed:
-        mesh = remesh(mesh)
-    else:
-        mesh = Mesh.Mesh(mesh)
+def complement(mesh):
+    mesh = Mesh.Mesh(mesh)
     mesh.flipNormals()
     return mesh
 
@@ -112,11 +109,13 @@ def fuse(meshes):
 def compound(meshes):
     comp = Mesh.Mesh()
     for mesh in meshes:
-        comp.addMesh(remesh(mesh))
+        comp.addMesh(Mesh.Mesh(mesh))
     return comp
 
 def transform(mesh, trans):
-    mesh = remesh(mesh)
-    mesh.Placement = spexpr2fcexpr(trans)
+    mesh = Mesh.Mesh(mesh)
+    plc = mesh.Placement
+    plc = plc.multiply(spexpr2fcexpr(trans))
+    mesh.Placement = plc
     return mesh
 
