@@ -372,6 +372,14 @@ AbsoluteComplement = FeatureAbsoluteComplementProxy
 Image = FeatureImageProxy
 
 
+def complist(ftr):
+    if isDerivedFrom(ftr, "Part::Compound"):
+        return ftrlist(ftr.Links)
+    elif isDerivedFrom(ftr, Compound):
+        return ftrlist(ftr.Sources)
+    else:
+        return [ftr]
+
 def common(ftrs):
     ftrs = ftrlist(ftrs)
     if len(ftrs) == 0:
@@ -385,14 +393,8 @@ def common(ftrs):
     elif any(isDerivedFrom(ftr, ("Part::Compound", Compound)) for ftr in ftrs):
         args = []
         for ftr in ftrs:
-            if isDerivedFrom(ftr, "Part::Compound"):
-                args.append(ftrlist(ftr.Links))
-                ftr.ViewObject.hide()
-            elif isDerivedFrom(ftr, Compound):
-                args.append(ftrlist(ftr.Sources))
-                ftr.ViewObject.hide()
-            else:
-                args.append([ftr])
+            ftr.ViewObject.hide()
+            args.append(complist(ftr))
         return compound(imap(common, product(*args)))
 
     else:
@@ -412,14 +414,8 @@ def fuse(ftrs):
     if any(isDerivedFrom(ftr, ("Part::Compound", Compound)) for ftr in ftrs):
         args = []
         for ftr in ftrs:
-            if isDerivedFrom(ftr, "Part::Compound"):
-                args += ftr.Links
-                ftr.ViewObject.hide()
-            elif isDerivedFrom(ftr, Compound):
-                args += ftr.Sources
-                ftr.ViewObject.hide()
-            else:
-                args.append(ftr)
+            ftr.ViewObject.hide()
+            args.extend(complist(ftr))
         return fuse(args)
 
     if len(ftrs) == 1:
@@ -451,7 +447,7 @@ def transform(ftr, trans=None):
 
     if isDerivedFrom(ftr, ("Part::Compound", Compound)):
         ftr.ViewObject.hide()
-        return compound(starmap(transform, product(ftrlist(ftr.OutList), [trans])))
+        return compound(starmap(transform, product(complist(ftr), [trans])))
 
     else:
         if trans is None:
@@ -484,14 +480,8 @@ def slice(target, ftrs):
         ftrs[0].ViewObject.show()
         return target
 
-    if isDerivedFrom(target, "Part::Compound"):
-        target.ViewObject.hide()
-        targets = target.Links
-    elif isDerivedFrom(target, Compound):
-        target.ViewObject.hide()
-        targets = target.Sources
-    else:
-        targets = [target]
+    target.ViewObject.hide()
+    targets = complist(target)
 
     knives = [[ftr, complement(ftr)] for ftr in ftrs]
     return compound(imap(common, product(targets, *knives)))
@@ -506,14 +496,8 @@ def compound(ftrs):
     if any(isDerivedFrom(ftr, ("Part::Compound", Compound)) for ftr in ftrs):
         args = []
         for ftr in ftrs:
-            if isDerivedFrom(ftr, "Part::Compound"):
-                args += ftr.Links
-                ftr.ViewObject.hide()
-            elif isDerivedFrom(ftr, Compound):
-                args += ftr.Sources
-                ftr.ViewObject.hide()
-            else:
-                args.append(ftr)
+            ftr.ViewObject.hide()
+            args.extend(complist(ftr))
         return compound(args)
 
     if P.originop:
@@ -524,12 +508,9 @@ def compound(ftrs):
                          args=dict(Sources=ftrs))
 
 def compoundFuse(comp, targets):
-    if isDerivedFrom(comp, "Part::Compound"):
-        ftrs = ftrlist(comp.Links)
-    elif isDerivedFrom(comp, Compound):
-        ftrs = ftrlist(comp.Sources)
-    else:
+    if not isDerivedFrom(comp, ("Part::Compound", Compound)):
         raise TypeError
+    ftrs = complist(comp)
     targets = ftrlist(targets)
     if not all(target in ftrs for target in targets):
         raise ValueError
@@ -545,12 +526,9 @@ def compoundFuse(comp, targets):
     return compound(ftrs)
 
 def compoundTransform(comp, targets, trans=None):
-    if isDerivedFrom(comp, "Part::Compound"):
-        ftrs = ftrlist(comp.Links)
-    elif isDerivedFrom(comp, Compound):
-        ftrs = ftrlist(comp.Sources)
-    else:
+    if not isDerivedFrom(comp, ("Part::Compound", Compound)):
         raise TypeError
+    ftrs = complist(comp)
     targets = ftrlist(targets)
     if not all(target in ftrs for target in targets):
         raise ValueError
@@ -581,7 +559,7 @@ def noCollision(ftrs):
     shps = []
     for ftr in ftrs:
         if isDerivedFrom(ftr, ("Part::Compound", Compound)):
-            shps.append(Shapes.fuse(outftr.Shape for outftr in ftrlist(ftr.OutList)))
+            shps.append(Shapes.fuse(outftr.Shape for outftr in complist(ftr)))
         else:
             shps.append(ftr.Shape)
     vol_sum = sum(shp.Volume for shp in shps)
