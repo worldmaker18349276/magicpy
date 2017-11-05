@@ -15,7 +15,7 @@ class AdjustViewBoxCommand(object):
             if len(FreeCADGui.Selection.getSelection()) == 0:
                 FreeCADGui.doCommand("MagicPart.fitBounded(MagicPart.getViewBox())")
             else:
-                FreeCADGui.doCommand("MagicPart.fitFeatures(MagicPart.getViewBox(), FreeCADGui.Selection.getSelection())")
+                FreeCADGui.doCommand("MagicPart.fitBounded(MagicPart.getViewBox(), FreeCADGui.Selection.getSelection())")
             FreeCADGui.doCommand("MagicPart.recompute([MagicPart.getViewBox()])")
 
         else:
@@ -23,7 +23,7 @@ class AdjustViewBoxCommand(object):
             if len(FreeCADGui.Selection.getSelection()) == 0:
                 fitBounded(vb)
             else:
-                fitFeatures(vb, FreeCADGui.Selection.getSelection())
+                fitBounded(vb, FreeCADGui.Selection.getSelection())
             recompute([vb])
 
     def IsActive(self):

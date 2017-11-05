@@ -19,16 +19,9 @@ def initViewBox(doc=None):
     vb.ViewObject.DiffuseColor = [(1., 1., 1., 1.)]*6
     vb.ViewObject.LineColor = (1., 0., 0.)
 
-    R = 10.
-    mbb = FreeCAD.BoundBox(FreeCAD.Vector(-R,-R,-R), FreeCAD.Vector(R,R,R))
-    return setMaxBoundBox(vb, mbb)
+    return fitBounded(vb)
 
-def setMaxBoundBox(vb, mbb, enlarged=True):
-    mbb = FreeCAD.BoundBox(mbb)
-
-    if enlarged:
-        mbb.add(boundBoxOf(vb))
-
+def setViewBox(vb, mbb):
     vb.Length = mbb.XLength
     vb.Width = mbb.YLength
     vb.Height = mbb.ZLength
@@ -50,21 +43,15 @@ def isBounded(obj):
     return boundBoxOf(vb).isInside(boundBoxOf(obj))
 
 
-
-def fitBounded(vb, enlarged=True, margin=1e-03):
-    bb = FreeCAD.BoundBox()
-    for ftr in vb.Document.Objects:
-        if isBounded(ftr):
-            bb.add(boundBoxOf(ftr))
-    bb.enlarge(margin)
-    return setMaxBoundBox(vb, bb, enlarged=enlarged)
-
-def fitFeatures(vb, ftrs, enlarged=True, margin=1e-03):
-    bb = FreeCAD.BoundBox()
+def fitBounded(vb, ftrs=None, R=1., margin=0.5):
+    if ftrs is None:
+        ftrs = vb.Document.Objects
+    mbb = FreeCAD.BoundBox(FreeCAD.Vector(-R,-R,-R), FreeCAD.Vector(R,R,R))
     for ftr in ftrs:
-        bb.add(boundBoxOf(ftr))
-    bb.enlarge(margin)
-    return setMaxBoundBox(vb, bb, enlarged=enlarged)
+        if isBounded(ftr):
+            mbb.add(boundBoxOf(ftr))
+    mbb.enlarge(margin)
+    return setViewBox(vb, mbb)
 
 
 def hideAllUnbounded():
