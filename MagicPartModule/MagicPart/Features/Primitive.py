@@ -287,10 +287,10 @@ def construct(expr):
         return Part.Shape()
 
     elif isinstance(expr, setplus.Intersection):
-        return common(construct(arg) for arg in expr.args)
+        return common(*[construct(arg) for arg in expr.args])
 
     elif isinstance(expr, setplus.Union):
-        return fuse(construct(arg) for arg in expr.args)
+        return fuse(*[construct(arg) for arg in expr.args])
 
     elif isinstance(expr, setplus.Complement):
         return cut(construct(expr.args[0]), construct(expr.args[1]))

@@ -62,17 +62,26 @@ def diffuseColorOf(obj):
 
 # Feature
 
+def distinct_list(ls):
+    ls_ = []
+    for e in ls:
+        if e in ls_:
+            ls_.remove(e)
+        ls_.append(e)
+    return ls_
+
 def ftrlist(ftrs):
     if hasattr(ftrs, "__iter__"):
-        ftrs_ = []
-        for ftr in ftrs:
-            if ftr in ftrs_:
-                ftrs_.remove(ftr)
-            ftrs_.append(ftr)
-        return ftrs_
+        return list(ftrs)
 
     elif isDerivedFrom(ftrs, "App::DocumentObjectGroup"):
         return ftrs.Group
+
+    elif isDerivedFrom(ftrs, "Part::Compound"):
+        return ftrs.Links
+
+    elif isDerivedFrom(ftrs, FeaturePythonGroupProxy):
+        return ftrs.Sources
 
     elif isDerivedFrom(ftrs, "App::GeoFeature"):
         return [ftrs]
@@ -91,6 +100,9 @@ def ftrstr(ftrs):
         raise TypeError
 
 class FeaturePythonProxy(object):
+    pass
+
+class FeaturePythonGroupProxy(FeaturePythonProxy):
     pass
 
 def typeIdOf(obj):

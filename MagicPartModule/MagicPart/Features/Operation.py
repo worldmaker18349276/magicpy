@@ -1,4 +1,5 @@
 from itertools import product, imap, starmap, islice
+from functools import wraps
 import FreeCAD
 import symplus.setplus as setplus
 from symplus.affine import EuclideanTransformation
@@ -44,7 +45,7 @@ class DerivedFeatureViewProxy(object):
 class DerivedFeatureProxy(FeaturePythonProxy):
     pass
 
-class FeatureCompoundProxy(DerivedFeatureProxy):
+class FeatureCompoundProxy(DerivedFeatureProxy, FeaturePythonGroupProxy):
     @classmethod
     def featurePropertiesOf(clazz, obj=None, args={}):
         prop = {}
@@ -372,133 +373,82 @@ AbsoluteComplement = FeatureAbsoluteComplementProxy
 Image = FeatureImageProxy
 
 
-def complist(ftr):
-    if isDerivedFrom(ftr, "Part::Compound"):
-        return ftrlist(ftr.Links)
-    elif isDerivedFrom(ftr, Compound):
-        return ftrlist(ftr.Sources)
-    else:
-        return [ftr]
+def autohide(func):
+    @wraps(func)
+    def func_(*ftrs, **kwargs):
+        autohide = kwargs.pop("autohide", True)
+        if autohide:
+            for ftr in ftrs:
+                ftr.ViewObject.hide()
+        res = func(*ftrs, **kwargs)
+        if autohide and res is not None:
+            res.ViewObject.show()
+        return res
+    return func_
 
-def common(ftrs):
-    ftrs = ftrlist(ftrs)
+@autohide
+def common(*ftrs):
+    ftrs = [subftr for ftr in ftrs for subftr in ftrlist(ftr)]
     if len(ftrs) == 0:
         return None
     doc = ftrs[0].Document
 
     if len(ftrs) == 1:
-        ftrs[0].ViewObject.show()
         return ftrs[0]
 
-    elif any(isDerivedFrom(ftr, ("Part::Compound", Compound)) for ftr in ftrs):
-        args = []
-        for ftr in ftrs:
-            ftr.ViewObject.hide()
-            args.append(complist(ftr))
-        return compound(imap(common, product(*args)))
-
+    if P.originop:
+        return addObject("Part::MultiCommon", "Intersection", doc=doc,
+                         cached=P.cached, args=dict(Shapes=ftrs))
     else:
-        if P.originop:
-            return addObject("Part::MultiCommon", "Intersection", doc=doc, cached=P.cached,
-                             args=dict(Shapes=ftrs))
-        else:
-            return addObject(Intersection, "Intersection", rep=P.rep, doc=doc, cached=P.cached,
-                             args=dict(Sources=ftrs))
+        return addObject(Intersection, "Intersection", rep=P.rep, doc=doc,
+                         cached=P.cached, args=dict(Sources=ftrs))
 
-def fuse(ftrs):
-    ftrs = ftrlist(ftrs)
+@autohide
+def fuse(*ftrs):
+    ftrs = [subftr for ftr in ftrs for subftr in ftrlist(ftr)]
     if len(ftrs) == 0:
         return None
     doc = ftrs[0].Document
 
-    if any(isDerivedFrom(ftr, ("Part::Compound", Compound)) for ftr in ftrs):
-        args = []
-        for ftr in ftrs:
-            ftr.ViewObject.hide()
-            args.extend(complist(ftr))
-        return fuse(args)
-
     if len(ftrs) == 1:
-        ftrs[0].ViewObject.show()
         return ftrs[0]
 
+    if P.originop:
+        return addObject("Part::multiFuse", "Union", doc=doc, cached=P.cached,
+                         args=dict(Shapes=ftrs))
     else:
-        if P.originop:
-            return addObject("Part::multiFuse", "Union", doc=doc, cached=P.cached,
-                             args=dict(Shapes=ftrs))
-        else:
-            return addObject(Union, "Union", rep=P.rep, doc=doc, cached=P.cached,
-                             args=dict(Sources=ftrs))
+        return addObject(Union, "Union", rep=P.rep, doc=doc, cached=P.cached,
+                         args=dict(Sources=ftrs))
 
+@autohide
 def cut(ftr1, ftr2):
     if P.originop:
         return addObject("Part::Cut", "Cut", doc=doc, cached=P.cached,
                          args=dict(Base=ftr1, Tool=ftr2))
     else:
-        return common([ftr1, complement(ftr2)])
+        return common(ftr1, complement(ftr2, autohide=False), autohide=False)
 
+@autohide
 def complement(ftr):
     doc = ftr.Document
-    return addObject(AbsoluteComplement, "AbsoluteComplement", rep=P.rep, doc=doc, cached=P.cached,
-                     args=dict(Source=ftr))
+    return addObject(AbsoluteComplement, "AbsoluteComplement", rep=P.rep, doc=doc,
+                     cached=P.cached, args=dict(Source=ftr))
 
+@autohide
 def transform(ftr, trans=None):
     doc = ftr.Document
-
-    if isDerivedFrom(ftr, ("Part::Compound", Compound)):
-        ftr.ViewObject.hide()
-        return compound(starmap(transform, product(complist(ftr), [trans])))
-
-    else:
-        if trans is None:
-            return addObject(Image, "Image", rep=P.rep, doc=doc, cached=P.cached,
-                             args=dict(Source=ftr))
-        else:
-            return addObject(Image, "Image", rep=P.rep, doc=doc, cached=P.cached,
-                             args=dict(Source=ftr, SymPyTransformation=trans))
+    args = dict(Source=ftr)
+    if trans is not None:
+        args.SymPyTransformation = trans
+    return addObject(Image, "Image", rep=P.rep, doc=doc, cached=P.cached, args=args)
 
 
-def partition(ftrs):
-    ftrs = ftrlist(ftrs)
-    if len(ftrs) == 0:
-        return None
-
-    knives = [[ftr, complement(ftr)] for ftr in ftrs]
-    return compound(imap(common, product(*knives)))
-
-def fragment(ftrs):
-    ftrs = ftrlist(ftrs)
-    if len(ftrs) == 0:
-        return None
-
-    knives = [[ftr, complement(ftr)] for ftr in ftrs]
-    return compound(imap(common, islice(product(*knives), 2**len(knives)-1)))
-
-def slice(target, ftrs):
-    ftrs = ftrlist(ftrs)
-    if len(ftrs) == 0:
-        ftrs[0].ViewObject.show()
-        return target
-
-    target.ViewObject.hide()
-    targets = complist(target)
-
-    knives = [[ftr, complement(ftr)] for ftr in ftrs]
-    return compound(imap(common, product(targets, *knives)))
-
-
-def compound(ftrs):
-    ftrs = ftrlist(ftrs)
+@autohide
+def compound(*ftrs):
+    ftrs = [subftr for ftr in ftrs for subftr in ftrlist(ftr)]
     if len(ftrs) == 0:
         return None
     doc = ftrs[0].Document
-
-    if any(isDerivedFrom(ftr, ("Part::Compound", Compound)) for ftr in ftrs):
-        args = []
-        for ftr in ftrs:
-            ftr.ViewObject.hide()
-            args.extend(complist(ftr))
-        return compound(args)
 
     if P.originop:
         return addObject("Part::Compound", "Compound", doc=doc, cached=P.cached,
@@ -507,41 +457,94 @@ def compound(ftrs):
         return addObject(Compound, "Compound", rep=P.rep, doc=doc, cached=P.cached,
                          args=dict(Sources=ftrs))
 
-def compoundFuse(comp, targets):
-    if not isDerivedFrom(comp, ("Part::Compound", Compound)):
-        raise TypeError
-    ftrs = complist(comp)
-    targets = ftrlist(targets)
+@autohide
+def cross_common(*comps):
+    if len(comps) == 0:
+        return None
+
+    if len(comps) == 1:
+        return comps[0]
+
+    ftrss = [ftrlist(comp) for comp in comps]
+    res = [common(*ftrs, autohide=False) for ftrs in product(*ftrss)]
+    return compound(*res, autohide=False)
+
+@autohide
+def partition(*ftrs):
+    if len(ftrs) == 0:
+        return None
+
+    knives = [[ftr, complement(ftr)] for ftr in ftrs]
+    res = [common(*ftrs, autohide=False) for ftrs in product(*knives)]
+    return compound(*res, autohide=False)
+
+@autohide
+def fragment(*ftrs):
+    if len(ftrs) == 0:
+        return None
+
+    knives = [[ftr, complement(ftr)] for ftr in ftrs]
+    res = [common(*ftrs, autohide=False) for ftrs in islice(product(*knives), 2**len(knives)-1)]
+    return compound(*res, autohide=False)
+
+@autohide
+def slice(target, *ftrs):
+    if len(ftrs) == 0:
+        return target
+
+    knives = [[ftr, complement(ftr)] for ftr in ftrs]
+    res = [common(target, *ftrs, autohide=False) for ftrs in product(*knives)]
+    return compound(*res, autohide=False)
+
+
+def compoundFuse(comp, *targets):
+    ftrs = ftrlist(comp)
     if not all(target in ftrs for target in targets):
         raise ValueError
 
     if len(targets) <= 1:
-        comp.ViewObject.show()
         return comp
 
-    comp.ViewObject.hide()
     for target in targets:
         ftrs.remove(target)
-    ftrs.append(fuse(targets))
-    return compound(ftrs)
+    ftrs.append(fuse(targets, autohide=False))
 
-def compoundTransform(comp, targets, trans=None):
-    if not isDerivedFrom(comp, ("Part::Compound", Compound)):
-        raise TypeError
-    ftrs = complist(comp)
-    targets = ftrlist(targets)
+    if isDerivedFrom(comp, "Part::Compound"):
+        comp.Links = ftrs
+    elif isDerivedFrom(comp, Compound):
+        comp.Sources = ftrs
+    return comp
+
+def compoundTransform(comp, *targets, **kwargs):
+    trans = kwargs.pop("trans", None)
+    ftrs = ftrlist(comp)
     if not all(target in ftrs for target in targets):
         raise ValueError
 
     if len(targets) == 0:
-        comp.ViewObject.show()
         return comp
 
-    comp.ViewObject.hide()
     for target in targets:
-        i = ftrs.index(target)
-        ftrs[i] = transform(target, trans=trans)
-    return compound(ftrs)
+        ftrs[ftrs.index(target)] = transform(target, trans=trans, autohide=False)
+
+    if isDerivedFrom(comp, "Part::Compound"):
+        comp.Links = ftrs
+    elif isDerivedFrom(comp, Compound):
+        comp.Sources = ftrs
+    return comp
+
+def compoundSlice(comp, *ftrs):
+    if len(ftrs) == 0:
+        return comp
+
+    knives = [[ftr, complement(ftr)] for ftr in ftrs]
+    res = [common(*ftrs, autohide=False) for ftrs in product(ftrlist(comp), *knives)]
+
+    if isDerivedFrom(comp, "Part::Compound"):
+        comp.Links = res
+    elif isDerivedFrom(comp, Compound):
+        comp.Sources = res
+    return comp
 
 
 def isOutside(ftr1, ftr2):
@@ -559,7 +562,7 @@ def noCollision(ftrs):
     shps = []
     for ftr in ftrs:
         if isDerivedFrom(ftr, ("Part::Compound", Compound)):
-            shps.append(Shapes.fuse(outftr.Shape for outftr in complist(ftr)))
+            shps.append(Shapes.fuse(outftr.Shape for outftr in ftrlist(ftr)))
         else:
             shps.append(ftr.Shape)
     vol_sum = sum(shp.Volume for shp in shps)
