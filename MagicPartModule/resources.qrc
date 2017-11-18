@@ -1,6 +1,6 @@
 <RCC>
     <qresource>
-        <file>icons/MagicPart_adjust_viewbox.png</file>
+        <file>icons/MagicPart_adjust_viewbox.svg</file>
         <file>icons/MagicPart_common.png</file>
         <file>icons/MagicPart_fuse.png</file>
         <file>icons/MagicPart_cut.png</file>
@@ -9,14 +9,14 @@
         <file>icons/MagicPart_group.png</file>
         <file>icons/MagicPart_mask.png</file>
         <file>icons/MagicPart_slice.png</file>
-        <file>icons/MagicPart_whole_space.png</file>
-        <file>icons/MagicPart_empty_space.png</file>
-        <file>icons/MagicPart_box.png</file>
-        <file>icons/MagicPart_cylinder.png</file>
-        <file>icons/MagicPart_cone.png</file>
-        <file>icons/MagicPart_sphere.png</file>
-        <file>icons/MagicPart_halfspace.png</file>
-        <file>icons/MagicPart_infinite_cylinder.png</file>
-        <file>icons/MagicPart_semi_infinite_cone.png</file>
+        <file>icons/primitive/MagicPart_whole_space.svg</file>
+        <file>icons/primitive/MagicPart_empty_space.svg</file>
+        <file>icons/primitive/MagicPart_cube.svg</file>
+        <file>icons/primitive/MagicPart_cylinder.svg</file>
+        <file>icons/primitive/MagicPart_cone.svg</file>
+        <file>icons/primitive/MagicPart_sphere.svg</file>
+        <file>icons/primitive/MagicPart_halfspace.svg</file>
+        <file>icons/primitive/MagicPart_infinite_cylinder.svg</file>
+        <file>icons/primitive/MagicPart_semi_infinite_cone.svg</file>
     </qresource>
 </RCC>

@@ -6,7 +6,7 @@ from MagicPart.Features import *
 
 class AdjustViewBoxCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : "MagicPart_adjust_viewbox.png",
+        return {"Pixmap"  : ":/icons/MagicPart_adjust_viewbox.svg",
                 "MenuText": "adjust viewbox",
                 "ToolTip" : "set/adjust viewbox by selected object"}
 
@@ -31,7 +31,7 @@ class AdjustViewBoxCommand(object):
 
 class CreateBoxCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : "MagicPart_box.png",
+        return {"Pixmap"  : ":/icons/primitive/MagicPart_cube.svg",
                 "MenuText": "box",
                 "ToolTip" : "create a box"}
 
@@ -55,7 +55,7 @@ class CreateBoxCommand(object):
 
 class CreateCylinderCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/MagicPart_cylinder.png",
+        return {"Pixmap"  : ":/icons/primitive/MagicPart_cylinder.svg",
                 "MenuText": "cylinder",
                 "ToolTip" : "create a cylinder"}
 
@@ -79,7 +79,7 @@ class CreateCylinderCommand(object):
 
 class CreateConeCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/MagicPart_cone.png",
+        return {"Pixmap"  : ":/icons/primitive/MagicPart_cone.svg",
                 "MenuText": "cone",
                 "ToolTip" : "create a cone"}
 
@@ -103,7 +103,7 @@ class CreateConeCommand(object):
 
 class CreateSphereCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/MagicPart_sphere.png",
+        return {"Pixmap"  : ":/icons/primitive/MagicPart_sphere.svg",
                 "MenuText": "sphere",
                 "ToolTip" : "create a sphere"}
 
@@ -127,7 +127,7 @@ class CreateSphereCommand(object):
 
 class CreateHalfspaceCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/MagicPart_halfspace.png",
+        return {"Pixmap"  : ":/icons/primitive/MagicPart_halfspace.svg",
                 "MenuText": "halfspace",
                 "ToolTip" : "create a halfspace"}
 
@@ -151,7 +151,7 @@ class CreateHalfspaceCommand(object):
 
 class CreateInfiniteCylinderCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/MagicPart_infinite_cylinder.png",
+        return {"Pixmap"  : ":/icons/primitive/MagicPart_infinite_cylinder.svg",
                 "MenuText": "infinite cylinder",
                 "ToolTip" : "create an infinite cylinder"}
 
@@ -175,7 +175,7 @@ class CreateInfiniteCylinderCommand(object):
 
 class CreateSemiInfiniteConeCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/MagicPart_semi_infinite_cone.png",
+        return {"Pixmap"  : ":/icons/primitive/MagicPart_semi_infinite_cone.svg",
                 "MenuText": "semi-infinite cone",
                 "ToolTip" : "create a semi-infinite cone"}
 
@@ -199,7 +199,7 @@ class CreateSemiInfiniteConeCommand(object):
 
 class WholeSpaceCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/MagicPart_whole_space.png",
+        return {"Pixmap"  : ":/icons/primitive/MagicPart_whole_space.svg",
                 "MenuText": "whole space",
                 "ToolTip" : "create a whole space"}
 
@@ -223,7 +223,7 @@ class WholeSpaceCommand(object):
 
 class EmptySpaceCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/MagicPart_empty_space.png",
+        return {"Pixmap"  : ":/icons/primitive/MagicPart_empty_space.svg",
                 "MenuText": "empty space",
                 "ToolTip" : "create a empty space"}
 
