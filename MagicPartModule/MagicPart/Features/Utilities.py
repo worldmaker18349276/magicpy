@@ -234,10 +234,13 @@ def featurePropertiesOf(obj, args={}):
     return prop
 
 def addObject(TypeId, name, rep="Shape", parent=None, cached=False, args={}):
-    if parent is None:
+    if parent is None or isDerivedFrom(parent, "App::Document"):
+        parent = None
         doc = FreeCAD.ActiveDocument
     elif isDerivedFrom(parent, "App::DocumentObjectGroup"):
         doc = parent.Document
+    else:
+        raise TypeError
 
     if cached:
         for obj in doc.Objects:
