@@ -11,7 +11,7 @@ def getViewBox(doc=None, init_if_absent=True):
     return vb
 
 def initViewBox(doc=None):
-    vb = addObject("Part::Box", "ViewBox", doc=doc, cached=False)
+    vb = addObject("Part::Box", "ViewBox", parent=doc, cached=False)
     vb.ViewObject.Visibility = False
     vb.ViewObject.Selectable = False
     vb.ViewObject.DisplayMode = "Wireframe"

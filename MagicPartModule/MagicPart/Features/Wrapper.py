@@ -2,7 +2,7 @@ import FreeCAD
 from MagicPart.Basic import P
 from MagicPart.Features.Utilities import *
 from MagicPart.Features.ViewBox import getViewBox
-from MagicPart.Features.Operation import Compound, DerivedFeatureViewProxy
+from MagicPart.Features.Operation import DerivedFeatureViewProxy
 from MagicPart.Features.SubObject import subFaceLinksOf, trace
 from MagicPart import Shapes, Meshes
 
@@ -55,8 +55,6 @@ class FeatureApartProxy(WrappedFeatureProxy):
 
         if isDerivedFrom(obj.Origin, "Part::Compound"):
             ftrs = obj.Origin.Links
-        elif isDerivedFrom(obj.Origin, Compound):
-            ftrs = obj.Origin.Sources
         else:
             raise TypeError
 
@@ -154,19 +152,19 @@ Mask = FeatureMaskProxy
 
 
 def apart(ftr, ratio=1.5, center=None):
-    doc = ftr.Document
+    parent = ftr.getParentGroup()
 
     if center is None:
         center = centerOf(ftr)
         if center is None:
             center = FreeCAD.Vector(0,0,0)
 
-    return addObject(Apart, "Apart", rep=P.rep, doc=doc, cached=P.cached,
+    return addObject(Apart, "Apart", rep=P.rep, parent=parent, cached=P.cached,
                      args=dict(Origin=ftr, Ratio=ratio, Base=center))
 
 def mask(ftr):
-    doc = ftr.Document
+    parent = ftr.getParentGroup()
 
-    return addObject(Mask, "Mask", rep=P.rep, doc=doc, cached=P.cached,
+    return addObject(Mask, "Mask", rep=P.rep, parent=parent, cached=P.cached,
                      args=dict(Origin=ftr))
 

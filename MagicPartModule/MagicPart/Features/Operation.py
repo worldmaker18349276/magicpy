@@ -45,51 +45,6 @@ class DerivedFeatureViewProxy(object):
 class DerivedFeatureProxy(FeaturePythonProxy):
     pass
 
-class FeatureCompoundProxy(DerivedFeatureProxy, FeaturePythonGroupProxy):
-    @classmethod
-    def featurePropertiesOf(clazz, obj=None, args={}):
-        prop = {}
-        prop["TypeId"] = clazz
-
-        Sources = getattr(obj, "Sources", None)
-        prop["Sources"] = sorted(args.get("Sources", Sources), key=hash)
-
-        return prop
-
-    def getSymPyExpression(self, obj):
-        return [s.Proxy.getSymPyExpression(s) for s in obj.Sources]
-
-    def onChanged(self, obj, p):
-        if p == "Proxy":
-            if isDerivedFrom(obj, "Part::FeaturePython"):
-                if "Outfaces" not in obj.PropertiesList:
-                    obj.addProperty("App::PropertyPythonObject", "Outfaces")
-                    obj.Outfaces = []
-                    obj.setEditorMode("Outfaces", 2)
-
-            if "Sources" not in obj.PropertiesList:
-                obj.addProperty("App::PropertyLinkList", "Sources")
-            obj.setEditorMode("Placement", 2)
-            if FreeCAD.GuiUp:
-                obj.ViewObject.Proxy = DerivedFeatureViewProxy()
-
-    def execute(self, obj):
-        if isDerivedFrom(obj, "Part::FeaturePython"):
-            obj.Shape = Shapes.compound(s.Shape for s in obj.Sources)
-            obj.Placement = FreeCAD.Placement()
-
-            obj.Outfaces = trace(obj) if P.autotrace else []
-
-        elif isDerivedFrom(obj, "Mesh::FeaturePython"):
-            obj.Mesh = Meshes.compound(meshOf(s) for s in obj.Sources)
-            obj.Placement = FreeCAD.Placement()
-
-        else:
-            raise TypeError
-
-    def _trace(self, obj):
-        return [subface for outobj in obj.Sources for subface in subFaceLinksOf(outobj)]
-
 class FeatureIntersectionProxy(DerivedFeatureProxy):
     @classmethod
     def featurePropertiesOf(clazz, obj=None, args={}):
@@ -366,7 +321,6 @@ class FeatureImageProxy(DerivedFeatureProxy):
     def _trace(self, obj):
         return subFaceLinksOf(obj.Source)
 
-Compound = FeatureCompoundProxy
 Intersection = FeatureIntersectionProxy
 Union = FeatureUnionProxy
 AbsoluteComplement = FeatureAbsoluteComplementProxy
@@ -387,164 +341,104 @@ def autohide(func):
     return func_
 
 @autohide
-def common(*ftrs):
+def common(*ftrs, **kwargs):
     ftrs = [subftr for ftr in ftrs for subftr in ftrlist(ftr)]
     if len(ftrs) == 0:
         return None
-    doc = ftrs[0].Document
 
     if len(ftrs) == 1:
         return ftrs[0]
 
+    parent = kwargs.pop("parent", None)
+    if parent is not None:
+        parent.removeObjects(ftrs)
+
     if P.originop:
-        return addObject("Part::MultiCommon", "Intersection", doc=doc,
+        return addObject("Part::MultiCommon", "Intersection", parent=parent,
                          cached=P.cached, args=dict(Shapes=ftrs))
     else:
-        return addObject(Intersection, "Intersection", rep=P.rep, doc=doc,
+        return addObject(Intersection, "Intersection", rep=P.rep, parent=parent,
                          cached=P.cached, args=dict(Sources=ftrs))
 
 @autohide
-def fuse(*ftrs):
+def fuse(*ftrs, **kwargs):
     ftrs = [subftr for ftr in ftrs for subftr in ftrlist(ftr)]
     if len(ftrs) == 0:
         return None
-    doc = ftrs[0].Document
 
     if len(ftrs) == 1:
         return ftrs[0]
 
+    parent = kwargs.pop("parent", None)
+    if parent is not None:
+        parent.removeObjects(ftrs)
+
     if P.originop:
-        return addObject("Part::multiFuse", "Union", doc=doc, cached=P.cached,
+        return addObject("Part::multiFuse", "Union", parent=parent, cached=P.cached,
                          args=dict(Shapes=ftrs))
     else:
-        return addObject(Union, "Union", rep=P.rep, doc=doc, cached=P.cached,
+        return addObject(Union, "Union", rep=P.rep, parent=parent, cached=P.cached,
                          args=dict(Sources=ftrs))
 
 @autohide
-def cut(ftr1, ftr2):
+def cut(ftr1, ftr2, parent=None):
+    if parent is not None:
+        parent.removeObjects([ftr1, ftr2])
+
     if P.originop:
-        return addObject("Part::Cut", "Cut", doc=doc, cached=P.cached,
+        return addObject("Part::Cut", "Cut", parent=parent, cached=P.cached,
                          args=dict(Base=ftr1, Tool=ftr2))
     else:
         return common(ftr1, complement(ftr2, autohide=False), autohide=False)
 
 @autohide
-def complement(ftr):
-    doc = ftr.Document
-    return addObject(AbsoluteComplement, "AbsoluteComplement", rep=P.rep, doc=doc,
+def complement(ftr, parent=None):
+    if parent is not None:
+        parent.removeObject(ftr)
+
+    return addObject(AbsoluteComplement, "AbsoluteComplement", rep=P.rep, parent=parent,
                      cached=P.cached, args=dict(Source=ftr))
 
 @autohide
-def transform(ftr, trans=None):
-    doc = ftr.Document
+def transform(ftr, trans=None, parent=None):
+    if parent is not None:
+        parent.removeObjects(ftr)
+
     args = dict(Source=ftr)
     if trans is not None:
         args.SymPyTransformation = trans
-    return addObject(Image, "Image", rep=P.rep, doc=doc, cached=P.cached, args=args)
+    return addObject(Image, "Image", rep=P.rep, parent=parent, cached=P.cached, args=args)
 
 
-@autohide
-def compound(*ftrs):
+def group(*ftrs, **kwargs):
     ftrs = [subftr for ftr in ftrs for subftr in ftrlist(ftr)]
     if len(ftrs) == 0:
         return None
-    doc = ftrs[0].Document
 
-    if P.originop:
-        return addObject("Part::Compound", "Compound", doc=doc, cached=P.cached,
-                         args=dict(Links=ftrs))
-    else:
-        return addObject(Compound, "Compound", rep=P.rep, doc=doc, cached=P.cached,
-                         args=dict(Sources=ftrs))
+    parent = kwargs.pop("parent", None)
 
-@autohide
-def cross_common(*comps):
-    if len(comps) == 0:
-        return None
+    return addObject("App::DocumentObjectGroup", "Group", parent=parent, cached=P.cached,
+                     args=dict(Group=ftrs))
 
-    if len(comps) == 1:
-        return comps[0]
-
-    ftrss = [ftrlist(comp) for comp in comps]
-    res = [common(*ftrs, autohide=False) for ftrs in product(*ftrss)]
-    return compound(*res, autohide=False)
-
-@autohide
-def partition(*ftrs):
-    if len(ftrs) == 0:
-        return None
-
-    knives = [[ftr, complement(ftr)] for ftr in ftrs]
-    res = [common(*ftrs, autohide=False) for ftrs in product(*knives)]
-    return compound(*res, autohide=False)
-
-@autohide
-def fragment(*ftrs):
-    if len(ftrs) == 0:
-        return None
-
-    knives = [[ftr, complement(ftr)] for ftr in ftrs]
-    res = [common(*ftrs, autohide=False) for ftrs in islice(product(*knives), 2**len(knives)-1)]
-    return compound(*res, autohide=False)
-
-@autohide
-def slice(target, *ftrs):
+def group_mask(target, *ftrs):
     if len(ftrs) == 0:
         return target
 
-    knives = [[ftr, complement(ftr)] for ftr in ftrs]
-    res = [common(target, *ftrs, autohide=False) for ftrs in product(*knives)]
-    return compound(*res, autohide=False)
+    ftrss = [ftrlist(ftr) for ftr in ftrs]
+    if len(ftrlist(target)) > 0:
+        ftrss = [ftrlist(target)] + ftrss
+    target.Group = [common(*ftrs, parent=target) for ftrs in product(*ftrss)]
+    return target
 
-
-def compoundFuse(comp, *targets):
-    ftrs = ftrlist(comp)
-    if not all(target in ftrs for target in targets):
-        raise ValueError
-
-    if len(targets) <= 1:
-        return comp
-
-    for target in targets:
-        ftrs.remove(target)
-    ftrs.append(fuse(targets, autohide=False))
-
-    if isDerivedFrom(comp, "Part::Compound"):
-        comp.Links = ftrs
-    elif isDerivedFrom(comp, Compound):
-        comp.Sources = ftrs
-    return comp
-
-def compoundTransform(comp, *targets, **kwargs):
-    trans = kwargs.pop("trans", None)
-    ftrs = ftrlist(comp)
-    if not all(target in ftrs for target in targets):
-        raise ValueError
-
-    if len(targets) == 0:
-        return comp
-
-    for target in targets:
-        ftrs[ftrs.index(target)] = transform(target, trans=trans, autohide=False)
-
-    if isDerivedFrom(comp, "Part::Compound"):
-        comp.Links = ftrs
-    elif isDerivedFrom(comp, Compound):
-        comp.Sources = ftrs
-    return comp
-
-def compoundSlice(comp, *ftrs):
+def group_slice(target, *ftrs):
     if len(ftrs) == 0:
-        return comp
+        return target
 
-    knives = [[ftr, complement(ftr)] for ftr in ftrs]
-    res = [common(*ftrs, autohide=False) for ftrs in product(ftrlist(comp), *knives)]
-
-    if isDerivedFrom(comp, "Part::Compound"):
-        comp.Links = res
-    elif isDerivedFrom(comp, Compound):
-        comp.Sources = res
-    return comp
+    ftrss = [[ftr, complement(ftr)] for ftr in ftrs]
+    if len(ftrlist(target)) > 0:
+        ftrss = [ftrlist(target)] + ftrss
+    target.Group = [common(*ftrs, parent=target) for ftrs in product(*ftrss)]
+    return target
 
 
 def isOutside(ftr1, ftr2):

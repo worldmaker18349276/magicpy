@@ -199,8 +199,7 @@ The main goal of this project is provide an API for jumbling twisty puzzle simul
 
     - [x] Operation
       > Common, Fuse, Cut, Complement, Transform  
-      > Partition, Fragment, Slice  
-      > Compound(/Remove/Fuse/Transform)  
+      > Group(Mask/Slice)  
       > Apart, Mask  
 
     - [ ] Check

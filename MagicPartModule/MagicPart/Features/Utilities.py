@@ -77,12 +77,6 @@ def ftrlist(ftrs):
     elif isDerivedFrom(ftrs, "App::DocumentObjectGroup"):
         return ftrs.Group
 
-    elif isDerivedFrom(ftrs, "Part::Compound"):
-        return ftrs.Links
-
-    elif isDerivedFrom(ftrs, FeaturePythonGroupProxy):
-        return ftrs.Sources
-
     elif isDerivedFrom(ftrs, "App::GeoFeature"):
         return [ftrs]
 
@@ -100,9 +94,6 @@ def ftrstr(ftrs):
         raise TypeError
 
 class FeaturePythonProxy(object):
-    pass
-
-class FeaturePythonGroupProxy(FeaturePythonProxy):
     pass
 
 def typeIdOf(obj):
@@ -242,9 +233,11 @@ def featurePropertiesOf(obj, args={}):
 
     return prop
 
-def addObject(TypeId, name, rep="Shape", doc=None, cached=False, args={}):
-    if doc is None:
+def addObject(TypeId, name, rep="Shape", parent=None, cached=False, args={}):
+    if parent is None:
         doc = FreeCAD.ActiveDocument
+    elif isDerivedFrom(parent, "App::DocumentObjectGroup"):
+        doc = parent.Document
 
     if cached:
         for obj in doc.Objects:
@@ -271,6 +264,8 @@ def addObject(TypeId, name, rep="Shape", doc=None, cached=False, args={}):
         else:
             getattr(obj.Proxy, "set"+k)(obj, v)
 
+    if parent is not None:
+        parent.addObject(obj)
     return obj
 
 
