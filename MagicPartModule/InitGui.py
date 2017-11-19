@@ -53,18 +53,21 @@ class MagicPartWorkbench(Workbench):
                          "OpenSCAD_AddOpenSCADElement",
                          "OpenSCAD_MeshBoolean",
                          ]
+        self.varlist = MagicPart.Commands.varlist
         self.objlist = MagicPart.Commands.objlist
         self.oplist = MagicPart.Commands.oplist
         self.ctrllist = MagicPart.Commands.ctrllist
 
         self.appendToolbar("Part", self.partlist)
         self.appendToolbar("Mesh", self.meshlist)
+        self.appendToolbar("Variable", self.varlist)
         self.appendToolbar("Primitive", self.objlist)
         self.appendToolbar("Operation", self.oplist)
 
-        self.appendMenu("Magic Part", self.objlist)
-        self.appendMenu("Magic Part", self.oplist)
-        self.appendMenu("Magic Part", self.ctrllist)
+        self.appendMenu("MagicPart", self.varlist)
+        self.appendMenu("MagicPart", self.objlist)
+        self.appendMenu("MagicPart", self.oplist)
+        self.appendMenu("MagicPart", self.ctrllist)
 
     def Activated(self):
         return
