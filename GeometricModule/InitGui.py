@@ -7,7 +7,35 @@ class GeometricWorkbench(Workbench):
     Icon = ":/icons/view-isometric.svg"
 
     def Initialize(self):
-        pass
+        import Geometric
+        import Geometric.Commands
+        Gui.doCommand("import Geometric")
+        Gui.activateWorkbench("PartWorkbench")
+        Gui.activateWorkbench("MeshWorkbench")
+        Gui.activateWorkbench("OpenSCADWorkbench")
+
+        self.partlist = ["Part_Box",
+                         "Part_Cylinder",
+                         "Part_Sphere",
+                         "Part_Cone",
+                         "Part_Torus",
+                         "Part_Common",
+                         "Part_Fuse",
+                         "Part_Cut",
+                         "Part_BooleanFragments",
+                         "Part_Slice",
+                         "Part_XOR",
+                         "Part_CheckGeometry"]
+        self.meshlist = ["Mesh_BuildRegularSolid",
+                         "Mesh_FromPartShape",
+                         "OpenSCAD_AddOpenSCADElement",
+                         "OpenSCAD_MeshBoolean"]
+        self.ctrllist = Geometric.Commands.ctrllist
+
+        self.appendToolbar("Part", self.partlist)
+        self.appendToolbar("Mesh", self.meshlist)
+
+        self.appendMenu("Geometric", self.ctrllist)
 
     def Activated(self):
         return
@@ -16,7 +44,7 @@ class GeometricWorkbench(Workbench):
         return
 
     def ContextMenu(self, recipient):
-        pass
+        self.appendContextMenu("Control", self.ctrllist)
 
     def GetClassName(self): 
         return "Gui::PythonWorkbench"
