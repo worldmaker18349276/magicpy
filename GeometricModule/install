@@ -1,0 +1,5 @@
+#!/bin/sh
+
+FREECAD_DIR=/usr/lib/freecad-daily
+sudo rm -rf $FREECAD_DIR/Mod/Geometric
+sudo cp -rf . $FREECAD_DIR/Mod/Geometric
