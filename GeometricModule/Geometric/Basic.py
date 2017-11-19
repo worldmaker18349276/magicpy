@@ -1,6 +1,13 @@
 import math
 import FreeCAD, Units
 
+Vec = FreeCAD.Vector
+Plc = FreeCAD.Placement
+
+k = Vec(0,0,1)
+
+def k2d(d):
+    return Plc(Vec(), FreeCAD.Rotation(k,d))
 
 def fuzzyCompare(v1, v2):
     if isinstance(v1, Units.Quantity):
@@ -33,8 +40,8 @@ def fuzzyCompare(v1, v2):
 
         return all(fuzzyCompare(v1[k], v2[k]) for k in v1.keys())
 
-    elif isinstance(v1, FreeCAD.Vector):
-        if not isinstance(v2, FreeCAD.Vector):
+    elif isinstance(v1, Vec):
+        if not isinstance(v2, Vec):
             return False
 
         return (v1 - v2).Length < 1e-7
@@ -47,8 +54,8 @@ def fuzzyCompare(v1, v2):
         q2 = v2.Q
         return abs(q1[0]*q2[0] + q1[1]*q2[1] + q1[2]*q2[2] + q1[3]*q2[3]) >= math.cos(1e-12/2)
 
-    elif isinstance(v1, FreeCAD.Placement):
-        if not isinstance(v2, FreeCAD.Placement):
+    elif isinstance(v1, Plc):
+        if not isinstance(v2, Plc):
             return False
 
         if not fuzzyCompare(v1.Base, v2.Base):
