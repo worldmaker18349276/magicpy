@@ -4,6 +4,7 @@ import FreeCAD, Units
 Vec = FreeCAD.Vector
 Plc = FreeCAD.Placement
 
+o = Vec()
 k = Vec(0,0,1)
 
 def k2d(d):
