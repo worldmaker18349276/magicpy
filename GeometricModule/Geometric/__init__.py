@@ -1,3 +1,2 @@
 from Geometric.Basic import *
-from Geometric.Shapes import *
-
+from Geometric import Shapes, Meshes

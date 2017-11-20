@@ -1,17 +1,8 @@
 import math
 import FreeCAD, Part
-from Geometric.Basic import fuzzyCompare, k2d, k, o
+from Geometric.Basic import fuzzyCompare, k2d, o, k, viewbox
 
 
-viewbox = {
-    # maximum bound box
-    mbb:    FreeCAD.BoundBox(-1.5,-1.5,-1.5, 1.5, 1.5, 1.5),
-    margin: 1e-03
-}
-
-makeBox = Part.makeBox
-makeCone = Part.makeCone
-makeCylinder = Part.makeCylinder
 makeSphere = Part.makeSphere
 
 def makeConicalFrustum(radius1=0., radius2=1., pnt=o, axis=k):
