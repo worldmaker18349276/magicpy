@@ -79,7 +79,138 @@ types = [
     "Part::Offset",
     "Part::Offset2D",
     "Part::Thickness",
-    "Part::Datum"]
+    "Part::Datum",
+    "Mesh::Feature",
+    "Mesh::FeatureCustom",
+    "Mesh::FeaturePython",
+    "Mesh::Import",
+    "Mesh::Export",
+    "Mesh::Transform",
+    "Mesh::TransformDemolding",
+    "Mesh::Curvature",
+    "Mesh::SegmentByMesh",
+    "Mesh::SetOperations",
+    "Mesh::FixDefects",
+    "Mesh::HarmonizeNormals",
+    "Mesh::FlipNormals",
+    "Mesh::FixNonManifolds",
+    "Mesh::FixDuplicatedFaces",
+    "Mesh::FixDuplicatedPoints",
+    "Mesh::FixDegenerations",
+    "Mesh::FixDeformations",
+    "Mesh::FixIndices",
+    "Mesh::FillHoles",
+    "Mesh::RemoveComponents",
+    "Mesh::Sphere",
+    "Mesh::Ellipsoid",
+    "Mesh::Cylinder",
+    "Mesh::Cone",
+    "Mesh::Torus",
+    "Mesh::Cube",
+]
+
+scripted_types = [
+    "App::FeaturePython",
+    "App::GeometryPython",
+    "App::DocumentObjectGroupPython",
+    "App::MaterialObjectPython",
+    "Part::FeaturePython",
+    "Part::CustomFeaturePython",
+    "Part::RegularPolygon",
+    "Part::Part2DObjectPython",
+    "Mesh::FeaturePython",
+]
+
+geo_types = [
+    "App::GeoFeature",
+    "App::GeometryPython",
+    "App::InventorObject",
+    "App::VRMLObject",
+    "App::Placement",
+    "App::OriginFeature",
+    "App::Plane",
+    "App::Line",
+    "App::Part",
+    "Part::Feature",
+    "Part::FeatureExt",
+    "Part::BodyBase",
+    "Part::FeaturePython",
+    "Part::FeatureGeometrySet",
+    "Part::CustomFeature",
+    "Part::CustomFeaturePython",
+    "Part::Primitive",
+    "Part::Box",
+    "Part::Spline",
+    "Part::Boolean",
+    "Part::Common",
+    "Part::MultiCommon",
+    "Part::Cut",
+    "Part::Fuse",
+    "Part::MultiFuse",
+    "Part::Section",
+    "Part::FilletBase",
+    "Part::Fillet",
+    "Part::Chamfer",
+    "Part::Compound",
+    "Part::Extrusion",
+    "Part::Revolution",
+    "Part::Mirroring",
+    "Part::ImportStep",
+    "Part::ImportIges",
+    "Part::ImportBrep",
+    "Part::CurveNet",
+    "Part::Polygon",
+    "Part::Circle",
+    "Part::Ellipse",
+    "Part::Vertex",
+    "Part::Line",
+    "Part::Ellipsoid",
+    "Part::Plane",
+    "Part::Sphere",
+    "Part::Cylinder",
+    "Part::Prism",
+    "Part::RegularPolygon",
+    "Part::Cone",
+    "Part::Torus",
+    "Part::Helix",
+    "Part::Spiral",
+    "Part::Wedge",
+    "Part::Part2DObject",
+    "Part::Part2DObjectPython",
+    "Part::Face",
+    "Part::RuledSurface",
+    "Part::Loft",
+    "Part::Sweep",
+    "Part::Offset",
+    "Part::Offset2D",
+    "Part::Thickness",
+    "Part::Datum",
+    "Mesh::Feature",
+    "Mesh::FeatureCustom",
+    "Mesh::FeaturePython",
+    "Mesh::Import",
+    "Mesh::Transform",
+    "Mesh::TransformDemolding",
+    "Mesh::SegmentByMesh",
+    "Mesh::SetOperations",
+    "Mesh::FixDefects",
+    "Mesh::HarmonizeNormals",
+    "Mesh::FlipNormals",
+    "Mesh::FixNonManifolds",
+    "Mesh::FixDuplicatedFaces",
+    "Mesh::FixDuplicatedPoints",
+    "Mesh::FixDegenerations",
+    "Mesh::FixDeformations",
+    "Mesh::FixIndices",
+    "Mesh::FillHoles",
+    "Mesh::RemoveComponents",
+    "Mesh::Sphere",
+    "Mesh::Ellipsoid",
+    "Mesh::Cylinder",
+    "Mesh::Cone",
+    "Mesh::Torus",
+    "Mesh::Cube",
+]
 
 properties = [
     "App::PropertyBool",
@@ -143,16 +274,21 @@ properties = [
     "Part::PropertyPartShape",
     "Part::PropertyGeometryList",
     "Part::PropertyShapeHistory",
-    "Part::PropertyFilletEdges"]
+    "Part::PropertyFilletEdges",
+    "Mesh::PropertyNormalList",
+    "Mesh::PropertyCurvatureList",
+    "Mesh::PropertyMeshKernel",
+]
+
 
 # Property
 
-def setView(obj, view):
+def setGeometry(obj, geo):
     if isDerivedFrom(obj, "Part::FeaturePython"):
-        obj.Shape = view
-        obj.Placement = view.Placement
+        obj.Shape = geo
+        obj.Placement = geo.Placement
     elif isDerivedFrom(obj, "Mesh::FeaturePython"):
-        obj.Mesh = view
+        obj.Mesh = geo
         obj.Placement = view.Placement
     else:
         raise TypeError
@@ -238,7 +374,7 @@ def ftrstr(*ftrs):
     return ", ".join("FreeCAD.ActiveDocument.%s"%ftr.Name for ftr in ftrs)
 
 
-class FeaturePythonViewProxy(object):
+class PartFeaturePythonViewProxy(object):
     def __init__(self, icon=""):
         self.icon = icon
 
@@ -262,184 +398,47 @@ class FeaturePythonViewProxy(object):
 
 class FeaturePythonProxy(object):
     @classmethod
-    def featurePropertiesOf(clazz, obj=None, args={}):
-        prop = {}
-        prop["TypeId"] = clazz
-        return prop
+    def getTypeId(clz):
+        return "App::FeaturePython"
+
+    @classmethod
+    def createObject(clz, name, doc=None, **kwargs):
+        if doc is None:
+            doc = FreeCAD.ActiveDocument
+        proxy = clz(**kwargs)
+        obj = doc.addObject(proxy.getTypeId(), name)
+        obj.Proxy = proxy
+        return obj
+
+    def createViewProxy(self):
+        return None
 
     def onChanged(self, obj, p):
         if p == "Proxy":
-            obj.setEditorMode("Placement", 2)
+            self.init(obj)
             if FreeCAD.GuiUp:
-                obj.ViewObject.Proxy = FeaturePythonViewProxy()
+                obj.ViewObject.Proxy = self.createViewProxy()
 
     def execute(self, obj):
         pass
 
-
-def typeIdOf(obj):
-    if obj.isDerivedFrom("Part::FeaturePython") or obj.isDerivedFrom("Mesh::FeaturePython"):
+def typeOf(obj):
+    if any(obj.isDerivedFrom(t) for t in scripted_types):
         return type(obj.Proxy)
     else:
         return getattr(obj, "TypeId", type(obj))
 
-def isDerivedFrom(obj, TypeId):
-    if isinstance(TypeId, (tuple, list)):
-        return any(isDerivedFrom(obj, TypeId_i) for TypeId_i in TypeId)
+def isDerivedFrom(obj, typ):
+    if isinstance(typ, (tuple, list)):
+        return any(isDerivedFrom(obj, typ_i) for typ_i in typ)
 
     if not hasattr(obj, "isDerivedFrom"):
-        return isinstance(TypeId, type) and isinstance(obj, TypeId)
-    elif isinstance(TypeId, str):
-        return obj.isDerivedFrom(TypeId)
-    elif issubclass(TypeId, FeaturePythonProxy):
-        if obj.isDerivedFrom("Part::FeaturePython") or obj.isDerivedFrom("Mesh::FeaturePython"):
-            return isinstance(obj.Proxy, TypeId)
-        else:
-            return False
+        return isinstance(typ, type) and isinstance(obj, typ)
+    elif isinstance(typ, str):
+        return obj.isDerivedFrom(typ)
+    elif issubclass(typ, FeaturePythonProxy):
+        return obj.isDerivedFrom(typ.FeaturePythonProxy.gettyp()) and isinstance(obj.Proxy, typ)
     else:
         return False
 
-# replaced by `len(obj.getPathsByOutList(father)) > 0`
-def isDependOn(obj, father):
-    if obj is None:
-        return False
-    elif obj == father:
-        return True
-    else:
-        return any(isDependOn(outobj, father) for outobj in obj.OutList)
-
-def featurePropertiesOf(obj, args={}):
-    if isinstance(obj, str):
-        ftr = None
-        TypeId = obj
-    elif isinstance(obj, type) and issubclass(obj, FeaturePythonProxy):
-        ftr = None
-        TypeId = obj
-    elif isDerivedFrom(obj, "App::GeoFeature"):
-        ftr = obj
-        TypeId = typeIdOf(obj)
-    else:
-        raise TypeError
-
-    prop = {}
-    prop["TypeId"] = TypeId
-
-    if TypeId == "Part::Compound":
-        Links = getattr(ftr, "Links", [])
-        Placement = getattr(ftr, "Placement", FreeCAD.Placement())
-        prop["Links"] = sorted(args.get("Links", Links), key=hash)
-        prop["Placement"] = args.get("Placement", Placement)
-
-    elif TypeId in ["Part::MultiCommon", "Part::MultiFuse"]:
-        Shapes = getattr(ftr, "Shapes", [])
-        Placement = getattr(ftr, "Placement", FreeCAD.Placement())
-        prop["Shapes"] = sorted(args.get("Shapes", Shapes), key=hash)
-        prop["Placement"] = args.get("Placement", Placement)
-
-    elif TypeId in ["Part::Cut", "Part::Fuse", "Part::Common"]:
-        Base = getattr(ftr, "Base", None)
-        Tool = getattr(ftr, "Tool", None)
-        Placement = getattr(ftr, "Placement", FreeCAD.Placement())
-        prop["Base"] = args.get("Base", Base)
-        prop["Tool"] = args.get("Tool", Tool)
-        prop["Placement"] = args.get("Placement", Placement)
-
-    elif TypeId == "Part::Box":
-        Length = getattr(ftr, "Length", Units.Quantity("10 mm"))
-        Width = getattr(ftr, "Width", Units.Quantity("10 mm"))
-        Height = getattr(ftr, "Height", Units.Quantity("10 mm"))
-        Placement = getattr(ftr, "Placement", FreeCAD.Placement())
-        prop["Length"] = args.get("Length", Length)
-        prop["Width"] = args.get("Width", Width)
-        prop["Height"] = args.get("Height", Height)
-        prop["Placement"] = args.get("Placement", Placement)
-
-    elif TypeId == "Part::Sphere":
-        Radius = getattr(ftr, "Radius", Units.Quantity("5 mm"))
-        Angle1 = getattr(ftr, "Angle1", Units.Quantity("-90 deg"))
-        Angle2 = getattr(ftr, "Angle2", Units.Quantity("90 deg"))
-        Angle3 = getattr(ftr, "Angle3", Units.Quantity("360 deg"))
-        Placement = getattr(ftr, "Placement", FreeCAD.Placement())
-        prop["Radius"] = args.get("Radius", Radius)
-        prop["Angle1"] = args.get("Angle1", Angle1)
-        prop["Angle2"] = args.get("Angle2", Angle2)
-        prop["Angle3"] = args.get("Angle3", Angle3)
-        prop["Placement"] = args.get("Placement", Placement)
-
-    elif TypeId == "Part::Cylinder":
-        Radius = getattr(ftr, "Radius", Units.Quantity("2 mm"))
-        Height = getattr(ftr, "Height", Units.Quantity("10 mm"))
-        Angle = getattr(ftr, "Angle", Units.Quantity("360 deg"))
-        Placement = getattr(ftr, "Placement", FreeCAD.Placement())
-        prop["Radius"] = args.get("Radius", Radius)
-        prop["Height"] = args.get("Height", Height)
-        prop["Angle"] = args.get("Angle", Angle)
-        prop["Placement"] = args.get("Placement", Placement)
-
-    elif TypeId == "Part::Cone":
-        Radius1 = getattr(ftr, "Radius1", Units.Quantity("2 mm"))
-        Radius2 = getattr(ftr, "Radius2", Units.Quantity("4 mm"))
-        Height = getattr(ftr, "Height", Units.Quantity("10 mm"))
-        Angle = getattr(ftr, "Angle", Units.Quantity("360 deg"))
-        Placement = getattr(ftr, "Placement", FreeCAD.Placement())
-        prop["Radius1"] = args.get("Radius1", Radius1)
-        prop["Radius2"] = args.get("Radius2", Radius2)
-        prop["Height"] = args.get("Height", Height)
-        prop["Angle"] = args.get("Angle", Angle)
-        prop["Placement"] = args.get("Placement", Placement)
-
-    elif TypeId == "Part::Torus":
-        Radius1 = getattr(ftr, "Radius1", Units.Quantity("10 mm"))
-        Radius2 = getattr(ftr, "Radius2", Units.Quantity("2 mm"))
-        Angle1 = getattr(ftr, "Angle1", Units.Quantity("-180 deg"))
-        Angle2 = getattr(ftr, "Angle2", Units.Quantity("180 deg"))
-        Angle3 = getattr(ftr, "Angle3", Units.Quantity("360 deg"))
-        Placement = getattr(ftr, "Placement", FreeCAD.Placement())
-        prop["Radius1"] = args.get("Radius1", Radius1)
-        prop["Radius2"] = args.get("Radius2", Radius2)
-        prop["Angle1"] = args.get("Angle1", Angle1)
-        prop["Angle2"] = args.get("Angle2", Angle2)
-        prop["Angle3"] = args.get("Angle3", Angle3)
-        prop["Placement"] = args.get("Placement", Placement)
-
-    elif isinstance(TypeId, type) and issubclass(TypeId, FeaturePythonProxy):
-        prop = TypeId.featurePropertiesOf(ftr, args=args)
-
-    else:
-        raise TypeError
-
-    return prop
-
-def addObject(TypeId, name, rep="Shape", parent=None, args={}):
-    if parent is None:
-        parent = None
-        doc = FreeCAD.ActiveDocument
-    elif isDerivedFrom(parent, "App::Document"):
-        parent = None
-        doc = parent
-    elif isDerivedFrom(parent, "App::DocumentObjectGroup"):
-        doc = parent.Document
-    else:
-        raise TypeError
-
-    if isinstance(TypeId, str):
-        obj = doc.addObject(TypeId, name)
-    else:
-        if rep == "Shape":
-            obj = doc.addObject("Part::FeaturePython", name)
-        elif rep == "Mesh":
-            obj = doc.addObject("Mesh::FeaturePython", name)
-        else:
-            raise TypeError
-        obj.Proxy = TypeId()
-
-    for k, v in args.items():
-        if k in obj.PropertiesList:
-            setattr(obj, k, v)
-        else:
-            getattr(obj.Proxy, "set"+k)(obj, v)
-
-    if parent is not None:
-        parent.addObject(obj)
-    return obj
-
+# len(obj.getPathsByOutList(father)) > 0
