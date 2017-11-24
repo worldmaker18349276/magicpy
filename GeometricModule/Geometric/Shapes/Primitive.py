@@ -4,7 +4,7 @@ from Geometric.Basic import fuzzyCompare, k2d, o, k, bb
 
 
 def makeSphere(radius=1., center=o, bb=bb):
-    return Part.Sphere(radius, center)
+    return Part.makeSphere(radius, center)
 
 def makeConicalFrustum(radius1=0., radius2=1., center=o, axis=k, bb=bb):
     height = axis.Length
@@ -41,10 +41,10 @@ def makeInfiniteCylinder(radius=1., direction=k, center=o, bb=bb):
     offset = center.dot(direction)*(1./direction.Length)
     height = bb_.ZLength
     bottom = center - direction*((offset+height/2.)/direction.Length)
-    return makeCylinder(abs(radius), height, bottom, direction)
+    return Part.makeCylinder(abs(radius), height, bottom, direction)
 
 def makeSemiInfiniteCone(slope=1., direction=k, center=o, bb=bb):
     bb_ = bb.transformed(k2d(direction).inverse().toMatrix())
     offset = center.dot(direction)*(1./direction.Length)
     height = max(bb_.ZMax - offset, 0.01)
-    return makeCone(0., abs(slope*height), height, center, direction)
+    return Part.makeCone(0., abs(slope*height), height, center, direction)

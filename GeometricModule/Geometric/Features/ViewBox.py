@@ -4,11 +4,7 @@ from Geometric.Features.Utilities import *
 
 
 class ViewBoxProxy(ScriptedObjectProxy):
-    @classmethod
-    def getTypeId(clz):
-        return "Part::FeaturePython"
-
-    def init(self, obj):
+    def __init__(self, obj):
         obj.Proxy = self
         if "Min" not in obj.PropertiesList:
             obj.addProperty("App::PropertyVector", "Min")
@@ -22,7 +18,7 @@ class ViewBoxProxy(ScriptedObjectProxy):
         obj.setEditorMode("Placement", 2)
 
         if FreeCAD.GuiUp:
-            ViewBoxViewProxy().init(obj.ViewObject)
+            ViewBoxViewProxy(obj.ViewObject)
 
     def execute(self, obj):
         V = obj.Max - obj.Min
@@ -49,7 +45,7 @@ class ViewBoxViewProxy(object):
     def getIcon(self):
         return ""
 
-    def init(self, view):
+    def __init__(self, view):
         view.Proxy = self
         view.Visibility = False
         view.Selectable = False
@@ -66,7 +62,8 @@ def getViewBox(doc=None, init_if_absent=True):
         doc = FreeCAD.ActiveDocument
     vb = doc.getObject("ViewBox")
     if init_if_absent and vb is None:
-        vb = ViewBox().createObject("ViewBox", doc=doc)
+        vb = doc.addObject("Part::FeaturePython", "ViewBox")
+        ViewBox(vb)
     return vb
 
 def isBounded(obj):

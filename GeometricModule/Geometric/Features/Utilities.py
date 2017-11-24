@@ -375,50 +375,7 @@ def ftrstr(*ftrs):
 
 
 class ScriptedObjectProxy(object):
-    def init(self, obj):
-        obj.Proxy = self
-        # if FreeCAD.GuiUp:
-        #     obj.ViewObject.Proxy = 0
-
-    @classmethod
-    def getTypeId(clz):
-        return "App::FeaturePython"
-
-    def createObject(self, name, doc=None):
-        if doc is None:
-            doc = FreeCAD.ActiveDocument
-        obj = doc.addObject(self.getTypeId(), name)
-        self.init(obj)
-        return obj
-
-    def onChanged(self, obj, prop):
-        pass
-
-    def execute(self, obj):
-        pass
-
-class PartFeaturePythonViewProxy(object):
-    def __init__(self, icon=""):
-        self.icon = icon
-
-    def getIcon(self):
-        return self.icon
-
-    def onChanged(self, view, p):
-        if isDerivedFrom(view.Object, "Part::FeaturePython"):
-            if p == "ShapeColor":
-                clrs = diffuseColorOf(view.Object)
-                for i in range(len(clrs)):
-                    clrs[i] = view.ShapeColor[:3] + clrs[i][-1:]
-                view.DiffuseColor = clrs
-
-            elif p == "Transparency":
-                clrs = diffuseColorOf(view.Object)
-                tr = (view.Transparency/100.,)
-                for i in range(len(clrs)):
-                    clrs[i] = clrs[i][:3]+tr
-                view.DiffuseColor = clrs
-
+    pass
 
 def typeOf(obj):
     if any(obj.isDerivedFrom(t) for t in scripted_types):

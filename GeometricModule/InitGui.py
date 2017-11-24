@@ -31,11 +31,14 @@ class GeometricWorkbench(Workbench):
                          "OpenSCAD_AddOpenSCADElement",
                          "OpenSCAD_MeshBoolean"]
         self.ctrllist = Geometric.Commands.ctrllist
+        self.objlist = Geometric.Commands.objlist
 
         self.appendToolbar("Part", self.partlist)
         self.appendToolbar("Mesh", self.meshlist)
+        self.appendToolbar("Geometric", self.objlist)
 
         self.appendMenu("Geometric", self.ctrllist)
+        self.appendMenu("Geometric", self.objlist)
 
     def Activated(self):
         return
