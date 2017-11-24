@@ -69,6 +69,6 @@ def fuzzyCompare(v1, v2):
 
 
 viewbox = {
-    mbb:    FreeCAD.BoundBox(-1.5,-1.5,-1.5, 1.5, 1.5, 1.5),
-    margin: 1e-03
+    "mbb"   : FreeCAD.BoundBox(-1.5,-1.5,-1.5, 1.5, 1.5, 1.5),
+    "margin": 1e-03
 }

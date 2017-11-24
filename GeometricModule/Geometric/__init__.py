@@ -1,2 +1,2 @@
 from Geometric.Basic import *
-from Geometric import Shapes, Meshes
+from Geometric import Shapes, Meshes, Features

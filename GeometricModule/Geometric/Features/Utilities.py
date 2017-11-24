@@ -374,6 +374,29 @@ def ftrstr(*ftrs):
     return ", ".join("FreeCAD.ActiveDocument.%s"%ftr.Name for ftr in ftrs)
 
 
+class ScriptedObjectProxy(object):
+    def init(self, obj):
+        obj.Proxy = self
+        # if FreeCAD.GuiUp:
+        #     obj.ViewObject.Proxy = 0
+
+    @classmethod
+    def getTypeId(clz):
+        return "App::FeaturePython"
+
+    def createObject(self, name, doc=None):
+        if doc is None:
+            doc = FreeCAD.ActiveDocument
+        obj = doc.addObject(self.getTypeId(), name)
+        self.init(obj)
+        return obj
+
+    def onChanged(self, obj, prop):
+        pass
+
+    def execute(self, obj):
+        pass
+
 class PartFeaturePythonViewProxy(object):
     def __init__(self, icon=""):
         self.icon = icon
@@ -396,31 +419,6 @@ class PartFeaturePythonViewProxy(object):
                     clrs[i] = clrs[i][:3]+tr
                 view.DiffuseColor = clrs
 
-class FeaturePythonProxy(object):
-    @classmethod
-    def getTypeId(clz):
-        return "App::FeaturePython"
-
-    @classmethod
-    def createObject(clz, name, doc=None, **kwargs):
-        if doc is None:
-            doc = FreeCAD.ActiveDocument
-        proxy = clz(**kwargs)
-        obj = doc.addObject(proxy.getTypeId(), name)
-        obj.Proxy = proxy
-        return obj
-
-    def createViewProxy(self):
-        return None
-
-    def onChanged(self, obj, p):
-        if p == "Proxy":
-            self.init(obj)
-            if FreeCAD.GuiUp:
-                obj.ViewObject.Proxy = self.createViewProxy()
-
-    def execute(self, obj):
-        pass
 
 def typeOf(obj):
     if any(obj.isDerivedFrom(t) for t in scripted_types):
@@ -436,8 +434,8 @@ def isDerivedFrom(obj, typ):
         return isinstance(typ, type) and isinstance(obj, typ)
     elif isinstance(typ, str):
         return obj.isDerivedFrom(typ)
-    elif issubclass(typ, FeaturePythonProxy):
-        return obj.isDerivedFrom(typ.FeaturePythonProxy.gettyp()) and isinstance(obj.Proxy, typ)
+    elif issubclass(typ, ScriptedObjectProxy):
+        return obj.isDerivedFrom(typ.ScriptedObjectProxy.gettyp()) and isinstance(obj.Proxy, typ)
     else:
         return False
 
