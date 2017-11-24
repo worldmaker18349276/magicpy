@@ -6,6 +6,7 @@ Plc = FreeCAD.Placement
 
 o = Vec()
 k = Vec(0,0,1)
+bb = FreeCAD.BoundBox(-1.5,-1.5,-1.5, 1.5, 1.5, 1.5)
 
 def k2d(d):
     return Plc(Vec(), FreeCAD.Rotation(k,d))
@@ -66,9 +67,3 @@ def fuzzyCompare(v1, v2):
 
     else:
         return v1 == v2
-
-
-viewbox = {
-    "mbb"   : FreeCAD.BoundBox(-1.5,-1.5,-1.5, 1.5, 1.5, 1.5),
-    "margin": 1e-03
-}
