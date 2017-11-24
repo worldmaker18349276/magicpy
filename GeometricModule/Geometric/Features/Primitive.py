@@ -1,4 +1,5 @@
 import FreeCAD
+import GeometricResources
 from Geometric.Basic import o, k
 from Geometric.Features.Utilities import *
 from Geometric.Features.ViewBox import getViewBox, viewAllBounded
@@ -50,6 +51,13 @@ class PrimitiveViewProxy(object):
 
 
 class EmptySpaceProxy(PrimitiveProxy):
+    def __init__(self, obj):
+        obj.Proxy = self
+        obj.setEditorMode("Placement", 2)
+
+        if FreeCAD.GuiUp:
+            PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_empty_space.svg")
+
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
             builder = Shapes
@@ -61,6 +69,17 @@ class EmptySpaceProxy(PrimitiveProxy):
         setGeometry(obj, builder.makeEmptySpace())
 
 class WholeSpaceProxy(UnboundedPrimitiveProxy):
+    def __init__(self, obj):
+        obj.Proxy = self
+        if "ViewBox" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyLink", "ViewBox")
+            obj.setEditorMode("ViewBox", 2)
+            obj.ViewBox = getViewBox(obj.Document)
+        obj.setEditorMode("Placement", 2)
+
+        if FreeCAD.GuiUp:
+            PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_whole_space.svg")
+
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
             builder = Shapes
@@ -89,7 +108,7 @@ class HalfspaceProxy(UnboundedPrimitiveProxy):
         obj.setEditorMode("Placement", 2)
 
         if FreeCAD.GuiUp:
-            PrimitiveViewProxy(obj.ViewObject)
+            PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_halfspace.svg")
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -122,7 +141,7 @@ class InfiniteCylinderProxy(UnboundedPrimitiveProxy):
         obj.setEditorMode("Placement", 2)
 
         if FreeCAD.GuiUp:
-            PrimitiveViewProxy(obj.ViewObject)
+            PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_infinite_cylinder.svg")
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -155,7 +174,7 @@ class SemiInfiniteConeProxy(UnboundedPrimitiveProxy):
         obj.setEditorMode("Placement", 2)
 
         if FreeCAD.GuiUp:
-            PrimitiveViewProxy(obj.ViewObject)
+            PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_semi_infinite_cone.svg")
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -181,7 +200,7 @@ class SphereProxy(PrimitiveProxy):
         obj.setEditorMode("Placement", 2)
 
         if FreeCAD.GuiUp:
-            PrimitiveViewProxy(obj.ViewObject)
+            PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_sphere.svg")
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -208,7 +227,7 @@ class ConeProxy(PrimitiveProxy):
         obj.setEditorMode("Placement", 2)
 
         if FreeCAD.GuiUp:
-            PrimitiveViewProxy(obj.ViewObject)
+            PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_cone.svg")
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -235,7 +254,7 @@ class CylinderProxy(PrimitiveProxy):
         obj.setEditorMode("Placement", 2)
 
         if FreeCAD.GuiUp:
-            PrimitiveViewProxy(obj.ViewObject)
+            PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_cylinder.svg")
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):

@@ -1,10 +1,11 @@
 import FreeCAD, FreeCADGui
+import GeometricResources
 from Geometric.Features import *
 
 
 class AdjustViewBoxCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/view-axonometric.svg", # ":/icons/MagicPart_adjust_viewbox.svg",
+        return {"Pixmap"  : ":/icons/Geometric_adjust_viewbox.svg",
                 "MenuText": "adjust viewbox",
                 "ToolTip" : "set/adjust viewbox by selected object"}
 
@@ -19,7 +20,7 @@ class AdjustViewBoxCommand(object):
 
 class CreateSphereCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/Part_Sphere.svg", # ":/icons/primitive/MagicPart_sphere.svg",
+        return {"Pixmap"  : ":/icons/primitive/Geometric_sphere.svg",
                 "MenuText": "sphere",
                 "ToolTip" : "create a sphere"}
 
@@ -34,7 +35,7 @@ class CreateSphereCommand(object):
 
 class CreateConeCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/Part_Cone.svg", # ":/icons/primitive/MagicPart_cone.svg",
+        return {"Pixmap"  : ":/icons/primitive/Geometric_cone.svg",
                 "MenuText": "cone",
                 "ToolTip" : "create a cone"}
 
@@ -49,7 +50,7 @@ class CreateConeCommand(object):
 
 class CreateCylinderCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/Part_Cylinder.svg", # ":/icons/primitive/MagicPart_cylinder.svg",
+        return {"Pixmap"  : ":/icons/primitive/Geometric_cylinder.svg",
                 "MenuText": "cylinder",
                 "ToolTip" : "create a cylinder"}
 
@@ -64,7 +65,7 @@ class CreateCylinderCommand(object):
 
 class EmptySpaceCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/primitive/MagicPart_empty_space.svg",
+        return {"Pixmap"  : ":/icons/primitive/Geometric_empty_space.svg",
                 "MenuText": "empty space",
                 "ToolTip" : "create a empty space"}
 
@@ -79,7 +80,7 @@ class EmptySpaceCommand(object):
 
 class WholeSpaceCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/primitive/MagicPart_whole_space.svg",
+        return {"Pixmap"  : ":/icons/primitive/Geometric_whole_space.svg",
                 "MenuText": "whole space",
                 "ToolTip" : "create a whole space"}
 
@@ -95,7 +96,7 @@ class WholeSpaceCommand(object):
 
 class CreateHalfspaceCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/primitive/MagicPart_halfspace.svg",
+        return {"Pixmap"  : ":/icons/primitive/Geometric_halfspace.svg",
                 "MenuText": "halfspace",
                 "ToolTip" : "create a halfspace"}
 
@@ -111,7 +112,7 @@ class CreateHalfspaceCommand(object):
 
 class CreateInfiniteCylinderCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/primitive/MagicPart_infinite_cylinder.svg",
+        return {"Pixmap"  : ":/icons/primitive/Geometric_infinite_cylinder.svg",
                 "MenuText": "infinite cylinder",
                 "ToolTip" : "create an infinite cylinder"}
 
@@ -127,7 +128,7 @@ class CreateInfiniteCylinderCommand(object):
 
 class CreateSemiInfiniteConeCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/primitive/MagicPart_semi_infinite_cone.svg",
+        return {"Pixmap"  : ":/icons/primitive/Geometric_semi_infinite_cone.svg",
                 "MenuText": "semi-infinite cone",
                 "ToolTip" : "create a semi-infinite cone"}
 
@@ -154,13 +155,13 @@ FreeCADGui.addCommand("Geometric_cylinder", CreateCylinderCommand())
 
 objlist = [
     "Geometric_adjust_viewbox",
+    "Geometric_sphere",
+    "Geometric_cone",
+    "Geometric_cylinder",
     "Geometric_empty_space",
     "Geometric_whole_space",
     "Geometric_halfspace",
     "Geometric_infinite_cylinder",
     "Geometric_semi_infinite_cone",
-    "Geometric_sphere",
-    "Geometric_cone",
-    "Geometric_cylinder",
 ]
 

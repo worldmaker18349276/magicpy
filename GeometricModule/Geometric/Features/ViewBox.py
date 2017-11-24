@@ -43,7 +43,7 @@ class ViewBoxProxy(ScriptedObjectProxy):
 
 class ViewBoxViewProxy(object):
     def getIcon(self):
-        return ""
+        return ":/icons/Geometric_adjust_viewbox.svg"
 
     def __init__(self, view):
         view.Proxy = self
