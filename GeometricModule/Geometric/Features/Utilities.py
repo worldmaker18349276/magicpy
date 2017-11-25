@@ -378,10 +378,9 @@ class ScriptedObjectProxy(object):
     pass
 
 def typeOf(obj):
-    if any(obj.isDerivedFrom(t) for t in scripted_types):
+    if hasattr(obj, "Proxy") and obj.Proxy is not None and isinstance(obj.Proxy, ScriptedObjectProxy):
         return type(obj.Proxy)
-    else:
-        return getattr(obj, "TypeId", type(obj))
+    return getattr(obj, "TypeId", type(obj))
 
 def isDerivedFrom(obj, typ):
     if isinstance(typ, (tuple, list)):

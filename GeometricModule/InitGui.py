@@ -32,13 +32,16 @@ class GeometricWorkbench(Workbench):
                          "OpenSCAD_MeshBoolean"]
         self.ctrllist = Geometric.Commands.ctrllist
         self.objlist = Geometric.Commands.objlist
+        self.oplist = Geometric.Commands.oplist
 
         self.appendToolbar("Part", self.partlist)
         self.appendToolbar("Mesh", self.meshlist)
-        self.appendToolbar("Geometric", self.objlist)
+        self.appendToolbar("Geometric_obj", self.objlist)
+        self.appendToolbar("Geometric_op", self.oplist)
 
         self.appendMenu("Geometric", self.ctrllist)
         self.appendMenu("Geometric", self.objlist)
+        self.appendMenu("Geometric", self.oplist)
 
     def Activated(self):
         return
