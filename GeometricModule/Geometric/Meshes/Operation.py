@@ -1,6 +1,14 @@
-from Geometric.Meshes.Utilities import orientation
 import OpenSCADUtils
 
+
+def orientation(mesh):
+    mesh_ = Mesh.Mesh(mesh)
+    mesh_.offset(0.001)
+    Mesh.Mesh().offset(0)
+    if mesh_.Volume > mesh.Volume:
+        return "Forward"
+    else:
+        return "Reversed"
 
 def complement(mesh):
     mesh = Mesh.Mesh(mesh)

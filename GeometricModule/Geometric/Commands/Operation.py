@@ -4,7 +4,7 @@ from Geometric.Features import *
 
 class CommonCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : "MagicPart_common.png",
+        return {"Pixmap"  : "Geometric_common.png",
                 "MenuText": "common",
                 "ToolTip" : "make an intersection of several shapes"}
 
@@ -19,7 +19,7 @@ class CommonCommand(object):
 
 class FuseCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : "MagicPart_fuse.png",
+        return {"Pixmap"  : "Geometric_fuse.png",
                 "MenuText": "fuse",
                 "ToolTip" : "make an union of several shapes"}
 
@@ -34,7 +34,7 @@ class FuseCommand(object):
 
 class ComplementCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : "MagicPart_complement.png",
+        return {"Pixmap"  : "Geometric_complement.png",
                 "MenuText": "complement",
                 "ToolTip" : "make a complement of shape"}
 
@@ -49,7 +49,7 @@ class ComplementCommand(object):
 
 class TransformCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : "MagicPart_transform.png",
+        return {"Pixmap"  : "Geometric_transform.png",
                 "MenuText": "transform",
                 "ToolTip" : "make a transformation of shape"}
 
@@ -65,7 +65,7 @@ class TransformCommand(object):
 
 class GroupCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : "MagicPart_group.png",
+        return {"Pixmap"  : "Geometric_group.png",
                 "MenuText": "group",
                 "ToolTip" : "make a group of several shapes"}
 
@@ -78,7 +78,7 @@ class GroupCommand(object):
 
 class MaskCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : "MagicPart_mask.png",
+        return {"Pixmap"  : "Geometric_mask.png",
                 "MenuText": "mask",
                 "ToolTip" : "make a mask of several shapes"}
 
@@ -94,7 +94,7 @@ class MaskCommand(object):
 
 class SliceCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : "MagicPart_slice.png",
+        return {"Pixmap"  : "Geometric_slice.png",
                 "MenuText": "slice",
                 "ToolTip" : "make a slice of several shapes"}
 

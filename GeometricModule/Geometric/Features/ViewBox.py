@@ -36,6 +36,7 @@ class ViewBoxProxy(ScriptedObjectProxy):
 
     def fit(self, obj, ftrs=[]):
         bb = self.getBoundBox(obj)
+        bb.enlarge(-obj.Margin)
         for ftr in ftrs:
             bb.add(boundBoxOf(ftr))
         bb.enlarge(obj.Margin)

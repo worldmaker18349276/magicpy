@@ -6,6 +6,9 @@ from Geometric.Features.Utilities import *
 from Geometric import Shapes, Meshes
 
 
+class DerivedFeatureProxy(ScriptedObjectProxy):
+    pass
+
 class DerivedFeatureViewProxy(object):
     def __init__(self, view, icon=""):
         view.Proxy = self
@@ -30,9 +33,6 @@ class DerivedFeatureViewProxy(object):
         for ftr in self.children:
             ftr.ViewObject.show()
         return True
-
-class DerivedFeatureProxy(ScriptedObjectProxy):
-    pass
 
 class ComplementProxy(DerivedFeatureProxy):
     def __init__(self, obj):
