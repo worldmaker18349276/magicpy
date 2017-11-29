@@ -1,10 +1,36 @@
-import FreeCAD
+import FreeCAD, Part
 import GeometricResources
-from Geometric.Basic import o, k
+from Geometric.Basic import Vec, o, k
 from Geometric.Features.Utilities import *
-from Geometric.Features.ViewBox import getViewBox, viewAllBounded
 from Geometric import Shapes, Meshes
 
+
+class MaskedProxy(ScriptedObjectProxy):
+    def __init__(self, obj):
+        obj.Proxy = self
+        if "Min" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyVector", "Min", "ViewBox")
+            obj.Min = Vec(-1.5,-1.5,-1.5)
+        if "Max" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyVector", "Max", "ViewBox")
+            obj.Max = Vec( 1.5, 1.5, 1.5)
+        if "Margin" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyFloat", "Margin", "ViewBox")
+            obj.Margin = 0.01
+
+    def getViewBox(self, obj):
+        V = obj.Max - obj.Min
+        if V.x <= 0 or V.y <= 0 or V.z <= 0:
+             return Part.Shape()
+        else:
+             return Part.makeBox(V.x, V.y, V.z, obj.Min)
+
+    def getBoundBox(self, obj):
+        return FreeCAD.BoundBox(obj.Min, obj.Max)
+
+    def setBoundBox(self, obj, bb):
+        obj.Min = bb.getPoint(4)
+        obj.Max = bb.getPoint(2)
 
 class PrimitiveProxy(ScriptedObjectProxy):
     def __init__(self, obj):
@@ -14,17 +40,8 @@ class PrimitiveProxy(ScriptedObjectProxy):
         if FreeCAD.GuiUp:
             PrimitiveViewProxy(obj.ViewObject)
 
-class UnboundedPrimitiveProxy(PrimitiveProxy):
-    def __init__(self, obj):
-        obj.Proxy = self
-        if "ViewBox" not in obj.PropertiesList:
-            obj.addProperty("App::PropertyLink", "ViewBox")
-            obj.setEditorMode("ViewBox", 2)
-            obj.ViewBox = getViewBox(obj.Document)
-        obj.setEditorMode("Placement", 2)
-
-        if FreeCAD.GuiUp:
-            PrimitiveViewProxy(obj.ViewObject)
+class UnboundedPrimitiveProxy(PrimitiveProxy, MaskedProxy):
+    pass
 
 class PrimitiveViewProxy(object):
     def __init__(self, view, icon=""):
@@ -71,14 +88,24 @@ class EmptySpaceProxy(PrimitiveProxy):
 class WholeSpaceProxy(UnboundedPrimitiveProxy):
     def __init__(self, obj):
         obj.Proxy = self
-        if "ViewBox" not in obj.PropertiesList:
-            obj.addProperty("App::PropertyLink", "ViewBox")
-            obj.setEditorMode("ViewBox", 2)
-            obj.ViewBox = getViewBox(obj.Document)
+        if "Min" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyVector", "Min", "ViewBox")
+            obj.Min = Vec(-1.5,-1.5,-1.5)
+        if "Max" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyVector", "Max", "ViewBox")
+            obj.Max = Vec( 1.5, 1.5, 1.5)
+        if "Margin" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyFloat", "Margin", "ViewBox")
+            obj.Margin = 0.01
         obj.setEditorMode("Placement", 2)
 
         if FreeCAD.GuiUp:
             PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_whole_space.svg")
+
+            # obj.ViewObject.DisplayMode = "Wireframe"
+            # obj.ViewObject.DrawStyle = "Dashed"
+            # obj.ViewObject.DiffuseColor = [(1., 1., 1., 1.)]*6
+            # obj.ViewObject.LineColor = (1., 0., 0.)
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -88,17 +115,24 @@ class WholeSpaceProxy(UnboundedPrimitiveProxy):
         else:
             raise TypeError
 
-        bb = boundBoxOf(obj.ViewBox)
-        bb.enlarge(obj.ViewBox.Margin)
-        setGeometry(obj, builder.makeWholeSpace(bb=bb))
+        bb = self.getBoundBox(obj)
+        bb.enlarge(obj.Margin)
+        geo = builder.makeWholeSpace(bb=bb)
+        geo = builder.common([geo, self.getViewBox(obj)])
+        setGeometry(obj, geo)
 
 class HalfspaceProxy(UnboundedPrimitiveProxy):
     def __init__(self, obj):
         obj.Proxy = self
-        if "ViewBox" not in obj.PropertiesList:
-            obj.addProperty("App::PropertyLink", "ViewBox")
-            obj.setEditorMode("ViewBox", 2)
-            obj.ViewBox = getViewBox(obj.Document)
+        if "Min" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyVector", "Min", "ViewBox")
+            obj.Min = Vec(-1.5,-1.5,-1.5)
+        if "Max" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyVector", "Max", "ViewBox")
+            obj.Max = Vec( 1.5, 1.5, 1.5)
+        if "Margin" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyFloat", "Margin", "ViewBox")
+            obj.Margin = 0.01
         if "Offset" not in obj.PropertiesList:
             obj.addProperty("App::PropertyFloat", "Offset")
             obj.Offset = 0.
@@ -118,17 +152,24 @@ class HalfspaceProxy(UnboundedPrimitiveProxy):
         else:
             raise TypeError
 
-        bb = boundBoxOf(obj.ViewBox)
-        bb.enlarge(obj.ViewBox.Margin)
-        setGeometry(obj, builder.makeHalfspace(direction=obj.Direction, offset=obj.Offset, bb=bb))
+        bb = self.getBoundBox(obj)
+        bb.enlarge(obj.Margin)
+        geo = builder.makeHalfspace(direction=obj.Direction, offset=obj.Offset, bb=bb)
+        geo = builder.common([geo, self.getViewBox(obj)])
+        setGeometry(obj, geo)
 
 class InfiniteCylinderProxy(UnboundedPrimitiveProxy):
     def __init__(self, obj):
         obj.Proxy = self
-        if "ViewBox" not in obj.PropertiesList:
-            obj.addProperty("App::PropertyLink", "ViewBox")
-            obj.setEditorMode("ViewBox", 2)
-            obj.ViewBox = getViewBox(obj.Document)
+        if "Min" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyVector", "Min", "ViewBox")
+            obj.Min = Vec(-1.5,-1.5,-1.5)
+        if "Max" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyVector", "Max", "ViewBox")
+            obj.Max = Vec( 1.5, 1.5, 1.5)
+        if "Margin" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyFloat", "Margin", "ViewBox")
+            obj.Margin = 0.01
         if "Radius" not in obj.PropertiesList:
             obj.addProperty("App::PropertyFloat", "Radius")
             obj.Radius = 1.
@@ -151,17 +192,24 @@ class InfiniteCylinderProxy(UnboundedPrimitiveProxy):
         else:
             raise TypeError
 
-        bb = boundBoxOf(obj.ViewBox)
-        bb.enlarge(obj.ViewBox.Margin)
-        setGeometry(obj, builder.makeInfiniteCylinder(radius=obj.Radius, direction=obj.Direction, center=obj.Center, bb=bb))
+        bb = self.getBoundBox(obj)
+        bb.enlarge(obj.Margin)
+        geo = builder.makeInfiniteCylinder(radius=obj.Radius, direction=obj.Direction, center=obj.Center, bb=bb)
+        geo = builder.common([geo, self.getViewBox(obj)])
+        setGeometry(obj, geo)
 
 class SemiInfiniteConeProxy(UnboundedPrimitiveProxy):
     def __init__(self, obj):
         obj.Proxy = self
-        if "ViewBox" not in obj.PropertiesList:
-            obj.addProperty("App::PropertyLink", "ViewBox")
-            obj.setEditorMode("ViewBox", 2)
-            obj.ViewBox = getViewBox(obj.Document)
+        if "Min" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyVector", "Min", "ViewBox")
+            obj.Min = Vec(-1.5,-1.5,-1.5)
+        if "Max" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyVector", "Max", "ViewBox")
+            obj.Max = Vec( 1.5, 1.5, 1.5)
+        if "Margin" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyFloat", "Margin", "ViewBox")
+            obj.Margin = 0.01
         if "Slope" not in obj.PropertiesList:
             obj.addProperty("App::PropertyFloat", "Slope")
             obj.Slope = 1.
@@ -184,9 +232,11 @@ class SemiInfiniteConeProxy(UnboundedPrimitiveProxy):
         else:
             raise TypeError
 
-        bb = boundBoxOf(obj.ViewBox)
-        bb.enlarge(obj.ViewBox.Margin)
-        setGeometry(obj, builder.makeSemiInfiniteCone(slope=obj.Slope, direction=obj.Direction, center=obj.Center, bb=bb))
+        bb = self.getBoundBox(obj)
+        bb.enlarge(obj.Margin)
+        geo = builder.makeSemiInfiniteCone(slope=obj.Slope, direction=obj.Direction, center=obj.Center, bb=bb)
+        geo = builder.common([geo, self.getViewBox(obj)])
+        setGeometry(obj, geo)
 
 class SphereProxy(PrimitiveProxy):
     def __init__(self, obj):

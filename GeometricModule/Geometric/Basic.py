@@ -65,5 +65,12 @@ def fuzzyCompare(v1, v2):
 
         return fuzzyCompare(v1.Rotation, v2.Rotation)
 
+    elif isinstance(v1, FreeCAD.BoundBox):
+        if not isinstance(v2, FreeCAD.BoundBox):
+            return False
+
+        return (fuzzyCompare(v1.getPoint(4), v2.getPoint(4)) and
+                fuzzyCompare(v1.getPoint(2), v2.getPoint(2)))
+
     else:
         return v1 == v2

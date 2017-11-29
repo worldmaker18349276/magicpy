@@ -3,21 +3,6 @@ import GeometricResources
 from Geometric.Features import *
 
 
-class AdjustViewBoxCommand(object):
-    def GetResources(self):
-        return {"Pixmap"  : ":/icons/Geometric_adjust_viewbox.svg",
-                "MenuText": "adjust viewbox",
-                "ToolTip" : "set/adjust viewbox by selected object"}
-
-    def Activated(self):
-        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'ViewBox')")
-        FreeCADGui.doCommand("Geometric.ViewBox(_ftr)")
-        FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
-        FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
-
-    def IsActive(self):
-        return FreeCAD.ActiveDocument is not None
-
 class CreateSphereCommand(object):
     def GetResources(self):
         return {"Pixmap"  : ":/icons/primitive/Geometric_sphere.svg",
@@ -143,7 +128,6 @@ class CreateSemiInfiniteConeCommand(object):
         return FreeCAD.ActiveDocument is not None
 
 
-FreeCADGui.addCommand("Geometric_adjust_viewbox", AdjustViewBoxCommand())
 FreeCADGui.addCommand("Geometric_empty_space", EmptySpaceCommand())
 FreeCADGui.addCommand("Geometric_whole_space", WholeSpaceCommand())
 FreeCADGui.addCommand("Geometric_halfspace", CreateHalfspaceCommand())
@@ -154,7 +138,6 @@ FreeCADGui.addCommand("Geometric_cone", CreateConeCommand())
 FreeCADGui.addCommand("Geometric_cylinder", CreateCylinderCommand())
 
 objlist = [
-    "Geometric_adjust_viewbox",
     "Geometric_sphere",
     "Geometric_cone",
     "Geometric_cylinder",
