@@ -78,13 +78,6 @@ def boundBoxOf(obj):
     else:
         raise TypeError
 
-def diffuseColorOf(obj):
-    clrs = obj.ViewObject.DiffuseColor
-    if len(clrs) != len(obj.Shape.Faces):
-        clr = obj.ViewObject.ShapeColor[:3] + (obj.ViewObject.Transparency/100.,)
-        clrs = [clr]*len(obj.Shape.Faces)
-    return clrs
-
 
 # Feature
 

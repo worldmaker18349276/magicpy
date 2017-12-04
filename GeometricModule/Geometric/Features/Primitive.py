@@ -5,7 +5,15 @@ from Geometric.Features.Utilities import *
 from Geometric import Shapes, Meshes
 
 
-class MaskedProxy(ScriptedObjectProxy):
+class PrimitiveProxy(ScriptedObjectProxy):
+    def __init__(self, obj):
+        obj.Proxy = self
+        obj.setEditorMode("Placement", 2)
+
+        if FreeCAD.GuiUp:
+            PrimitiveViewProxy(obj.ViewObject)
+
+class UnboundedPrimitiveProxy(PrimitiveProxy):
     def __init__(self, obj):
         obj.Proxy = self
         if "Min" not in obj.PropertiesList:
@@ -17,6 +25,10 @@ class MaskedProxy(ScriptedObjectProxy):
         if "Margin" not in obj.PropertiesList:
             obj.addProperty("App::PropertyFloat", "Margin", "ViewBox")
             obj.Margin = 0.01
+        obj.setEditorMode("Placement", 2)
+
+        if FreeCAD.GuiUp:
+            PrimitiveViewProxy(obj.ViewObject)
 
     def getViewBox(self, obj):
         V = obj.Max - obj.Min
@@ -32,17 +44,6 @@ class MaskedProxy(ScriptedObjectProxy):
         obj.Min = bb.getPoint(4)
         obj.Max = bb.getPoint(2)
 
-class PrimitiveProxy(ScriptedObjectProxy):
-    def __init__(self, obj):
-        obj.Proxy = self
-        obj.setEditorMode("Placement", 2)
-
-        if FreeCAD.GuiUp:
-            PrimitiveViewProxy(obj.ViewObject)
-
-class UnboundedPrimitiveProxy(PrimitiveProxy, MaskedProxy):
-    pass
-
 class PrimitiveViewProxy(object):
     def __init__(self, view, icon=""):
         view.Proxy = self
@@ -50,21 +51,6 @@ class PrimitiveViewProxy(object):
 
     def getIcon(self):
         return self.icon
-
-    def onChanged(self, view, p):
-        if isDerivedFrom(view.Object, "Part::FeaturePython"):
-            if p == "ShapeColor":
-                clrs = diffuseColorOf(view.Object)
-                for i in range(len(clrs)):
-                    clrs[i] = view.ShapeColor[:3] + clrs[i][-1:]
-                view.DiffuseColor = clrs
-
-            elif p == "Transparency":
-                clrs = diffuseColorOf(view.Object)
-                tr = (view.Transparency/100.,)
-                for i in range(len(clrs)):
-                    clrs[i] = clrs[i][:3]+tr
-                view.DiffuseColor = clrs
 
 
 class EmptySpaceProxy(PrimitiveProxy):
@@ -101,6 +87,7 @@ class WholeSpaceProxy(UnboundedPrimitiveProxy):
 
         if FreeCAD.GuiUp:
             PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_whole_space.svg")
+            # ProperFaces = []
 
             # obj.ViewObject.DisplayMode = "Wireframe"
             # obj.ViewObject.DrawStyle = "Dashed"
@@ -118,7 +105,7 @@ class WholeSpaceProxy(UnboundedPrimitiveProxy):
         bb = self.getBoundBox(obj)
         bb.enlarge(obj.Margin)
         geo = builder.makeWholeSpace(bb=bb)
-        geo = builder.common([geo, self.getViewBox(obj)])
+        # geo = builder.common([geo, self.getViewBox(obj)])
         setGeometry(obj, geo)
 
 class HalfspaceProxy(UnboundedPrimitiveProxy):
@@ -143,6 +130,7 @@ class HalfspaceProxy(UnboundedPrimitiveProxy):
 
         if FreeCAD.GuiUp:
             PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_halfspace.svg")
+            # ProperFaces = [2]
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -155,7 +143,7 @@ class HalfspaceProxy(UnboundedPrimitiveProxy):
         bb = self.getBoundBox(obj)
         bb.enlarge(obj.Margin)
         geo = builder.makeHalfspace(direction=obj.Direction, offset=obj.Offset, bb=bb)
-        geo = builder.common([geo, self.getViewBox(obj)])
+        # geo = builder.common([geo, self.getViewBox(obj)])
         setGeometry(obj, geo)
 
 class InfiniteCylinderProxy(UnboundedPrimitiveProxy):
@@ -183,6 +171,7 @@ class InfiniteCylinderProxy(UnboundedPrimitiveProxy):
 
         if FreeCAD.GuiUp:
             PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_infinite_cylinder.svg")
+            # ProperFaces = [0]
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -195,7 +184,7 @@ class InfiniteCylinderProxy(UnboundedPrimitiveProxy):
         bb = self.getBoundBox(obj)
         bb.enlarge(obj.Margin)
         geo = builder.makeInfiniteCylinder(radius=obj.Radius, direction=obj.Direction, center=obj.Center, bb=bb)
-        geo = builder.common([geo, self.getViewBox(obj)])
+        # geo = builder.common([geo, self.getViewBox(obj)])
         setGeometry(obj, geo)
 
 class SemiInfiniteConeProxy(UnboundedPrimitiveProxy):
@@ -223,6 +212,7 @@ class SemiInfiniteConeProxy(UnboundedPrimitiveProxy):
 
         if FreeCAD.GuiUp:
             PrimitiveViewProxy(obj.ViewObject, ":/icons/primitive/Geometric_semi_infinite_cone.svg")
+            # ProperFaces = [0]
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -235,7 +225,7 @@ class SemiInfiniteConeProxy(UnboundedPrimitiveProxy):
         bb = self.getBoundBox(obj)
         bb.enlarge(obj.Margin)
         geo = builder.makeSemiInfiniteCone(slope=obj.Slope, direction=obj.Direction, center=obj.Center, bb=bb)
-        geo = builder.common([geo, self.getViewBox(obj)])
+        # geo = builder.common([geo, self.getViewBox(obj)])
         setGeometry(obj, geo)
 
 class SphereProxy(PrimitiveProxy):

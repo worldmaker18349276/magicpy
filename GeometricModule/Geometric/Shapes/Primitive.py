@@ -29,22 +29,17 @@ def makeWholeSpace(bb=bb):
     return Part.makeSphere(bb.DiagonalLength/2, bb.Center)
 
 def makeHalfspace(direction=k, offset=0., bb=bb):
-    bb_ = bb.transformed(k2d(direction).inverse().toMatrix())
-    height = max(bb_.ZMax - offset, 0.01)
-    xm = max(abs(bb_.XMax), abs(bb_.XMin))
-    ym = max(abs(bb_.YMax), abs(bb_.YMin))
-    radius = math.sqrt(xm**2 + ym**2)
+    height = max(bb.DiagonalLength/2 - offset, 0.01)
+    radius = bb.DiagonalLength/2
     return Part.makeCylinder(radius, height, direction*offset, direction)
 
 def makeInfiniteCylinder(radius=1., direction=k, center=o, bb=bb):
-    bb_ = bb.transformed(k2d(direction).inverse().toMatrix())
     offset = center.dot(direction)*(1./direction.Length)
-    height = bb_.ZLength
+    height = bb.DiagonalLength
     bottom = center - direction*((offset+height/2.)/direction.Length)
     return Part.makeCylinder(abs(radius), height, bottom, direction)
 
 def makeSemiInfiniteCone(slope=1., direction=k, center=o, bb=bb):
-    bb_ = bb.transformed(k2d(direction).inverse().toMatrix())
     offset = center.dot(direction)*(1./direction.Length)
-    height = max(bb_.ZMax - offset, 0.01)
+    height = max(bb.DiagonalLength/2 - offset, 0.01)
     return Part.makeCone(0., abs(slope*height), height, center, direction)
