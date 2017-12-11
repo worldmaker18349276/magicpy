@@ -3,6 +3,7 @@ import FreeCAD, Units
 
 Vec = FreeCAD.Vector
 Plc = FreeCAD.Placement
+Rot = FreeCAD.Rotation
 
 o = Vec()
 k = Vec(0,0,1)
@@ -10,6 +11,13 @@ bb = FreeCAD.BoundBox(-1.5,-1.5,-1.5, 1.5, 1.5, 1.5)
 
 def k2d(d):
     return Plc(Vec(), FreeCAD.Rotation(k,d))
+
+def mirror(base, norm):
+    m = FreeCAD.Matrix()
+    m.move(base*(-1))
+    m.scale(-1,-1,-1)
+    m.move(base)
+    return m.multiply(Plc(Vec(), FreeCAD.Rotation(norm, 180)).toMatrix())
 
 def fuzzyCompare(v1, v2):
     if isinstance(v1, Units.Quantity):

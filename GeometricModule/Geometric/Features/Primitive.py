@@ -30,20 +30,6 @@ class UnboundedPrimitiveProxy(PrimitiveProxy):
         if FreeCAD.GuiUp:
             PrimitiveViewProxy(obj.ViewObject)
 
-    def getViewBox(self, obj):
-        V = obj.Max - obj.Min
-        if V.x <= 0 or V.y <= 0 or V.z <= 0:
-             return Part.Shape()
-        else:
-             return Part.makeBox(V.x, V.y, V.z, obj.Min)
-
-    def getBoundBox(self, obj):
-        return FreeCAD.BoundBox(obj.Min, obj.Max)
-
-    def setBoundBox(self, obj, bb):
-        obj.Min = bb.getPoint(4)
-        obj.Max = bb.getPoint(2)
-
 class PrimitiveViewProxy(object):
     def __init__(self, view, icon=""):
         view.Proxy = self
@@ -102,7 +88,7 @@ class WholeSpaceProxy(UnboundedPrimitiveProxy):
         else:
             raise TypeError
 
-        bb = self.getBoundBox(obj)
+        bb = FreeCAD.BoundBox(obj.Min, obj.Max)
         bb.enlarge(obj.Margin)
         geo = builder.makeWholeSpace(bb=bb)
         # geo = builder.common([geo, self.getViewBox(obj)])
@@ -140,7 +126,7 @@ class HalfspaceProxy(UnboundedPrimitiveProxy):
         else:
             raise TypeError
 
-        bb = self.getBoundBox(obj)
+        bb = FreeCAD.BoundBox(obj.Min, obj.Max)
         bb.enlarge(obj.Margin)
         geo = builder.makeHalfspace(direction=obj.Direction, offset=obj.Offset, bb=bb)
         # geo = builder.common([geo, self.getViewBox(obj)])
@@ -181,7 +167,7 @@ class InfiniteCylinderProxy(UnboundedPrimitiveProxy):
         else:
             raise TypeError
 
-        bb = self.getBoundBox(obj)
+        bb = FreeCAD.BoundBox(obj.Min, obj.Max)
         bb.enlarge(obj.Margin)
         geo = builder.makeInfiniteCylinder(radius=obj.Radius, direction=obj.Direction, center=obj.Center, bb=bb)
         # geo = builder.common([geo, self.getViewBox(obj)])
@@ -222,7 +208,7 @@ class SemiInfiniteConeProxy(UnboundedPrimitiveProxy):
         else:
             raise TypeError
 
-        bb = self.getBoundBox(obj)
+        bb = FreeCAD.BoundBox(obj.Min, obj.Max)
         bb.enlarge(obj.Margin)
         geo = builder.makeSemiInfiniteCone(slope=obj.Slope, direction=obj.Direction, center=obj.Center, bb=bb)
         # geo = builder.common([geo, self.getViewBox(obj)])

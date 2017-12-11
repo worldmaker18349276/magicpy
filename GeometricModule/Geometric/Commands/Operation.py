@@ -109,6 +109,20 @@ class SliceCommand(object):
         return len(FreeCADGui.Selection.getSelection()) > 0
 
 
+class ViewGroupCommand(object):
+    def GetResources(self):
+        return {"Pixmap"  : ":/icons/Geometric_adjust_viewbox.svg",
+                "MenuText": "add view group",
+                "ToolTip" : "add view group"}
+
+    def Activated(self):
+        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('App::DocumentObjectGroupPython', 'ViewGroup')")
+        FreeCADGui.doCommand("Geometric.ViewGroup(_ftr)")
+
+    def IsActive(self):
+        return FreeCAD.ActiveDocument is not None
+
+
 FreeCADGui.addCommand("Geometric_common", CommonCommand())
 FreeCADGui.addCommand("Geometric_fuse", FuseCommand())
 FreeCADGui.addCommand("Geometric_complement", ComplementCommand())
@@ -116,6 +130,7 @@ FreeCADGui.addCommand("Geometric_transform", TransformCommand())
 FreeCADGui.addCommand("Geometric_group", GroupCommand())
 FreeCADGui.addCommand("Geometric_mask", MaskCommand())
 FreeCADGui.addCommand("Geometric_slice", SliceCommand())
+FreeCADGui.addCommand("Geometric_viewgroup", ViewGroupCommand())
 
 oplist = ["Geometric_common",
           "Geometric_fuse",
@@ -123,5 +138,7 @@ oplist = ["Geometric_common",
           "Geometric_transform",
           "Geometric_group",
           "Geometric_mask",
-          "Geometric_slice"]
+          "Geometric_slice",
+          "Geometric_viewgroup",
+        ]
 
