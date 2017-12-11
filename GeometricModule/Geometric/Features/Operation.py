@@ -46,7 +46,7 @@ class ComplementProxy(DerivedFeatureProxy):
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
             setGeometry(obj, Shapes.complement(obj.Source.Shape))
-            obj.ViewObject.DiffuseColor = diffuseColorOf(obj.Source)
+            obj.ViewObject.DiffuseColor = obj.Source.ViewObject.DiffuseColor
 
         elif isDerivedFrom(obj, "Mesh::FeaturePython"):
             setGeometry(obj, Meshes.complement(meshOf(obj.Source)))
@@ -115,10 +115,12 @@ def group(*ftrs):
     ftrs = distinct_list(subftr for ftr in ftrs for subftr in ftrlist(ftr))
 
     obj = ftrs[0].Document.addObject("App::DocumentObjectGroup", "Group")
+    for ftr in ftrs:
+        ftr.getParentGroup().removeObject(ftr)
     obj.Group = ftrs
     return obj
 
-def group_mask(target, *ftrs):
+def group_common(target, *ftrs):
     if len(ftrs) == 0:
         return target
 
