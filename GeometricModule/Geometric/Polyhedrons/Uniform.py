@@ -1,63 +1,6 @@
 from math import sqrt, pow
-import Part
 from Geometric.Basic import *
-
-
-def star(func):
-    def star_func(*vs):
-        if len(vs) == 0:
-            return None
-        elif len(vs) == 1:
-            return func(vs[0])
-        else:
-            return [func(v) for v in vs]
-    return star_func
-
-def istar(func):
-    def star_func(*vs):
-        if len(vs) == 0:
-            return None
-        elif len(vs) == 1:
-            return func(vs[0])
-        else:
-            return [func(v) for v in vs[::-1]]
-    return star_func
-
-e    =  star(lambda v: v)
-_e   = istar(lambda v: v)
-xy   = istar(lambda v: Vec( v.y, v.x, v.z))
-yz   = istar(lambda v: Vec( v.x, v.z, v.y))
-zx   = istar(lambda v: Vec( v.z, v.y, v.x))
-xyz  =  star(lambda v: Vec( v.y, v.z, v.x))
-zyx  =  star(lambda v: Vec( v.z, v.x, v.y))
-_x   = istar(lambda v: Vec(-v.x, v.y, v.z))
-_y   = istar(lambda v: Vec( v.x,-v.y, v.z))
-_z   = istar(lambda v: Vec( v.x, v.y,-v.z))
-_xy  =  star(lambda v: Vec(-v.x,-v.y, v.z))
-_zx  =  star(lambda v: Vec(-v.x, v.y,-v.z))
-_yz  =  star(lambda v: Vec( v.x,-v.y,-v.z))
-_xyz = istar(lambda v: Vec(-v.x,-v.y,-v.z))
-x_y  =  star(lambda v: Vec(-v.y, v.x, v.z))
-y_z  =  star(lambda v: Vec( v.x,-v.z, v.y))
-z_x  =  star(lambda v: Vec( v.z, v.y,-v.x))
-y_x  =  star(lambda v: Vec( v.y,-v.x, v.z))
-z_y  =  star(lambda v: Vec( v.x, v.z,-v.y))
-x_z  =  star(lambda v: Vec(-v.z, v.y, v.x))
-
-def map_by(fs, *opss):
-    for ops in opss:
-        fs = [op(*f) for op in ops for f in fs]
-    return fs
-
-def make_polyhedron(vss):
-    faces = []
-    for vs in vss:
-        faces.append(Part.Face(Part.makePolygon(vs+vs[:1])))
-    return Part.makeSolid(Part.makeShell(faces))
-
-phi = (sqrt(5)+1)/2
-
-poly = {}
+from Geometric.Polyhedrons.Utilities import *
 
 
 # "4.4.4"
@@ -67,7 +10,7 @@ poly = {}
 cube = make_polyhedron(
     map_by(
         [[Vec(1,1,1), Vec(-1,1,1), Vec(-1,-1,1), Vec(1,-1,1)]],
-        (e, _z), (e, xyz, zyx)
+        (e, iz), (e, xyz, zyx)
     ))
 poly["4.4.4"] = cube
 
@@ -78,7 +21,7 @@ poly["4.4.4"] = cube
 tetrahedron = make_polyhedron(
     map_by(
         [[Vec(-1,1,1), Vec(1,-1,1), Vec(1,1,-1)]],
-        (e, _xy), (e, _zx)
+        (e, ixy), (e, izx)
     ))
 poly["3.3.3"] = tetrahedron
 
@@ -89,7 +32,7 @@ poly["3.3.3"] = tetrahedron
 octahedron = make_polyhedron(
     map_by(
         [[Vec(2,0,0), Vec(0,2,0), Vec(0,0,2)]],
-        (e, _x), (e, _y), (e, _z)
+        (e, ix), (e, iy), (e, iz)
     ))
 poly["3.3.3.3"] = octahedron
 
@@ -101,10 +44,10 @@ poly["3.3.3.3"] = octahedron
 icosahedron = make_polyhedron(
     map_by(
         [[Vec(1,0,phi), Vec(0,phi,1), Vec(-1,0,phi)]],
-        (e, _xy), (e, _yz), (e, xyz, zyx)
+        (e, ixy), (e, iyz), (e, xyz, zyx)
     )+map_by(
         [[Vec(1,0,phi), Vec(phi,1,0), Vec(0,phi,1)]],
-        (e, _x), (e, _y), (e, _z)
+        (e, ix), (e, iy), (e, iz)
     ))
 poly["3.3.3.3.3"] = icosahedron
 
@@ -115,7 +58,7 @@ poly["3.3.3.3.3"] = icosahedron
 dodecahedron = make_polyhedron(
     map_by(
         [[Vec(0,1/phi,phi), Vec(0,-1/phi,phi), Vec(1,-1,1), Vec(phi,0,1/phi), Vec(1,1,1)]],
-        (e, _xy), (e, _zx), (e, xyz, zyx)
+        (e, ixy), (e, izx), (e, xyz, zyx)
     ))
 poly["5.5.5"] = dodecahedron
 
@@ -127,7 +70,7 @@ poly["5.5.5"] = dodecahedron
 rhombicDodecahedron = make_polyhedron(
     map_by(
         [[Vec(0,0,2), Vec(1,1,1), Vec(0,2,0), Vec(-1,1,1)]],
-        (e, _xy), (e, _yz), (e, xyz, zyx)
+        (e, ixy), (e, iyz), (e, xyz, zyx)
     ))
 poly["V3.4.3.4"] = rhombicDodecahedron
 
@@ -138,10 +81,10 @@ poly["V3.4.3.4"] = rhombicDodecahedron
 rhombicTriacontahedron = make_polyhedron(
     map_by(
         [[Vec(1,0,phi), Vec(0,1/phi,phi), Vec(-1,0,phi), Vec(0,-1/phi,phi)]],
-        (e, _zx), (e, xyz, zyx)
+        (e, izx), (e, xyz, zyx)
     )+map_by(
         [[Vec(1,0,phi), Vec(1,1,1), Vec(0,phi,1), Vec(0,1/phi,phi)]],
-        (e, _x), (e, _xy), (e, _yz), (e, xyz, zyx)
+        (e, ix), (e, ixy), (e, iyz), (e, xyz, zyx)
     ))
 poly["V3.5.3.5"] = rhombicTriacontahedron
 
@@ -153,10 +96,10 @@ poly["V3.5.3.5"] = rhombicTriacontahedron
 cuboctahedron = make_polyhedron(
     map_by(
         [[Vec(1,0,1), Vec(0,1,1), Vec(-1,0,1), Vec(0,-1,1)]],
-        (e, _z), (e, xyz, zyx)
+        (e, iz), (e, xyz, zyx)
     )+map_by(
         [[Vec(1,0,1), Vec(1,1,0), Vec(0,1,1)]],
-        (e, _x), (e, _y), (e, _z)
+        (e, ix), (e, iy), (e, iz)
     ))
 poly["3.4.3.4"] = cuboctahedron
 
@@ -167,13 +110,13 @@ poly["3.4.3.4"] = cuboctahedron
 icosidodecahedron = make_polyhedron(
     map_by(
         [[Vec(0,0,phi), Vec(0.5,-phi/2,(1+phi)/2), Vec((1+phi)/2,-0.5,phi/2), Vec((1+phi)/2,0.5,phi/2), Vec(0.5,phi/2,(1+phi)/2)]],
-        (e, _xy), (e, _zx), (e, xyz, zyx)
+        (e, ixy), (e, izx), (e, xyz, zyx)
     )+map_by(
         [[Vec(0,0,phi), Vec(0.5,phi/2,(1+phi)/2), Vec(-0.5,phi/2,(1+phi)/2)]],
-        (e, _xy), (e, _zx), (e, xyz, zyx)
+        (e, ixy), (e, izx), (e, xyz, zyx)
     )+map_by(
         [[Vec(0.5,phi/2,(1+phi)/2), Vec((1+phi)/2,0.5,phi/2), Vec(phi/2,(1+phi)/2,0.5)]],
-        (e, _x), (e, _y), (e, _z)
+        (e, ix), (e, iy), (e, iz)
     ))
 poly["3.5.3.5"] = icosidodecahedron
 
@@ -186,13 +129,13 @@ c = 1+sqrt(2)
 rhombicuboctahedron = make_polyhedron(
     map_by(
         [[Vec(1,1,c), Vec(-1,1,c), Vec(-1,-1,c), Vec(1,-1,c)]],
-        (e, _z), (e, xyz, zyx)
+        (e, iz), (e, xyz, zyx)
     )+map_by(
         [[Vec(1,1,c), Vec(1,c,1), Vec(-1,c,1), Vec(-1,1,c)]],
-        (e, _y), (e, _z), (e, xyz, zyx)
+        (e, iy), (e, iz), (e, xyz, zyx)
     )+map_by(
         [[Vec(1,1,c), Vec(c,1,1), Vec(1,c,1)]],
-        (e, _x), (e, _y), (e, _z)
+        (e, ix), (e, iy), (e, iz)
     ))
 poly["3.4.4.4"] = rhombicuboctahedron
 
@@ -203,19 +146,19 @@ poly["3.4.4.4"] = rhombicuboctahedron
 rhombicosidodecahedron = make_polyhedron(
     map_by(
         [[Vec(1,1,phi**3), Vec(1,-1,phi**3), Vec(phi**2,-phi,phi*2), Vec(2+phi,0,phi**2), Vec(phi**2,phi,phi*2)]],
-        (e, _x), (e, _z), (e, xyz, zyx)
+        (e, ix), (e, iz), (e, xyz, zyx)
     )+map_by(
         [[Vec(phi,phi*2,phi**2), Vec(phi*2,phi**2,phi), Vec(phi**2,phi,phi*2)]],
-        (e, _x), (e, _y), (e, _z)
+        (e, ix), (e, iy), (e, iz)
     )+map_by(
         [[Vec(1,1,phi**3), Vec(-1,1,phi**3), Vec(-1,-1,phi**3), Vec(1,-1,phi**3)]],
-        (e, _z), (e, xyz, zyx)
+        (e, iz), (e, xyz, zyx)
     )+map_by(
         [[Vec(1,1,phi**3), Vec(0,phi**2,2+phi), Vec(-1,1,phi**3)]],
-        (e, _y), (e, _z), (e, xyz, zyx)
+        (e, iy), (e, iz), (e, xyz, zyx)
     )+map_by(
         [[Vec(1,1,phi**3), Vec(phi**2,phi,phi*2), Vec(phi,phi*2,phi**2), Vec(0,phi**2,2+phi)]],
-        (e, _x), (e, _y), (e, _z), (e, xyz, zyx)
+        (e, ix), (e, iy), (e, iz), (e, xyz, zyx)
     ))
 poly["3.4.5.4"] = rhombicosidodecahedron
 
@@ -228,13 +171,13 @@ t = (1+pow(19+3*sqrt(33), 1/3.)+pow(19-3*sqrt(33), 1/3.))/3
 snubCube = make_polyhedron(
     map_by(
         [[Vec(1,1/t,t), Vec(-1/t,1,t), Vec(-1,-1/t,t), Vec(1/t,-1,t)]],
-        (e, _yz), (e, xyz, zyx)
+        (e, iyz), (e, xyz, zyx)
     )+map_by(
         [[Vec(1,1/t,t), Vec(t,1,1/t), Vec(1/t,t,1)]],
-        (e, _yz), (e, x_y, _xy, y_x)
+        (e, iyz), (e, xiy, ixy, yix)
     )+map_by(
         [[Vec(1,1/t,t), Vec(1/t,t,1), Vec(-1/t,1,t)]],
-        (e, _yz), (e, x_y, _xy, y_x), (e, xyz, zyx)
+        (e, iyz), (e, xiy, ixy, yix), (e, xyz, zyx)
     ))
 poly["3.3.3.3.4"] = snubCube
 
@@ -253,30 +196,31 @@ v5 = Vec(a+b/phi+phi,-a*phi+b+1/phi,a/phi+b*phi-1)
 snubDodecahedron = make_polyhedron(
     map_by(
         [[v1,v2,v3,v4,v5]],
-        (e, _xy), (e, _zx), (e, xyz, zyx)
+        (e, ixy), (e, izx), (e, xyz, zyx)
     )+map_by(
-        [[v1, _xy(v1), v2]],
-        (e, _xy), (e, _zx), (e, xyz, zyx)
+        [[v1, ixy(v1), v2]],
+        (e, ixy), (e, izx), (e, xyz, zyx)
     )+map_by(
-        [[v1, xyz(v4), _xy(v2)]],
-        (e, _xy), (e, _zx), (e, xyz, zyx)
+        [[v1, xyz(v4), ixy(v2)]],
+        (e, ixy), (e, izx), (e, xyz, zyx)
     )+map_by(
         [[v1, v5, xyz(v4)]],
-        (e, _xy), (e, _zx), (e, xyz, zyx)
+        (e, ixy), (e, izx), (e, xyz, zyx)
     )+map_by(
         [[v5, xyz(v5), xyz(v4)]],
-        (e, _xy), (e, _zx), (e, xyz, zyx)
+        (e, ixy), (e, izx), (e, xyz, zyx)
     )+map_by(
         [[v5, zyx(v5), xyz(v5)]],
-        (e, _xy), (e, _zx)
+        (e, ixy), (e, izx)
     )+map_by(
-        [[_xy(v2), xyz(v4), xyz(v3)]],
-        (e, _xy), (e, _zx), (e, xyz, zyx)
+        [[ixy(v2), xyz(v4), xyz(v3)]],
+        (e, ixy), (e, izx), (e, xyz, zyx)
     )+map_by(
-        [[_xy(v2), xyz(v3), _xy(v3)]],
-        (e, _xy), (e, _zx), (e, xyz, zyx)
+        [[ixy(v2), xyz(v3), ixy(v3)]],
+        (e, ixy), (e, izx), (e, xyz, zyx)
     )+map_by(
-        [[_xy(v3), xyz(v3), zyx(_yz(v3))]],
-        (e, _xy), (e, _zx)
+        [[ixy(v3), xyz(v3), zyx(iyz(v3))]],
+        (e, ixy), (e, izx)
     ))
 poly["3.3.3.3.5"] = snubDodecahedron
+
