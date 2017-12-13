@@ -93,7 +93,7 @@ class GroupCommand(object):
 
 class GroupCommonCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : "Geometric_mask.png",
+        return {"Pixmap"  : "Geometric_group_common.png",
                 "MenuText": "group common",
                 "ToolTip" : "make a common of several shapes"}
 
@@ -109,7 +109,7 @@ class GroupCommonCommand(object):
 
 class GroupSliceCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : "Geometric_slice.png",
+        return {"Pixmap"  : "Geometric_group_slice.png",
                 "MenuText": "group slice",
                 "ToolTip" : "make a slice of several shapes"}
 
@@ -126,7 +126,7 @@ class GroupSliceCommand(object):
 
 class ViewBoxCommand(object):
     def GetResources(self):
-        return {"Pixmap"  : ":/icons/Geometric_adjust_viewbox.svg",
+        return {"Pixmap"  : ":/icons/Geometric_viewbox.svg",
                 "MenuText": "add viewbox",
                 "ToolTip" : "add viewbox"}
 

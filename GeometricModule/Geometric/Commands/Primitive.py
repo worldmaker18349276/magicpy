@@ -2,6 +2,19 @@ import FreeCAD, FreeCADGui
 import GeometricResources
 from Geometric.Features import *
 
+def do_createObject(name, unbounded=False):
+    viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+    if viewboxGroup is not None:
+        prefix = "_ftr = FreeCAD.ActiveDocument.%s.newObject"%viewboxGroup.Name
+    else:
+        prefix = "_ftr = FreeCAD.ActiveDocument.addObject"
+
+    FreeCADGui.doCommand(prefix+str(("Part::FeaturePython", name)))
+    FreeCADGui.doCommand("Geometric.%s(_ftr)"%name)
+    if unbounded:
+        FreeCADGui.doCommand("_ftr.ViewObject.Transparency = 50")
+    FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
+    FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
 class CreateSphereCommand(object):
     def GetResources(self):
@@ -10,13 +23,7 @@ class CreateSphereCommand(object):
                 "ToolTip" : "create a sphere"}
 
     def Activated(self):
-        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'Sphere')")
-        FreeCADGui.doCommand("Geometric.Sphere(_ftr)")
-        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
-        if viewboxGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
-        FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
-        FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
+        do_createObject("Sphere")
 
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None
@@ -28,13 +35,7 @@ class CreateConeCommand(object):
                 "ToolTip" : "create a cone"}
 
     def Activated(self):
-        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'Cone')")
-        FreeCADGui.doCommand("Geometric.Cone(_ftr)")
-        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
-        if viewboxGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
-        FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
-        FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
+        do_createObject("Cone")
 
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None
@@ -46,13 +47,7 @@ class CreateCylinderCommand(object):
                 "ToolTip" : "create a cylinder"}
 
     def Activated(self):
-        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'Cylinder')")
-        FreeCADGui.doCommand("Geometric.Cylinder(_ftr)")
-        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
-        if viewboxGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
-        FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
-        FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
+        do_createObject("Cylinder")
 
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None
@@ -64,13 +59,7 @@ class EmptySpaceCommand(object):
                 "ToolTip" : "create a empty space"}
 
     def Activated(self):
-        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'EmptySpace')")
-        FreeCADGui.doCommand("Geometric.EmptySpace(_ftr)")
-        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
-        if viewboxGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
-        FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
-        FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
+        do_createObject("EmptySpace")
 
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None
@@ -82,14 +71,7 @@ class WholeSpaceCommand(object):
                 "ToolTip" : "create a whole space"}
 
     def Activated(self):
-        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'WholeSpace')")
-        FreeCADGui.doCommand("Geometric.WholeSpace(_ftr)")
-        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
-        if viewboxGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
-        FreeCADGui.doCommand("_ftr.ViewObject.Transparency = 50")
-        FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
-        FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
+        do_createObject("WholeSpace", True)
 
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None
@@ -101,14 +83,7 @@ class CreateHalfspaceCommand(object):
                 "ToolTip" : "create a halfspace"}
 
     def Activated(self):
-        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'Halfspace')")
-        FreeCADGui.doCommand("Geometric.Halfspace(_ftr)")
-        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
-        if viewboxGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
-        FreeCADGui.doCommand("_ftr.ViewObject.Transparency = 50")
-        FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
-        FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
+        do_createObject("Halfspace", True)
 
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None
@@ -120,14 +95,7 @@ class CreateInfiniteCylinderCommand(object):
                 "ToolTip" : "create an infinite cylinder"}
 
     def Activated(self):
-        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'InfiniteCylinder')")
-        FreeCADGui.doCommand("Geometric.InfiniteCylinder(_ftr)")
-        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
-        if viewboxGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
-        FreeCADGui.doCommand("_ftr.ViewObject.Transparency = 50")
-        FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
-        FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
+        do_createObject("InfiniteCylinder", True)
 
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None
@@ -139,14 +107,7 @@ class CreateSemiInfiniteConeCommand(object):
                 "ToolTip" : "create a semi-infinite cone"}
 
     def Activated(self):
-        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'SemiInfiniteCone')")
-        FreeCADGui.doCommand("Geometric.SemiInfiniteCone(_ftr)")
-        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
-        if viewboxGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
-        FreeCADGui.doCommand("_ftr.ViewObject.Transparency = 50")
-        FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
-        FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
+        do_createObject("SemiInfiniteCone", True)
 
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None

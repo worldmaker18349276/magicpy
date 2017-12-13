@@ -1,14 +1,14 @@
 <RCC>
     <qresource>
-        <file>icons/Geometric_adjust_viewbox.svg</file>
+        <file>icons/Geometric_viewbox.svg</file>
         <file>icons/Geometric_common.png</file>
         <file>icons/Geometric_fuse.png</file>
         <file>icons/Geometric_cut.png</file>
         <file>icons/Geometric_complement.png</file>
         <file>icons/Geometric_transform.png</file>
         <file>icons/Geometric_group.png</file>
-        <file>icons/Geometric_mask.png</file>
-        <file>icons/Geometric_slice.png</file>
+        <file>icons/Geometric_group_common.png</file>
+        <file>icons/Geometric_group_slice.png</file>
         <file>icons/primitive/Geometric_whole_space.svg</file>
         <file>icons/primitive/Geometric_empty_space.svg</file>
         <file>icons/primitive/Geometric_cube.svg</file>

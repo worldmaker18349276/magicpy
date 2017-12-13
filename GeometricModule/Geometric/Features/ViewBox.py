@@ -18,6 +18,9 @@ class ViewboxGroupProxy(object):
             obj.addProperty("App::PropertyFloat", "Margin", "ViewBox")
             obj.Margin = 0.01
 
+        if FreeCAD.GuiUp:
+            ViewboxGroupViewProxy(obj.ViewObject)
+
     def getViewBox(self, obj):
         V = obj.Max - obj.Min
         if V.x <= 0 or V.y <= 0 or V.z <= 0:
@@ -150,6 +153,13 @@ class ViewboxGroupProxy(object):
             bb_ = bb.transformed(ftr.Placement.inverse().toMatrix())
             bb_ = bb_.transformed(mirror(ftr.Base, ftr.Normal))
             self.setBoundBox(ftr.Source, bb_)
+
+class ViewboxGroupViewProxy(object):
+    def __init__(self, view):
+        view.Proxy = self
+
+    def getIcon(self):
+        return ":/icons/Geometric_viewbox"
 
 ViewboxGroup = ViewboxGroupProxy
 
