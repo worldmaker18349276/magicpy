@@ -293,6 +293,28 @@ class CylinderProxy(PrimitiveProxy):
         setGeometry(obj, builder.makeConicalFrustum(radius1=obj.Radius, radius2=obj.Radius, center=obj.Center-obj.Axis*0.5, axis=obj.Axis))
 
 
+class PolyhedronProxy(PrimitiveProxy):
+    def __init__(self, obj, tag, icon=":/icons/primitive/Geometric_cube.svg"):
+        self.tag = tag
+        obj.Proxy = self
+        if "Inradius" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyFloat", "Inradius")
+            obj.Inradius = 1.
+
+        if FreeCAD.GuiUp:
+            PrimitiveViewProxy(obj.ViewObject, icon)
+
+    def execute(self, obj):
+        import Geometric.Polyhedrons
+        if not hasattr(self, "shape"):
+            self.shape = Geometric.Polyhedrons.poly[self.tag]
+            self.ri = Geometric.Polyhedrons.inradius(self.shape)
+        shape = self.shape.copy()
+        shape.scale(obj.Inradius/self.ri)
+        shape.Placement = obj.Placement
+        obj.Shape = shape
+
+
 Primitive = PrimitiveProxy
 EmptySpace = EmptySpaceProxy
 WholeSpace = WholeSpaceProxy
@@ -302,4 +324,5 @@ SemiInfiniteCone = SemiInfiniteConeProxy
 Sphere = SphereProxy
 Cone = ConeProxy
 Cylinder = CylinderProxy
+Polyhedron = PolyhedronProxy
 

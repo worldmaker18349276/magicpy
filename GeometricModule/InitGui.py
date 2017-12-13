@@ -33,11 +33,13 @@ class GeometricWorkbench(Workbench):
         self.ctrllist = Geometric.Commands.ctrllist
         self.objlist = Geometric.Commands.objlist
         self.oplist = Geometric.Commands.oplist
+        self.polylist = Geometric.Commands.polylist
 
         self.appendToolbar("Part", self.partlist)
         self.appendToolbar("Mesh", self.meshlist)
         self.appendToolbar("Geometric_obj", self.objlist)
         self.appendToolbar("Geometric_op", self.oplist)
+        self.appendToolbar("Geometric_poly", self.polylist)
 
         self.appendMenu("Geometric", self.ctrllist)
         self.appendMenu("Geometric", self.objlist)
