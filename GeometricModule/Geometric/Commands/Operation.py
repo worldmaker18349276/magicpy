@@ -11,9 +11,9 @@ class CommonCommand(object):
     def Activated(self):
         sel = distinct_list(FreeCADGui.Selection.getSelection())
         FreeCADGui.doCommand("_ftr = Geometric.common(%s)"%ftrstr(*sel))
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
@@ -29,9 +29,9 @@ class FuseCommand(object):
     def Activated(self):
         sel = distinct_list(FreeCADGui.Selection.getSelection())
         FreeCADGui.doCommand("_ftr = Geometric.fuse(%s)"%ftrstr(*sel))
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
@@ -47,9 +47,9 @@ class ComplementCommand(object):
     def Activated(self):
         sel = FreeCADGui.Selection.getSelection()[0]
         FreeCADGui.doCommand("_ftr = Geometric.complement(%s)"%ftrstr(sel))
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
@@ -65,9 +65,9 @@ class TransformCommand(object):
     def Activated(self):
         sel = FreeCADGui.Selection.getSelection()[0]
         FreeCADGui.doCommand("_ftr = Geometric.transform(%s)"%ftrstr(sel))
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
@@ -84,9 +84,9 @@ class GroupCommand(object):
     def Activated(self):
         sel = FreeCADGui.Selection.getSelection()
         FreeCADGui.doCommand("_ftr = Geometric.group(%s)"%ftrstr(*sel))
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
 
     def IsActive(self):
         return len(FreeCADGui.Selection.getSelection()) >= 0
@@ -124,16 +124,16 @@ class GroupSliceCommand(object):
         return len(FreeCADGui.Selection.getSelection()) > 0
 
 
-class ViewGroupCommand(object):
+class ViewBoxCommand(object):
     def GetResources(self):
         return {"Pixmap"  : ":/icons/Geometric_adjust_viewbox.svg",
-                "MenuText": "add view group",
-                "ToolTip" : "add view group"}
+                "MenuText": "add viewbox",
+                "ToolTip" : "add viewbox"}
 
     def Activated(self):
-        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('App::DocumentObjectGroupPython', 'ViewGroup')")
-        FreeCADGui.doCommand("Geometric.ViewGroup(_ftr)")
-        FreeCADGui.doCommand("FreeCADGui.activeView().setActiveObject('viewGroup', _ftr)")
+        FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('App::DocumentObjectGroupPython', 'ViewboxGroup')")
+        FreeCADGui.doCommand("Geometric.ViewboxGroup(_ftr)")
+        FreeCADGui.doCommand("FreeCADGui.activeView().setActiveObject('viewboxGroup', _ftr)")
 
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None
@@ -144,17 +144,17 @@ FreeCADGui.addCommand("Geometric_fuse", FuseCommand())
 FreeCADGui.addCommand("Geometric_complement", ComplementCommand())
 FreeCADGui.addCommand("Geometric_transform", TransformCommand())
 FreeCADGui.addCommand("Geometric_group", GroupCommand())
-FreeCADGui.addCommand("Geometric_common", GroupCommonCommand())
-FreeCADGui.addCommand("Geometric_slice", GroupSliceCommand())
-FreeCADGui.addCommand("Geometric_viewgroup", ViewGroupCommand())
+FreeCADGui.addCommand("Geometric_group_common", GroupCommonCommand())
+FreeCADGui.addCommand("Geometric_group_slice", GroupSliceCommand())
+FreeCADGui.addCommand("Geometric_viewbox", ViewBoxCommand())
 
 oplist = ["Geometric_common",
           "Geometric_fuse",
           "Geometric_complement",
           "Geometric_transform",
           "Geometric_group",
-          "Geometric_common",
-          "Geometric_slice",
-          "Geometric_viewgroup",
+          "Geometric_group_common",
+          "Geometric_group_slice",
+          "Geometric_viewbox",
         ]
 

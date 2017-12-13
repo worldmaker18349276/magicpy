@@ -12,9 +12,9 @@ class CreateSphereCommand(object):
     def Activated(self):
         FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'Sphere')")
         FreeCADGui.doCommand("Geometric.Sphere(_ftr)")
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
@@ -30,9 +30,9 @@ class CreateConeCommand(object):
     def Activated(self):
         FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'Cone')")
         FreeCADGui.doCommand("Geometric.Cone(_ftr)")
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
@@ -48,9 +48,9 @@ class CreateCylinderCommand(object):
     def Activated(self):
         FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'Cylinder')")
         FreeCADGui.doCommand("Geometric.Cylinder(_ftr)")
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
@@ -66,9 +66,9 @@ class EmptySpaceCommand(object):
     def Activated(self):
         FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'EmptySpace')")
         FreeCADGui.doCommand("Geometric.EmptySpace(_ftr)")
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
@@ -84,9 +84,9 @@ class WholeSpaceCommand(object):
     def Activated(self):
         FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'WholeSpace')")
         FreeCADGui.doCommand("Geometric.WholeSpace(_ftr)")
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("_ftr.ViewObject.Transparency = 50")
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
@@ -103,9 +103,9 @@ class CreateHalfspaceCommand(object):
     def Activated(self):
         FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'Halfspace')")
         FreeCADGui.doCommand("Geometric.Halfspace(_ftr)")
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("_ftr.ViewObject.Transparency = 50")
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
@@ -122,9 +122,9 @@ class CreateInfiniteCylinderCommand(object):
     def Activated(self):
         FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'InfiniteCylinder')")
         FreeCADGui.doCommand("Geometric.InfiniteCylinder(_ftr)")
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("_ftr.ViewObject.Transparency = 50")
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
@@ -141,9 +141,9 @@ class CreateSemiInfiniteConeCommand(object):
     def Activated(self):
         FreeCADGui.doCommand("_ftr = FreeCAD.ActiveDocument.addObject('Part::FeaturePython', 'SemiInfiniteCone')")
         FreeCADGui.doCommand("Geometric.SemiInfiniteCone(_ftr)")
-        viewGroup = FreeCADGui.activeView().getActiveObject("viewGroup")
-        if viewGroup is not None:
-            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewGroup.Name)
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
         FreeCADGui.doCommand("_ftr.ViewObject.Transparency = 50")
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")

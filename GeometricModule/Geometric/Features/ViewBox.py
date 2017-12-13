@@ -5,7 +5,7 @@ from Geometric.Features.Primitive import PrimitiveProxy, UnboundedPrimitiveProxy
 from Geometric.Features.Operation import ComplementProxy
 
 
-class ViewGroupProxy(object):
+class ViewboxGroupProxy(object):
     def __init__(self, obj):
         obj.Proxy = self
         if "Min" not in obj.PropertiesList:
@@ -151,7 +151,7 @@ class ViewGroupProxy(object):
             bb_ = bb_.transformed(mirror(ftr.Base, ftr.Normal))
             self.setBoundBox(ftr.Source, bb_)
 
-ViewGroup = ViewGroupProxy
+ViewboxGroup = ViewboxGroupProxy
 
 
 # def hideAllUnbounded():
