@@ -44,16 +44,25 @@ yix  =  star(lambda v: Vec( v.y,-v.x, v.z))
 ziy  =  star(lambda v: Vec( v.x, v.z,-v.y))
 xiz  =  star(lambda v: Vec(-v.z, v.y, v.x))
 
-def map_by(fs, *opss):
-    for ops in opss:
-        fs = [op(*f) for op in ops for f in fs]
-    return fs
+class polybuilder(list):
+    def face(self, *vs):
+        self.append([Vec(*v) for v in vs])
+        return self
 
-def make_polyhedron(vss):
-    faces = []
-    for vs in vss:
-        faces.append(Part.Face(Part.makePolygon(vs+vs[:1])))
-    return Part.makeSolid(Part.makeShell(faces))
+    def dup(self, *ops):
+        self[:] = [op(*f) for op in ops for f in self]
+        return self
+
+    def __add__(self, builder):
+        obj = polybuilder()
+        obj[:] = list.__add__(self, builder)
+        return obj
+
+    def make(self):
+        faces = []
+        for vs in self:
+            faces.append(Part.Face(Part.makePolygon(vs+vs[:1])))
+        return Part.makeSolid(Part.makeShell(faces))
 
 phi = (sqrt(5)+1)/2
 
