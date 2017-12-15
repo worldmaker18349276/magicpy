@@ -64,7 +64,8 @@ class TransformCommand(object):
 
     def Activated(self):
         sel = FreeCADGui.Selection.getSelection()[0]
-        FreeCADGui.doCommand("_ftr = Geometric.transform(%s)"%ftrstr(sel))
+        plc = FreeCADGui.Selection.getSelection()[1]
+        FreeCADGui.doCommand("_ftr = Geometric.transform(%s, %s)"%(ftrstr(sel), ftrstr(plc)))
         viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
         if viewboxGroup is not None:
             FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%viewboxGroup.Name)
@@ -72,7 +73,7 @@ class TransformCommand(object):
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
     def IsActive(self):
-        return len(FreeCADGui.Selection.getSelection()) == 1
+        return len(FreeCADGui.Selection.getSelection()) == 2
 
 
 class GroupCommand(object):

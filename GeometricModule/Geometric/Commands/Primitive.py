@@ -113,6 +113,26 @@ class CreateSemiInfiniteConeCommand(object):
         return FreeCAD.ActiveDocument is not None
 
 
+class CreatePlacementCommand(object):
+    def GetResources(self):
+        return {"Pixmap"  : ":/icons/CoordinateSystem.svg",
+                "MenuText": "placement",
+                "ToolTip" : "make a placement"}
+
+    def Activated(self):
+        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
+        if viewboxGroup is not None:
+            prefix = "_ftr = FreeCAD.ActiveDocument.%s.newObject"%viewboxGroup.Name
+        else:
+            prefix = "_ftr = FreeCAD.ActiveDocument.addObject"
+
+        FreeCADGui.doCommand(prefix+str(("App::Placement", "Placement")))
+        FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
+
+    def IsActive(self):
+        return FreeCAD.ActiveDocument is not None
+
+
 FreeCADGui.addCommand("Geometric_empty_space", EmptySpaceCommand())
 FreeCADGui.addCommand("Geometric_whole_space", WholeSpaceCommand())
 FreeCADGui.addCommand("Geometric_halfspace", CreateHalfspaceCommand())
@@ -121,6 +141,7 @@ FreeCADGui.addCommand("Geometric_semi_infinite_cone", CreateSemiInfiniteConeComm
 FreeCADGui.addCommand("Geometric_sphere", CreateSphereCommand())
 FreeCADGui.addCommand("Geometric_cone", CreateConeCommand())
 FreeCADGui.addCommand("Geometric_cylinder", CreateCylinderCommand())
+FreeCADGui.addCommand("Geometric_placement", CreatePlacementCommand())
 
 objlist = [
     "Geometric_sphere",
@@ -131,5 +152,6 @@ objlist = [
     "Geometric_halfspace",
     "Geometric_infinite_cylinder",
     "Geometric_semi_infinite_cone",
+    "Geometric_placement"
 ]
 

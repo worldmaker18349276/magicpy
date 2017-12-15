@@ -22,7 +22,7 @@ class DerivedFeatureViewProxy(object):
         return self.children
 
     def updateData(self, obj, p):
-        if obj.getTypeIdOfProperty(p) in ["App::PropertyLink", "App::PropertyLinkList"]:
+        if obj.getTypeIdOfProperty(p) in ["App::PropertyLink", "App::PropertyLinkList", "App::PropertyPlacementLink"]:
             outlist = distinct_list(obj.OutList)
             for ftr in outlist:
                 if ftr not in self.children:
@@ -54,7 +54,34 @@ class ComplementProxy(DerivedFeatureProxy):
         else:
             raise TypeError
 
+class TransformProxy(DerivedFeatureProxy):
+    def __init__(self, obj):
+        obj.Proxy = self
+        if "Source" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyLink", "Source")
+        if "PlacementLink" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyPlacementLink", "PlacementLink")
+        obj.setEditorMode("Placement", 2)
+        if FreeCAD.GuiUp:
+            DerivedFeatureViewProxy(obj.ViewObject)
+
+    def execute(self, obj):
+        if isDerivedFrom(obj, "Part::FeaturePython"):
+            geo = Shapes.reshape(obj.Source.Shape)
+            geo.Placement = obj.PlacementLink.Placement
+            setGeometry(obj, geo)
+            obj.ViewObject.DiffuseColor = obj.Source.ViewObject.DiffuseColor
+
+        elif isDerivedFrom(obj, "Mesh::FeaturePython"):
+            geo = Meshes.reshape(meshOf(obj.Source))
+            geo.Placement = obj.PlacementLink.Placement
+            setGeometry(obj, geo)
+
+        else:
+            raise TypeError
+
 Complement = ComplementProxy
+Transform = TransformProxy
 
 
 def autohide(func):
@@ -104,10 +131,11 @@ def complement(ftr):
     return obj
 
 @autohide
-def transform(ftr, plc=Plc()):
-    obj = ftr.Document.addObject("Part::Compound", "Transform")
-    obj.Links = [ftr]
-    obj.Placement = plc
+def transform(ftr, plc):
+    obj = ftr.Document.addObject("Part::FeaturePython", "Transform")
+    Transform(obj)
+    obj.Source = ftr
+    obj.PlacementLink = plc
     return obj
 
 

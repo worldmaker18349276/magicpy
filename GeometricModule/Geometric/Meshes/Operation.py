@@ -1,4 +1,4 @@
-import OpenSCADUtils
+import FreeCAD, Mesh, OpenSCADUtils
 
 
 def orientation(mesh):
@@ -82,5 +82,12 @@ def fuse(meshes):
 def transform(mesh, plc):
     mesh = Mesh.Mesh(mesh)
     mesh.Placement = mesh.Placement.multiply(plc)
+    return mesh
+
+def remesh(mesh):
+    plc = mesh.Placement.toMatrix()
+    mesh = Mesh.Mesh(mesh)
+    mesh.Placement = FreeCAD.Placement()
+    mesh.transform(plc)
     return mesh
 

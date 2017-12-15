@@ -1,4 +1,4 @@
-import Part
+import FreeCAD, Part
 
 
 def complement(shp):
@@ -72,4 +72,13 @@ def transform(shp, plc):
     shp = shp.copy()
     shp.Placement = shp.Placement.multiply(plc)
     return shp
+
+def reshape(shape):
+    if shape.isNull():
+        return shape.copy()
+    plc = shape.Placement.toMatrix()
+    shape = shape.copy()
+    shape.Placement = FreeCAD.Placement()
+    return shape.transformGeometry(plc)
+
 
