@@ -76,15 +76,15 @@ class TransformCommand(object):
         return len(FreeCADGui.Selection.getSelection()) == 2
 
 
-class GroupCommand(object):
+class CompoundCommand(object):
     def GetResources(self):
         return {"Pixmap"  : "Geometric_group.png",
-                "MenuText": "group",
-                "ToolTip" : "make a group of several shapes"}
+                "MenuText": "compound",
+                "ToolTip" : "make a compound of several shapes"}
 
     def Activated(self):
         sel = FreeCADGui.Selection.getSelection()
-        FreeCADGui.doCommand("_ftr = Geometric.group(%s)"%ftrstr(*sel))
+        FreeCADGui.doCommand("_ftr = Geometric.compound(%s)"%ftrstr(*sel))
         view_space = FreeCADGui.activeView().getActiveObject("ViewSpace")
         if view_space is not None:
             FreeCADGui.doCommand("FreeCAD.ActiveDocument.%s.addObject(_ftr)"%view_space.Name)
@@ -92,32 +92,32 @@ class GroupCommand(object):
     def IsActive(self):
         return len(FreeCADGui.Selection.getSelection()) >= 0
 
-class GroupCommonCommand(object):
+class CompoundCommonCommand(object):
     def GetResources(self):
         return {"Pixmap"  : "Geometric_group_common.png",
-                "MenuText": "group common",
+                "MenuText": "compound common",
                 "ToolTip" : "make a common of several shapes"}
 
     def Activated(self):
         target = FreeCADGui.Selection.getSelection()[0]
         sel = distinct_list(FreeCADGui.Selection.getSelection()[1:])
-        FreeCADGui.doCommand("Geometric.group_common(%s, %s)"%(ftrstr(target), ftrstr(*sel)))
+        FreeCADGui.doCommand("Geometric.compound_common(%s, %s)"%(ftrstr(target), ftrstr(*sel)))
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
     def IsActive(self):
         return len(FreeCADGui.Selection.getSelection()) > 0
 
-class GroupSliceCommand(object):
+class CompoundSliceCommand(object):
     def GetResources(self):
         return {"Pixmap"  : "Geometric_group_slice.png",
-                "MenuText": "group slice",
+                "MenuText": "compound slice",
                 "ToolTip" : "make a slice of several shapes"}
 
     def Activated(self):
         target = FreeCADGui.Selection.getSelection()[0]
         sel = distinct_list(FreeCADGui.Selection.getSelection()[1:])
-        FreeCADGui.doCommand("Geometric.group_slice(%s, %s)"%(ftrstr(target), ftrstr(*sel)))
+        FreeCADGui.doCommand("Geometric.compound_slice(%s, %s)"%(ftrstr(target), ftrstr(*sel)))
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
@@ -144,18 +144,18 @@ FreeCADGui.addCommand("Geometric_common", CommonCommand())
 FreeCADGui.addCommand("Geometric_fuse", FuseCommand())
 FreeCADGui.addCommand("Geometric_complement", ComplementCommand())
 FreeCADGui.addCommand("Geometric_transform", TransformCommand())
-FreeCADGui.addCommand("Geometric_group", GroupCommand())
-FreeCADGui.addCommand("Geometric_group_common", GroupCommonCommand())
-FreeCADGui.addCommand("Geometric_group_slice", GroupSliceCommand())
+FreeCADGui.addCommand("Geometric_compound", CompoundCommand())
+FreeCADGui.addCommand("Geometric_compound_common", CompoundCommonCommand())
+FreeCADGui.addCommand("Geometric_compound_slice", CompoundSliceCommand())
 FreeCADGui.addCommand("Geometric_viewbox", ViewSpaceCommand())
 
 oplist = ["Geometric_common",
           "Geometric_fuse",
           "Geometric_complement",
           "Geometric_transform",
-          "Geometric_group",
-          "Geometric_group_common",
-          "Geometric_group_slice",
+          "Geometric_compound",
+          "Geometric_compound_common",
+          "Geometric_compound_slice",
           "Geometric_viewbox",
         ]
 

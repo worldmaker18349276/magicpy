@@ -96,6 +96,9 @@ def ftrlist(ftrs):
     elif isDerivedFrom(ftrs, "App::DocumentObjectGroup"):
         return ftrs.Group
 
+    elif isDerivedFrom(ftrs, "Part::Compound"):
+        return ftrs.Links
+
     elif isDerivedFrom(ftrs, "App::GeoFeature"):
         return [ftrs]
 

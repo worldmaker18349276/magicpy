@@ -142,32 +142,32 @@ def transform(ftr, plc):
     return obj
 
 
-def group(*ftrs):
+def compound(*ftrs):
     ftrs = distinct_list(subftr for ftr in ftrs for subftr in ftrlist(ftr))
-
-    obj = ftrs[0].Document.addObject("App::DocumentObjectGroup", "Group")
-    for ftr in ftrs:
-        ftr.getParentGroup().removeObject(ftr)
-    obj.Group = ftrs
+    if len(ftrs) == 0:
+        obj = FreeCAD.ActiveDocument.addObject("Part::Compound", "Compound")
+    else:
+        obj = ftrs[0].Document.addObject("Part::Compound", "Compound")
+    obj.Links = ftrs
     return obj
 
-def group_common(target, *ftrs):
+def compound_common(target, *ftrs):
     if len(ftrs) == 0:
         return target
 
     ftrss = [ftrlist(ftr) for ftr in ftrs]
     if len(ftrlist(target)) > 0:
         ftrss = [ftrlist(target)] + ftrss
-    target.Group = [common(*ftrs) for ftrs in product(*ftrss)]
+    target.Links = [common(*ftrs) for ftrs in product(*ftrss)]
     return target
 
-def group_slice(target, *ftrs):
+def compound_slice(target, *ftrs):
     if len(ftrs) == 0:
         return target
 
     ftrss = [[ftr, complement(ftr)] for ftr in ftrs]
     if len(ftrlist(target)) > 0:
         ftrss = [ftrlist(target)] + ftrss
-    target.Group = [common(*ftrs) for ftrs in product(*ftrss)]
+    target.Links = [common(*ftrs) for ftrs in product(*ftrss)]
     return target
 
