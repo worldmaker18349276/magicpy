@@ -3,14 +3,14 @@ import GeometricResources
 from Geometric.Features import *
 
 def do_createPolyhedron(name, tag, icon):
-    viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
-    if viewboxGroup is not None:
-        prefix = "_ftr = FreeCAD.ActiveDocument.%s.newObject"%viewboxGroup.Name
+    view_space = FreeCADGui.activeView().getActiveObject("ViewSpace")
+    if view_space is not None:
+        prefix = "_ftr = FreeCAD.ActiveDocument.%s.newObject"%view_space.Name
     else:
         prefix = "_ftr = FreeCAD.ActiveDocument.addObject"
 
-    FreeCADGui.doCommand(prefix+str(("Part::FeaturePython", name, icon)))
-    FreeCADGui.doCommand("Geometric.Polyhedron(_ftr, '%s')"%tag)
+    FreeCADGui.doCommand(prefix+str(("Part::FeaturePython", name)))
+    FreeCADGui.doCommand("Geometric.Polyhedron(_ftr, '%s', '%s')"%(tag, icon))
     FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
     FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 

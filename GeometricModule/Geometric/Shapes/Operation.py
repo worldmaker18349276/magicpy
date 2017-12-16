@@ -1,8 +1,21 @@
 import FreeCAD, Part
 
 
+def reshape(shape):
+    if shape.isNull():
+        return shape.copy()
+    plc = shape.Placement.toMatrix()
+    shape = shape.copy()
+    shape.Placement = FreeCAD.Placement()
+    return shape.transformGeometry(plc)
+
+def transform(shp, plc):
+    shp = reshape(shp)
+    shp.Placement = plc
+    return shp
+
 def complement(shp):
-    shp = shp.copy()
+    shp = reshape(shp)
     shp.complement()
     return shp
 
@@ -67,18 +80,4 @@ def fuse(shps):
         return shp1
     else:
         return complement(shp2.cut(shp1))
-
-def transform(shp, plc):
-    shp = shp.copy()
-    shp.Placement = shp.Placement.multiply(plc)
-    return shp
-
-def reshape(shape):
-    if shape.isNull():
-        return shape.copy()
-    plc = shape.Placement.toMatrix()
-    shape = shape.copy()
-    shape.Placement = FreeCAD.Placement()
-    return shape.transformGeometry(plc)
-
 

@@ -2,10 +2,10 @@ import FreeCAD, Part
 from Geometric.Basic import *
 from Geometric.Features.Utilities import *
 from Geometric.Features.Primitive import PrimitiveProxy, UnboundedPrimitiveProxy
-from Geometric.Features.Operation import ComplementProxy
+from Geometric.Features.Operation import ComplementProxy, TransformProxy
 
 
-class ViewboxGroupProxy(object):
+class ViewSpaceProxy(object):
     def __init__(self, obj):
         obj.Proxy = self
         if "Min" not in obj.PropertiesList:
@@ -19,7 +19,7 @@ class ViewboxGroupProxy(object):
             obj.Margin = 0.01
 
         if FreeCAD.GuiUp:
-            ViewboxGroupViewProxy(obj.ViewObject)
+            ViewSpaceViewProxy(obj.ViewObject)
 
     def getViewBox(self, obj):
         V = obj.Max - obj.Min
@@ -59,6 +59,8 @@ class ViewboxGroupProxy(object):
             return all(self.isBounded(sub) for sub in ftr.Shapes)
         elif isDerivedFrom(ftr, "Part::Compound"):
             return all(self.isBounded(sub) for sub in ftr.Links)
+        elif isDerivedFrom(ftr, TransformProxy):
+            return self.isBounded(ftr.Source)
         elif isDerivedFrom(ftr, "Part::Mirroring"):
             return self.isBounded(ftr.Source)
         elif isDerivedFrom(ftr, "Part::Primitive"):
@@ -109,6 +111,11 @@ class ViewboxGroupProxy(object):
             bb = bb.transformed(ftr.Placement.toMatrix())
             return bb
 
+        elif isDerivedFrom(ftr, TransformProxy):
+            bb = self.getBoundBox(ftr.Source)
+            bb = bb.transformed(ftr.Placement.toMatrix())
+            return bb
+
         elif isDerivedFrom(ftr, "Part::Mirroring"):
             bb = self.getBoundBox(ftr.Source)
             bb = bb.transformed(mirror(ftr.Base, ftr.Normal))
@@ -146,22 +153,26 @@ class ViewboxGroupProxy(object):
 
         elif isDerivedFrom(ftr, "Part::Compound"):
             bb_ = bb.transformed(ftr.Placement.inverse().toMatrix())
-            for outftr in ftr.Shapes:
+            for outftr in ftr.Links:
                 self.setBoundBox(outftr, bb_)
+
+        elif isDerivedFrom(ftr, TransformProxy):
+            bb_ = bb.transformed(ftr.Placement.inverse().toMatrix())
+            self.setBoundBox(ftr.Source, bb_)
 
         elif isDerivedFrom(ftr, "Part::Mirroring"):
             bb_ = bb.transformed(ftr.Placement.inverse().toMatrix())
             bb_ = bb_.transformed(mirror(ftr.Base, ftr.Normal))
             self.setBoundBox(ftr.Source, bb_)
 
-class ViewboxGroupViewProxy(object):
+class ViewSpaceViewProxy(object):
     def __init__(self, view):
         view.Proxy = self
 
     def getIcon(self):
         return ":/icons/Geometric_viewbox"
 
-ViewboxGroup = ViewboxGroupProxy
+ViewSpace = ViewSpaceProxy
 
 
 # def hideAllUnbounded():

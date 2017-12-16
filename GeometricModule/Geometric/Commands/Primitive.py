@@ -3,9 +3,9 @@ import GeometricResources
 from Geometric.Features import *
 
 def do_createObject(name, unbounded=False):
-    viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
-    if viewboxGroup is not None:
-        prefix = "_ftr = FreeCAD.ActiveDocument.%s.newObject"%viewboxGroup.Name
+    view_space = FreeCADGui.activeView().getActiveObject("ViewSpace")
+    if view_space is not None:
+        prefix = "_ftr = FreeCAD.ActiveDocument.%s.newObject"%view_space.Name
     else:
         prefix = "_ftr = FreeCAD.ActiveDocument.addObject"
 
@@ -120,9 +120,9 @@ class CreatePlacementCommand(object):
                 "ToolTip" : "make a placement"}
 
     def Activated(self):
-        viewboxGroup = FreeCADGui.activeView().getActiveObject("viewboxGroup")
-        if viewboxGroup is not None:
-            prefix = "_ftr = FreeCAD.ActiveDocument.%s.newObject"%viewboxGroup.Name
+        view_space = FreeCADGui.activeView().getActiveObject("ViewSpace")
+        if view_space is not None:
+            prefix = "_ftr = FreeCAD.ActiveDocument.%s.newObject"%view_space.Name
         else:
             prefix = "_ftr = FreeCAD.ActiveDocument.addObject"
 

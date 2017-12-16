@@ -1,6 +1,13 @@
 import FreeCAD, Mesh, OpenSCADUtils
 
 
+def remesh(mesh):
+    plc = mesh.Placement.toMatrix()
+    mesh = Mesh.Mesh(mesh)
+    mesh.Placement = FreeCAD.Placement()
+    mesh.transform(plc)
+    return mesh
+
 def orientation(mesh):
     mesh_ = Mesh.Mesh(mesh)
     mesh_.offset(0.001)
@@ -10,8 +17,13 @@ def orientation(mesh):
     else:
         return "Reversed"
 
+def transform(mesh, plc):
+    mesh = remesh(mesh)
+    mesh.Placement = plc
+    return mesh
+
 def complement(mesh):
-    mesh = Mesh.Mesh(mesh)
+    mesh = remesh(mesh)
     mesh.flipNormals()
     return mesh
 
@@ -78,16 +90,4 @@ def fuse(meshes):
         return mesh1
     else:
         return complement(OpenSCADUtils.meshoptempfile("difference", [mesh2, mesh1]))
-
-def transform(mesh, plc):
-    mesh = Mesh.Mesh(mesh)
-    mesh.Placement = mesh.Placement.multiply(plc)
-    return mesh
-
-def remesh(mesh):
-    plc = mesh.Placement.toMatrix()
-    mesh = Mesh.Mesh(mesh)
-    mesh.Placement = FreeCAD.Placement()
-    mesh.transform(plc)
-    return mesh
 

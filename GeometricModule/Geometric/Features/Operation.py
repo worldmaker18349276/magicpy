@@ -22,7 +22,7 @@ class DerivedFeatureViewProxy(object):
         return self.children
 
     def updateData(self, obj, p):
-        if obj.getTypeIdOfProperty(p) in ["App::PropertyLink", "App::PropertyLinkList", "App::PropertyPlacementLink"]:
+        if obj.getTypeIdOfProperty(p) in ["App::PropertyLink", "App::PropertyLinkList"]:
             outlist = distinct_list(obj.OutList)
             for ftr in outlist:
                 if ftr not in self.children:
@@ -41,7 +41,7 @@ class ComplementProxy(DerivedFeatureProxy):
             obj.addProperty("App::PropertyLink", "Source")
         obj.setEditorMode("Placement", 2)
         if FreeCAD.GuiUp:
-            DerivedFeatureViewProxy(obj.ViewObject)
+            DerivedFeatureViewProxy(obj.ViewObject, "Geometric_complement.png")
 
     def execute(self, obj):
         if isDerivedFrom(obj, "Part::FeaturePython"):
@@ -63,41 +63,47 @@ class TransformProxy(DerivedFeatureProxy):
             obj.addProperty("App::PropertyPlacementLink", "PlacementLink")
         obj.setEditorMode("Placement", 2)
         if FreeCAD.GuiUp:
-            DerivedFeatureViewProxy(obj.ViewObject)
+            TransformViewProxy(obj.ViewObject)
 
     def execute(self, obj):
+        plc = obj.PlacementLink.Placement
         if isDerivedFrom(obj, "Part::FeaturePython"):
-            geo = Shapes.reshape(obj.Source.Shape)
-            geo.Placement = obj.PlacementLink.Placement
-            setGeometry(obj, geo)
+            setGeometry(obj, Shapes.transform(obj.Source.Shape, plc))
             obj.ViewObject.DiffuseColor = obj.Source.ViewObject.DiffuseColor
 
         elif isDerivedFrom(obj, "Mesh::FeaturePython"):
-            geo = Meshes.reshape(meshOf(obj.Source))
-            geo.Placement = obj.PlacementLink.Placement
-            setGeometry(obj, geo)
+            setGeometry(obj, Meshes.transform(meshOf(obj.Source), plc))
 
         else:
             raise TypeError
+
+class TransformViewProxy(object):
+    def __init__(self, view):
+        view.Proxy = self
+        self.children = []
+
+    def getIcon(self):
+        return "Geometric_transform.png"
+
+    def claimChildren(self):
+        return self.children
+
+    def updateData(self, obj, p):
+        if obj.getTypeIdOfProperty(p) in ["App::PropertyLink", "App::PropertyPlacementLink"]:
+            ftr = obj.getPropertyByName(p)
+            if ftr is not None:
+                ftr.ViewObject.hide()
+            self.children = [obj.Source, obj.PlacementLink]
+
+    def onDelete(self, obj, subelems):
+        for ftr in self.children:
+            ftr.ViewObject.show()
+        return True
 
 Complement = ComplementProxy
 Transform = TransformProxy
 
 
-def autohide(func):
-    @wraps(func)
-    def func_(*ftrs, **kwargs):
-        autohide = kwargs.pop("autohide", True)
-        if autohide:
-            for ftr in ftrs:
-                ftr.ViewObject.hide()
-        res = func(*ftrs, **kwargs)
-        if autohide and res is not None:
-            res.ViewObject.show()
-        return res
-    return func_
-
-@autohide
 def common(*ftrs):
     ftrs = distinct_list(subftr for ftr in ftrs for subftr in ftrlist(ftr))
     if len(ftrs) == 0:
@@ -110,7 +116,6 @@ def common(*ftrs):
     obj.Shapes = ftrs
     return obj
 
-@autohide
 def fuse(*ftrs):
     ftrs = distinct_list(subftr for ftr in ftrs for subftr in ftrlist(ftr))
     if len(ftrs) == 0:
@@ -123,14 +128,12 @@ def fuse(*ftrs):
     obj.Shapes = ftrs
     return obj
 
-@autohide
 def complement(ftr):
     obj = ftr.Document.addObject("Part::FeaturePython", "Complement")
     Complement(obj)
     obj.Source = ftr
     return obj
 
-@autohide
 def transform(ftr, plc):
     obj = ftr.Document.addObject("Part::FeaturePython", "Transform")
     Transform(obj)
