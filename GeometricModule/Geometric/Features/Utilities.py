@@ -109,6 +109,23 @@ def ftrstr(*ftrs):
     return ", ".join("FreeCAD.ActiveDocument.%s"%ftr.Name for ftr in ftrs)
 
 
+def addObject(TypeId, name, parent=None):
+    if parent is None:
+        parent = FreeCAD.ActiveDocument
+
+    if isDerivedFrom(parent, "App::Document"):
+        make = parent.addObject
+    else:
+        make = parent.newObject
+
+    if isinstance(TypeId, str):
+        obj = make(TypeId, name)
+    else:
+        obj = make("Part::FeaturePython", name)
+        TypeId(obj)
+
+    return obj
+
 class ScriptedObjectProxy(object):
     pass
 

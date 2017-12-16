@@ -104,7 +104,7 @@ Complement = ComplementProxy
 Transform = TransformProxy
 
 
-def common(*ftrs):
+def common(*ftrs, **kw):
     ftrs = distinct_list(subftr for ftr in ftrs for subftr in ftrlist(ftr))
     if len(ftrs) == 0:
         return None
@@ -112,11 +112,12 @@ def common(*ftrs):
     if len(ftrs) == 1:
         return ftrs[0]
 
-    obj = ftrs[0].Document.addObject("Part::MultiCommon", "Intersection")
+    parent = kw.pop("parent") if "parent" in kw else ftrs[0].getParentGroup()
+    obj = addObject("Part::MultiCommon", "Intersection", parent=parent)
     obj.Shapes = ftrs
     return obj
 
-def fuse(*ftrs):
+def fuse(*ftrs, **kw):
     ftrs = distinct_list(subftr for ftr in ftrs for subftr in ftrlist(ftr))
     if len(ftrs) == 0:
         return None
@@ -124,50 +125,49 @@ def fuse(*ftrs):
     if len(ftrs) == 1:
         return ftrs[0]
 
-    obj = ftrs[0].Document.addObject("Part::MultiFuse", "Union")
+    parent = kw.pop("parent") if "parent" in kw else ftrs[0].getParentGroup()
+    obj = addObject("Part::MultiFuse", "Union", parent=parent)
     obj.Shapes = ftrs
     return obj
 
-def complement(ftr):
-    obj = ftr.Document.addObject("Part::FeaturePython", "Complement")
-    Complement(obj)
+def complement(ftr, parent=None):
+    parent = parent if parent is not None else ftr.getParentGroup()
+    obj = addObject(Complement, "Complement", parent=parent)
     obj.Source = ftr
     return obj
 
-def transform(ftr, plc):
-    obj = ftr.Document.addObject("Part::FeaturePython", "Transform")
-    Transform(obj)
+def transform(ftr, plc, parent=None):
+    parent = parent if parent is not None else ftr.getParentGroup()
+    obj = addObject(Transform, "Transform", parent=parent)
     obj.Source = ftr
     obj.PlacementLink = plc
     return obj
 
 
-def compound(*ftrs):
+def compound(*ftrs, **kw):
     ftrs = distinct_list(subftr for ftr in ftrs for subftr in ftrlist(ftr))
-    if len(ftrs) == 0:
-        obj = FreeCAD.ActiveDocument.addObject("Part::Compound", "Compound")
-    else:
-        obj = ftrs[0].Document.addObject("Part::Compound", "Compound")
+    parent = kw.pop("parent") if "parent" in kw else ftrs[0].getParentGroup()
+    obj = addObject("Part::Compound", "Compound", parent=parent)
     obj.Links = ftrs
     return obj
 
-def compound_common(target, *ftrs):
+def compound_common(target, *ftrs, **kw):
     if len(ftrs) == 0:
         return target
 
     ftrss = [ftrlist(ftr) for ftr in ftrs]
     if len(ftrlist(target)) > 0:
         ftrss = [ftrlist(target)] + ftrss
-    target.Links = [common(*ftrs) for ftrs in product(*ftrss)]
+    target.Links = [common(*ftrs, **kw) for ftrs in product(*ftrss)]
     return target
 
-def compound_slice(target, *ftrs):
+def compound_slice(target, *ftrs, **kw):
     if len(ftrs) == 0:
         return target
 
     ftrss = [[ftr, complement(ftr)] for ftr in ftrs]
     if len(ftrlist(target)) > 0:
         ftrss = [ftrlist(target)] + ftrss
-    target.Links = [common(*ftrs) for ftrs in product(*ftrss)]
+    target.Links = [common(*ftrs, **kw) for ftrs in product(*ftrss)]
     return target
 
