@@ -59,20 +59,20 @@ class TransformProxy(DerivedFeatureProxy):
         obj.Proxy = self
         if "Source" not in obj.PropertiesList:
             obj.addProperty("App::PropertyLink", "Source")
-        if "PlacementLink" not in obj.PropertiesList:
-            obj.addProperty("App::PropertyPlacementLink", "PlacementLink")
+        if "Placements" not in obj.PropertiesList:
+            obj.addProperty("App::PropertyLinkList", "Placements")
         obj.setEditorMode("Placement", 2)
         if FreeCAD.GuiUp:
             TransformViewProxy(obj.ViewObject)
 
     def execute(self, obj):
-        plc = obj.PlacementLink.Placement
+        plcs = [ftr.Placement for ftr in obj.Placements]
         if isDerivedFrom(obj, "Part::FeaturePython"):
-            setGeometry(obj, Shapes.transform(obj.Source.Shape, plc))
+            setGeometry(obj, Shapes.transform(obj.Source.Shape, *plcs))
             obj.ViewObject.DiffuseColor = obj.Source.ViewObject.DiffuseColor
 
         elif isDerivedFrom(obj, "Mesh::FeaturePython"):
-            setGeometry(obj, Meshes.transform(meshOf(obj.Source), plc))
+            setGeometry(obj, Meshes.transform(meshOf(obj.Source), *plcs))
 
         else:
             raise TypeError
@@ -89,11 +89,15 @@ class TransformViewProxy(object):
         return self.children
 
     def updateData(self, obj, p):
-        if obj.getTypeIdOfProperty(p) in ["App::PropertyLink", "App::PropertyPlacementLink"]:
-            ftr = obj.getPropertyByName(p)
-            if ftr is not None:
-                ftr.ViewObject.hide()
-            self.children = [obj.Source, obj.PlacementLink]
+        if p in ["Source", "Placements"]:
+            prop = obj.getPropertyByName(p)
+            if prop is not None:
+                if p == "Source":
+                    prop.ViewObject.hide()
+                elif p == "Placements":
+                    for ftr in prop:
+                        ftr.ViewObject.hide()
+            self.children = [obj.Source] + list(obj.Placements)
 
     def onDelete(self, obj, subelems):
         for ftr in self.children:
@@ -136,11 +140,11 @@ def complement(ftr, parent=None):
     obj.Source = ftr
     return obj
 
-def transform(ftr, plc, parent=None):
-    parent = parent if parent is not None else ftr.getParentGroup()
+def transform(ftr, *plcs, **kw):
+    parent = kw.pop("parent") if "parent" in kw else ftr.getParentGroup()
     obj = addObject(Transform, "Transform", parent=parent)
     obj.Source = ftr
-    obj.PlacementLink = plc
+    obj.Placements = plcs
     return obj
 
 
@@ -169,5 +173,14 @@ def compound_slice(target, *ftrs, **kw):
     if len(ftrlist(target)) > 0:
         ftrss = [ftrlist(target)] + ftrss
     target.Links = [common(*ftrs, **kw) for ftrs in product(*ftrss)]
+    return target
+
+def compound_transform(target, *plcs, **kw):
+    if len(plcs) == 0:
+        return target
+
+    plcss = [ftrlist(plc) for plc in plcs]
+    argss = [ftrlist(target)] + plcss
+    target.Links = [transform(*args, **kw) for args in product(*argss)]
     return target
 

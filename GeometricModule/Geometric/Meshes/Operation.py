@@ -17,9 +17,11 @@ def orientation(mesh):
     else:
         return "Reversed"
 
-def transform(mesh, plc):
+def transform(mesh, *plcs):
     mesh = remesh(mesh)
-    mesh.Placement = plc
+    mesh.Placement = FreeCAD.Placement()
+    for plc in plcs:
+        mesh.Placement = plc.multiply(mesh.Placement)
     return mesh
 
 def complement(mesh):

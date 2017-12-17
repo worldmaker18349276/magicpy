@@ -80,13 +80,13 @@ class TransformCommand(object):
 
     def Activated(self):
         sel = FreeCADGui.Selection.getSelection()[0]
-        plc = FreeCADGui.Selection.getSelection()[1]
-        FreeCADGui.doCommand("_ftr = Geometric.transform(%s)"%ftrstr_p(sel, plc))
+        plcs = FreeCADGui.Selection.getSelection()[1:]
+        FreeCADGui.doCommand("_ftr = Geometric.transform(%s)"%ftrstr_p(sel, *plcs))
         FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
         FreeCADGui.doCommand("FreeCADGui.SendMsgToActiveView('ViewFit')")
 
     def IsActive(self):
-        return len(FreeCADGui.Selection.getSelection()) == 2
+        return len(FreeCADGui.Selection.getSelection()) >= 1
 
 
 class CompoundCommand(object):

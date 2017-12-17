@@ -9,9 +9,11 @@ def reshape(shape):
     shape.Placement = FreeCAD.Placement()
     return shape.transformGeometry(plc)
 
-def transform(shp, plc):
+def transform(shp, *plcs):
     shp = reshape(shp)
-    shp.Placement = plc
+    shp.Placement = FreeCAD.Placement()
+    for plc in plcs:
+        shp.Placement = plc.multiply(shp.Placement)
     return shp
 
 def complement(shp):
